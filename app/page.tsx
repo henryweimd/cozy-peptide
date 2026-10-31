@@ -20,6 +20,7 @@ const RESPONSE_EXAMPLE = `{
     "proposer_model": "Meta-Spark-1.3-Contributor",
     "linguistic_paradigm": "context_sensitive_loop_grammar",
     "compiler_refinement_cycles": 0,
+    "target_class": "bacterial-colonization",
     "refinement_trace": [
       {
         "turn": 0,
@@ -639,6 +640,25 @@ export default function Home() {
                 </tr>
               </tbody>
             </table>
+
+            <h3>More endpoints</h3>
+            <p className={styles.endpoint}>
+              <span className={styles.method}>POST</span>
+              <code>/api/audit-peptide</code>
+            </p>
+            <p className={styles.authline}>
+              Audit a caller-supplied sequence with no model calls: grammar,
+              violations, therapeutic and safety indices, and failure modes.
+              Bearer token required.
+            </p>
+            <p className={styles.endpoint}>
+              <span className={styles.method}>GET</span>
+              <code>/api/modalities</code>
+            </p>
+            <p className={styles.authline}>
+              Public capability listing: every design modality with its
+              length, cysteine, and hydropathy rules. No token needed.
+            </p>
           </div>
         </section>
 

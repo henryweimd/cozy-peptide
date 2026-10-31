@@ -1,4 +1,5 @@
 import type { Modality } from "./modality";
+import type { TargetClass } from "./prompt-steering";
 import { specForModality } from "./modality";
 import {
   computeBomanIndex,
@@ -68,18 +69,40 @@ export interface TherapeuticAssessment {
 }
 
 /**
+ * Per-target-class weights for the therapeutic index, as
+ * [proteaseResistance, chargeCentrality, solubilityBalance,
+ * bindingPotential, mucosalDwell]. Each row sums to 1. A colonization
+ * fighter values charge engagement; a barrier healer values mucosal
+ * dwell; an inflammation modulator values protease survival.
+ */
+export const THERAPEUTIC_WEIGHTS: Record<
+  TargetClass,
+  [number, number, number, number, number]
+> = {
+  general: [0.3, 0.2, 0.2, 0.15, 0.15],
+  "bacterial-colonization": [0.3, 0.25, 0.15, 0.2, 0.1],
+  "toxin-blockade": [0.3, 0.15, 0.15, 0.25, 0.15],
+  "barrier-repair": [0.2, 0.15, 0.25, 0.1, 0.3],
+  inflammation: [0.35, 0.15, 0.15, 0.2, 0.15],
+  "pain-motility": [0.25, 0.15, 0.25, 0.2, 0.15],
+  metabolic: [0.2, 0.15, 0.25, 0.25, 0.15],
+};
+
+/**
  * Therapeutic index (0-100): how promising a candidate looks as a gut
- * therapeutic, from deterministic sequence readouts only. Components:
- * - protease resistance 30%: 1 - cleavage susceptibility (capped)
- * - charge centrality 20%: formal charge near the window center (+2.5)
- * - solubility balance 20%: GRAVY near the modality window center
- * - binding potential 15%: Boman index inside the 0.5-2.5 band
- * - mucosal dwell 15%: basic-over-acidic surface ratio >= 1
+ * therapeutic, from deterministic sequence readouts only, weighted for
+ * the inferred target class. Components:
+ * - protease resistance: 1 - cleavage susceptibility (capped)
+ * - charge centrality: formal charge near the requested target
+ * - solubility balance: GRAVY near the modality window center
+ * - binding potential: Boman index inside the 0.5-2.5 band
+ * - mucosal dwell: basic-over-acidic surface ratio >= 1
  */
 export function computeTherapeuticIndex(
   sequence: string,
   modality: Modality,
-  chargeTarget: number
+  chargeTarget: number,
+  targetClass: TargetClass = "general"
 ): { index: number; breakdown: TherapeuticBreakdown } {
   const seq = sequence.trim().toUpperCase();
   const spec = specForModality(modality);
@@ -116,13 +139,14 @@ export function computeTherapeuticIndex(
     bindingPotential: round2(bindingPotential),
     mucosalDwell: round2(mucosalDwell),
   };
+  const weights = THERAPEUTIC_WEIGHTS[targetClass];
   const index =
     100 *
-    (0.3 * proteaseResistance +
-      0.2 * chargeCentrality +
-      0.2 * solubilityBalance +
-      0.15 * bindingPotential +
-      0.15 * mucosalDwell);
+    ((weights[0] ?? 0) * proteaseResistance +
+      (weights[1] ?? 0) * chargeCentrality +
+      (weights[2] ?? 0) * solubilityBalance +
+      (weights[3] ?? 0) * bindingPotential +
+      (weights[4] ?? 0) * mucosalDwell);
   return { index: round2(index), breakdown };
 }
 
@@ -194,9 +218,15 @@ export function computeSafetyIndex(sequence: string): {
 export function assessCandidate(
   sequence: string,
   modality: Modality,
-  chargeTarget: number
+  chargeTarget: number,
+  targetClass: TargetClass = "general"
 ): TherapeuticAssessment {
-  const therapeutic = computeTherapeuticIndex(sequence, modality, chargeTarget);
+  const therapeutic = computeTherapeuticIndex(
+    sequence,
+    modality,
+    chargeTarget,
+    targetClass
+  );
   const safety = computeSafetyIndex(sequence);
   return {
     therapeutic_index: therapeutic.index,

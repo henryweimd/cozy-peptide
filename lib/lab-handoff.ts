@@ -185,6 +185,96 @@ function gcFraction(dna: string): number {
 }
 
 /** Short deterministic construct tag derived from the mature sequence. */
+export interface SynthesisDifficulty {
+  /** 0-100, higher means easier to synthesize. */
+  score: number;
+  homopolymer_runs: string[];
+  gc_extreme_windows: string[];
+  repeat_flags: string[];
+}
+
+/** Homopolymer run length that vendors flag (synthesis errors). */
+export const HOMOPOLYMER_FLAG_LENGTH = 5;
+/** Sliding window for GC-extreme detection. */
+export const GC_WINDOW = 50;
+
+/**
+ * Scores DNA synthesis difficulty for vendor ordering: homopolymer runs
+ * of 5+, 50-nt windows outside 25-75% GC, and direct repeats of 10+ bp.
+ * Score starts at 100 and loses 15 per homopolymer, 10 per extreme
+ * window, and 10 per repeat, floored at 0.
+ */
+export function assessSynthesisDifficulty(dna: string): SynthesisDifficulty {
+  const seq = dna.trim().toUpperCase();
+  const homopolymer_runs: string[] = [];
+  const gc_extreme_windows: string[] = [];
+  const repeat_flags: string[] = [];
+
+  const runRe = new RegExp(
+    `(A{${HOMOPOLYMER_FLAG_LENGTH},}|C{${HOMOPOLYMER_FLAG_LENGTH},}|G{${HOMOPOLYMER_FLAG_LENGTH},}|T{${HOMOPOLYMER_FLAG_LENGTH},})`,
+    "g"
+  );
+  let runMatch: RegExpExecArray | null;
+  while ((runMatch = runRe.exec(seq)) !== null) {
+    homopolymer_runs.push(
+      `${runMatch[1]?.[0] ?? "?"}x${runMatch[1]?.length ?? 0} at ${runMatch.index}`
+    );
+  }
+
+  for (let i = 0; i + GC_WINDOW <= seq.length; i += 10) {
+    const window = seq.slice(i, i + GC_WINDOW);
+    let gc = 0;
+    for (const base of window) {
+      if (base === "G" || base === "C") gc += 1;
+    }
+    const fraction = gc / GC_WINDOW;
+    if (fraction > 0.75 || fraction < 0.25) {
+      gc_extreme_windows.push(
+        `${i}-${i + GC_WINDOW} gc=${Math.round(fraction * 100)}%`
+      );
+    }
+  }
+
+  const seen = new Map<string, number>();
+  for (let i = 0; i + 10 <= seq.length; i += 1) {
+    const kmer = seq.slice(i, i + 10);
+    const first = seen.get(kmer);
+    if (first === undefined) {
+      seen.set(kmer, i);
+    } else if (repeat_flags.length < 5) {
+      repeat_flags.push(`10-mer repeat at ${first} and ${i}`);
+    }
+  }
+
+  const score = Math.max(
+    0,
+    100 -
+      homopolymer_runs.length * 15 -
+      gc_extreme_windows.length * 10 -
+      repeat_flags.length * 10
+  );
+  return { score, homopolymer_runs, gc_extreme_windows, repeat_flags };
+}
+
+/**
+ * Builds a vendor-ready order CSV: one row per DNA artifact (gBlock and
+ * precursor cDNA) with construct id, length, and GC percent.
+ */
+export function buildOrderCsv(
+  constructId: string,
+  gblockDna: string,
+  payloadCds: string
+): string {
+  const gcPercent = (dna: string): string =>
+    `${Math.round(gcFraction(dna) * 1000) / 10}`;
+  const rows = [
+    "construct_id,artifact,dna_length,gc_percent,sequence",
+    `${constructId},gblock,${gblockDna.length},${gcPercent(gblockDna)},${gblockDna}`,
+    `${constructId},precursor_cdna,${payloadCds.length},${gcPercent(payloadCds)},${payloadCds}`,
+  ];
+  return rows.join("\n");
+}
+
 export function constructTag(mature: string): string {
   let hash = 2166136261;
   for (let i = 0; i < mature.length; i += 1) {
@@ -278,6 +368,12 @@ export function buildLabHandoff(
     },
     yeast_chassis: YEAST_CHASSIS,
     secretion_leader: SECRETION_LEADER_LABEL,
+    synthesis_difficulty: assessSynthesisDifficulty(dnaGblock),
+    order_csv: buildOrderCsv(
+      `${spec.idPrefix}${constructTag(mature)}`,
+      dnaGblock,
+      cdna
+    ),
   };
 }
 

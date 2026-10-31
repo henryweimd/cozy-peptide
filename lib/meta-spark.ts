@@ -28,6 +28,7 @@ import {
   specForModality,
 } from "./modality";
 import {
+  type TargetClass,
   buildRepairSteering,
   buildSteeringBrief,
   constraintBlockForModality,
@@ -163,7 +164,7 @@ export function buildSemanticProposePrompt(
           "4. Clean N-terminal processing: residue 1 must be A, S, G, or C — never P, F, Y, or W.",
           `5. Net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4); allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
           "6. No exposed chymotrypsin sites [FYW][^P][KR]; hydrophobic runs over [VILMFW] at most 3 consecutive residues.",
-          "7. GRAVY between -0.40 and +0.10; no NG or DG hotspots; at most one methionine; gut-stable and non-toxic.",
+          "7. GRAVY between -0.40 and +0.10; no NG, DG, or DP hotspots; at most one methionine; gut-stable and non-toxic.",
           "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
           ...scaffoldLines(),
         ]
@@ -209,8 +210,8 @@ export function buildRepairPrompt(
       ? "L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6, ICK pairing C1-C4/C2-C5/C3-C6, L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10, total 28-36 aa,"
       : `${spec.noun} topology: exactly ${spec.cysteines} cysteines, total ${spec.minLength}-${spec.maxLength} aa,`,
     modality === "knottin-6c"
-      ? `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [-0.40, +0.10], no NG/DG hotspots, at most one M.`
-      : `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [${spec.gravyMin.toFixed(2)}, +${spec.gravyMax.toFixed(2)}], no NG/DG hotspots, at most one M.`,
+      ? `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [-0.40, +0.10], no NG/DG/DP hotspots, at most one M.`
+      : `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [${spec.gravyMin.toFixed(2)}, +${spec.gravyMax.toFixed(2)}], no NG/DG/DP hotspots, at most one M.`,
   ];
   if (preservedCassette !== undefined && preservedCassette.length > 0) {
     lines.push(
@@ -520,11 +521,17 @@ interface Verification {
 function verifyCandidate(
   candidate: string,
   chargeTarget: number,
-  modality: Modality
+  modality: Modality,
+  targetClass: TargetClass
 ): Verification {
   const grammar = parseModalityGrammar(candidate, modality);
   const baseAudit = auditPeptideCandidate(candidate, chargeTarget, modality);
-  const assessment = assessCandidate(candidate, modality, chargeTarget);
+  const assessment = assessCandidate(
+    candidate,
+    modality,
+    chargeTarget,
+    targetClass
+  );
   const audit: SymbolicAuditResult = {
     ...baseAudit,
     therapeutic_index: assessment.therapeutic_index,
@@ -609,6 +616,7 @@ async function evaluatePool(
   pool: string[],
   chargeTarget: number,
   modality: Modality,
+  targetClass: TargetClass,
   turn: number,
   source: RefinementTurn["source"],
   terminal: boolean,
@@ -619,7 +627,12 @@ async function evaluatePool(
   temperature?: number
 ): Promise<{ candidate: string; audit: SymbolicAuditResult } | null> {
   const sync: SyncVerdict[] = pool.map((candidate, index) => {
-    const verification = verifyCandidate(candidate, chargeTarget, modality);
+    const verification = verifyCandidate(
+      candidate,
+      chargeTarget,
+      modality,
+      targetClass
+    );
     return {
       index,
       candidate,
@@ -759,13 +772,14 @@ export async function generateVerifiedPeptide(
   audit: SymbolicAuditResult;
   refinementHistory: RefinementTurn[];
   agentTools: AgentToolResult[];
+  targetClass: TargetClass;
 }> {
   const refinementHistory: RefinementTurn[] = [];
   const apiKey = process.env.META_API_KEY;
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
   const modality = options.modality ?? DEFAULT_MODALITY;
   const spec = specForModality(modality);
-  const { brief: steeringBrief } = buildSteeringBrief(
+  const { targetClass, brief: steeringBrief } = buildSteeringBrief(
     target,
     options.mechanism
   );
@@ -779,6 +793,7 @@ export async function generateVerifiedPeptide(
     audit: SymbolicAuditResult;
     refinementHistory: RefinementTurn[];
     agentTools: AgentToolResult[];
+    targetClass: TargetClass;
   }> => {
     const agentTools = await runAgentTools({
       candidate: accepted.candidate,
@@ -786,7 +801,7 @@ export async function generateVerifiedPeptide(
       modality,
       charge_target: chargeTarget,
     });
-    return { ...accepted, refinementHistory, agentTools };
+    return { ...accepted, refinementHistory, agentTools, targetClass };
   };
 
   const synthesize = async (
@@ -797,6 +812,7 @@ export async function generateVerifiedPeptide(
     audit: SymbolicAuditResult;
     refinementHistory: RefinementTurn[];
     agentTools: AgentToolResult[];
+    targetClass: TargetClass;
   }> => {
     onEvent?.({
       stage: "synthesize",
@@ -809,6 +825,7 @@ export async function generateVerifiedPeptide(
       pool,
       chargeTarget,
       modality,
+      targetClass,
       turn,
       "deterministic-synthesis",
       true,
@@ -940,6 +957,7 @@ export async function generateVerifiedPeptide(
       pool,
       chargeTarget,
       modality,
+      targetClass,
       cycle,
       "meta-spark-1.3",
       cycle >= maxRefinementTurns,
@@ -1361,6 +1379,23 @@ function fillSequence(
     const slot = hit.index + 1;
     let swapped = false;
     for (const aa of ["A", "S", "Q", "T"]) {
+      if (fitsNeighbors(out, slot, aa)) {
+        out[slot] = aa;
+        swapped = true;
+        break;
+      }
+    }
+    if (!swapped) return null;
+  }
+
+  // Break DP acid-labile bonds by swapping the proline (always a neutral
+  // filler slot) to a small stable residue.
+  for (let repair = 0; repair < 20; repair += 1) {
+    const hit = /DP/.exec(out.join(""));
+    if (hit === null || hit.index === undefined) break;
+    const slot = hit.index + 1;
+    let swapped = false;
+    for (const aa of ["A", "S", "G", "T"]) {
       if (fitsNeighbors(out, slot, aa)) {
         out[slot] = aa;
         swapped = true;

@@ -110,5 +110,25 @@
   "notes": [
    "tests 43/43; source lint clean; footer + rows shots verified"
   ]
+ },
+ {
+  "date": "2026-10-31",
+  "mode": "feature",
+  "scope": "api+page+docs",
+  "entry": "/",
+  "theme": "cobalt",
+  "added": [
+   "improvement cycles: DP acid-labile + low-complexity gates with sampler repair",
+   "class-weighted therapeutic index + target_class provenance",
+   "synthesis-difficulty report + vendor order CSV in handoff",
+   "POST /api/audit-peptide + GET /api/modalities; page band + README docs"
+  ],
+  "waived": [
+   "44c",
+   "19"
+  ],
+  "notes": [
+   "tests 49/49; source lint clean; endpoints live-checked; API band shot verified"
+  ]
  }
 ]

@@ -182,6 +182,8 @@ export const VerificationReportSchema = z.object({
   oxidation_clean: z.boolean().optional(),
   deamidation_clean: z.boolean().optional(),
   isomerization_clean: z.boolean().optional(),
+  acid_clean: z.boolean().optional(),
+  complexity_ok: z.boolean().optional(),
   ick_topology_ok: z.boolean(),
   passed: z.boolean(),
   failure_modes: z.array(z.string()),
@@ -245,6 +247,17 @@ export const SynthesisOrderSchema = z.object({
 export type SynthesisOrder = z.infer<typeof SynthesisOrderSchema>;
 
 /**
+ * DNA synthesis-difficulty report for vendor ordering.
+ */
+export const SynthesisDifficultySchema = z.object({
+  score: z.number(),
+  homopolymer_runs: z.array(z.string()),
+  gc_extreme_windows: z.array(z.string()),
+  repeat_flags: z.array(z.string()),
+});
+export type SynthesisDifficulty = z.infer<typeof SynthesisDifficultySchema>;
+
+/**
  * Lab-handoff production artifacts for engineered S. boulardii secretion.
  */
 export const LabHandoffManifestSchema = z.object({
@@ -263,6 +276,8 @@ export const LabHandoffManifestSchema = z.object({
   synthesis_order: SynthesisOrderSchema,
   yeast_chassis: z.string(),
   secretion_leader: z.string(),
+  synthesis_difficulty: SynthesisDifficultySchema.optional(),
+  order_csv: z.string().optional(),
 });
 export type LabHandoffManifest = z.infer<typeof LabHandoffManifestSchema>;
 

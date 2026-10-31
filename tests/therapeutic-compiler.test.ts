@@ -46,6 +46,14 @@ import {
   agentToolNames,
   runAgentTools,
 } from "../lib/agent-tools";
+import { THERAPEUTIC_WEIGHTS } from "../lib/therapeutic-index";
+import {
+  assessSynthesisDifficulty,
+  buildLabHandoff,
+  buildOrderCsv,
+} from "../lib/lab-handoff";
+import { POST as auditPOST } from "../app/api/audit-peptide/route";
+import { GET as modalitiesGET } from "../app/api/modalities/route";
 import {
   AgentToolResultSchema,
   CandidatePayloadSchema,
@@ -447,6 +455,131 @@ test("route payload carries agent tool results", async () => {
     tools.map((entry) => entry["tool"]),
     ["binding-affinity", "structure-fold", "off-target-panel"]
   );
+});
+
+test("therapeutic index weights follow the target class", () => {
+  for (const weights of Object.values(THERAPEUTIC_WEIGHTS)) {
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    assert.ok(Math.abs(total - 1) < 1e-9);
+  }
+  // A charge-heavy design scores higher where charge is weighted most.
+  const seq = sampleFallbackCandidates(TARGET, 4, 1, "linear")[0] ?? "";
+  const general = computeTherapeuticIndex(seq, "linear", 4, "general").index;
+  const colonized = computeTherapeuticIndex(
+    seq,
+    "linear",
+    4,
+    "bacterial-colonization"
+  ).index;
+  assert.notEqual(general, colonized);
+});
+
+test("auditor rejects acid-labile bonds and low-complexity runs", () => {
+  const clean = sampleFallbackCandidates(TARGET, 2, 1, "linear")[0] ?? "";
+  const withDp = `${clean.slice(0, 6)}DP${clean.slice(8)}`;
+  assert.ok(
+    auditFailureModes(auditPeptideCandidate(withDp, 2, "linear")).includes(
+      "ACID_LABILE_BOND"
+    )
+  );
+  const polyA = "A".repeat(20);
+  assert.ok(
+    auditFailureModes(auditPeptideCandidate(polyA, 1, "linear")).includes(
+      "LOW_COMPLEXITY_SEQUENCE"
+    )
+  );
+  // The sampler repairs DP everywhere it samples.
+  for (const modality of MODALITIES) {
+    for (const seq of sampleFallbackCandidates(TARGET, 2, 2, modality)) {
+      assert.ok(!seq.includes("DP"), `${modality} ${seq}`);
+    }
+  }
+});
+
+test("lab handoff scores synthesis difficulty and builds order CSV", () => {
+  const easy = assessSynthesisDifficulty("ACGTACGTACGT");
+  assert.equal(easy.score, 100);
+  assert.deepEqual(easy.homopolymer_runs, []);
+  const hard = assessSynthesisDifficulty(`ACGT${"A".repeat(8)}ACGTACGTACGT`);
+  assert.ok(hard.score < 100);
+  assert.ok(hard.homopolymer_runs.length >= 1);
+
+  const csv = buildOrderCsv("SB-LIN-TEST", "ACGTACGT", "AAACCCGGGTTT");
+  const lines = csv.split("\n");
+  assert.equal(lines.length, 3);
+  assert.ok(lines[0]?.startsWith("construct_id,artifact,"));
+  assert.ok(lines[1]?.includes("SB-LIN-TEST,gblock,8,"));
+  assert.ok(lines[2]?.includes("SB-LIN-TEST,precursor_cdna,12,"));
+
+  const manifest = buildLabHandoff("ACDEFGHIKLMN", "linear");
+  assert.ok(typeof manifest.synthesis_difficulty?.score === "number");
+  assert.ok((manifest.order_csv ?? "").includes("SB-LIN-"));
+});
+
+test("audit route scores caller-supplied sequences", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  process.env.API_BEARER_TOKEN = "test-token";
+  const req = (body: unknown, token?: string): NextRequest =>
+    ({
+      headers: new Headers(
+        token === undefined ? {} : { authorization: `Bearer ${token}` }
+      ),
+      json: async () => body,
+    }) as unknown as NextRequest;
+
+  assert.equal((await auditPOST(req({ sequence: "AAA" }, "wrong"))).status, 401);
+  assert.equal((await auditPOST(req({ nope: 1 }, "test-token"))).status, 400);
+
+  const good = sampleFallbackCandidates(TARGET, 2, 1, "linear")[0] ?? "";
+  const ok = await auditPOST(
+    req({ sequence: good, charge_target: 2, modality: "linear" }, "test-token")
+  );
+  assert.equal(ok.status, 200);
+  const body = (await ok.json()) as Record<string, unknown>;
+  const data = body["data"] as Record<string, unknown>;
+  assert.equal(data["audit_passed"], true);
+  assert.ok(typeof data["therapeutic_index"] === "number");
+  assert.ok(typeof data["safety_index"] === "number");
+
+  const bad = await auditPOST(
+    req({ sequence: "ACDE", charge_target: 4, modality: "linear" }, "test-token")
+  );
+  assert.equal(bad.status, 200);
+  const badData = ((await bad.json()) as Record<string, unknown>)[
+    "data"
+  ] as Record<string, unknown>;
+  assert.equal(badData["audit_passed"], false);
+  assert.ok((badData["failure_modes"] as string[]).length >= 1);
+});
+
+test("modalities route lists compiler capabilities", async () => {
+  const res = await modalitiesGET();
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as Record<string, unknown>;
+  const data = body["data"] as Array<Record<string, unknown>>;
+  assert.equal(data.length, 4);
+  assert.equal(data[0]?.["modality"], "knottin-6c");
+  assert.equal(data[0]?.["response_id"], "engineered_knottin_microprotein");
+  assert.equal(data[3]?.["modality"], "linear");
+});
+
+test("route provenance carries the target class", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  process.env.API_BEARER_TOKEN = "test-token";
+  const res = await POST({
+    headers: new Headers({ authorization: "Bearer test-token" }),
+    json: async () => ({
+      target: "Clostridioides difficile colonization in the gut",
+      charge_target: 2,
+      modality: "linear",
+    }),
+  } as unknown as NextRequest);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as Record<string, unknown>;
+  const provenance = body["neurosymbolic_provenance"] as Record<string, unknown>;
+  assert.equal(provenance["target_class"], "bacterial-colonization");
 });
 
 test("generation threads mechanism into steering", async () => {

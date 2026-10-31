@@ -200,13 +200,15 @@ flowchart LR
      `PR`), zero N-glycosylation sequons (`N[^P][ST]`), zero exposed
      chymotrypsin sites (`[FYW][^P][KR]`), a clean post-Kex2 N-terminus
      (never P/F/Y/W), hydrophobic runs capped at 3 over `[VILMFW]`, at most
-     one methionine (oxidation), and zero NG deamidation / DG
-     isomerization hotspots
+     one methionine (oxidation), zero NG deamidation / DG isomerization /
+     DP acid-labile hotspots, and no low-complexity dominance (single
+     residue at most 40%)
    - **Therapeutic and safety indices** (0-100, `lib/therapeutic-index.ts`) —
      deterministic composites of protease resistance, charge and solubility
      balance, binding potential, mucosal dwell, chemical stability,
-     aggregation margin, and membrane selectivity, reported per candidate
-     and used to rank passing pools
+     aggregation margin, and membrane selectivity — with the therapeutic
+     weights tuned per inferred target class — reported per candidate and
+     used to rank passing pools
 5. **Closed-loop compiler diagnostic feedback** — failures return structured
    diagnostics with machine-readable failure modes (`KEX2_SITE_DETECTED`,
    `CHARGE_OUT_OF_BOUNDS`, `DEAMIDATION_HOTSPOT`, …) plus recurring-fault
@@ -233,6 +235,9 @@ flowchart LR
    - A Gibson-flanked **gBlock manifest** (85-aa MFalpha-1 pre-pro leader,
      40-bp pESC/pPic9 homology arms) with CAI/GC reporting, mature/precursor
      FASTA, and a DNA synthesis order form
+   - A **synthesis-difficulty report** (homopolymer runs, GC-extreme
+     windows, repeat flags, 0-100 score) and a vendor-ready **order CSV**
+     for Twist/IDT-style uploads — built for synbio and CRO handoff
 8. **Agentic tool stubs** (`lib/agent-tools.ts`) — every accepted candidate
    runs through the tool registry (`binding-affinity`, `structure-fold`,
    `off-target-panel`), reported as `agent_tools` in the response. All
@@ -365,6 +370,16 @@ Sample JSON response (truncated):
 | `403` | Biosecurity block (toxin-signature screening). |
 | `422` | Catalytic-enzyme or off-site (non-gut) target refusal. |
 | `502` | Generation failure; no verifiable candidate produced. |
+
+### More endpoints
+
+- **`POST /api/audit-peptide`** (Bearer [REDACTED] — audit a caller-supplied
+  sequence with no model calls: `{sequence, charge_target?, modality?}`
+  returns grammar validity, the full violation list, therapeutic/safety
+  indices, the verification report, and machine-readable failure modes.
+  Built for CRO pre-screening of candidate peptides.
+- **`GET /api/modalities`** (public, no token) — lists the compiler's design
+  modalities with length windows, cysteine rules, and hydropathy windows.
 
 ### Try it in the browser
 

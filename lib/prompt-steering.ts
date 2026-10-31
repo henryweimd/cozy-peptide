@@ -197,7 +197,7 @@ export function constraintBlockForModality(
       "Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
       `Charge and hydropathy: net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4 for gentle mucosal retention); Kyte-Doolittle GRAVY between -0.40 and +0.10; hydrophobic runs over [VILMFW] at most 3 consecutive residues.`,
       "No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
-      "No deamidation (NG) or isomerization (DG) hotspots; at most one methionine (oxidation risk).",
+      "No deamidation (NG), isomerization (DG), or acid-labile (DP) hotspots; at most one methionine (oxidation risk).",
     ];
   }
   const spec = specForModality(modality);
@@ -212,7 +212,7 @@ export function constraintBlockForModality(
     "Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
     `Charge and hydropathy: net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4 for gentle mucosal retention); Kyte-Doolittle GRAVY between ${spec.gravyMin.toFixed(2)} and +${spec.gravyMax.toFixed(2)}; hydrophobic runs over [VILMFW] at most 3 consecutive residues.`,
     "No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
-    "No deamidation (NG) or isomerization (DG) hotspots; at most one methionine (oxidation risk).",
+    "No deamidation (NG), isomerization (DG), or acid-labile (DP) hotspots; at most one methionine (oxidation risk).",
   ];
 }
 

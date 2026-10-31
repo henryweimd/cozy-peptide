@@ -31,6 +31,10 @@ export const MAX_METHIONINES = 1;
 export const DEAMIDATION_PATTERN = /NG/;
 /** Aspartate-glycine isomerization hotspot. */
 export const ISOMERIZATION_PATTERN = /DG/;
+/** Asp-Pro acid-labile bond (cleaves in stomach acid). */
+export const ACID_LABILE_PATTERN = /DP/;
+/** Maximum single-residue fraction (low-complexity cap). */
+export const MAX_LOW_COMPLEXITY_FRACTION = 0.4;
 
 /** Full Kyte-Doolittle hydropathy scale. */
 export const KYTE_DOOLITTLE: Record<string, number> = {
@@ -329,6 +333,8 @@ export function computeMaxResidueFraction(sequence: string): number {
  * - GRAVY strictly inside the modality window (knottin: [-0.40, +0.10])
  * - At most one methionine (oxidation risk)
  * - No NG deamidation or DG isomerization hotspots
+ * - No DP acid-labile bonds (stomach-acid cleavage risk)
+ * - No low-complexity dominance (single residue at most 40%)
  */
 export function auditPeptideCandidate(
   sequence: string,
@@ -416,6 +422,11 @@ export function auditPeptideCandidate(
   }
 
   const maxResidueFraction = computeMaxResidueFraction(seq);
+  if (maxResidueFraction > MAX_LOW_COMPLEXITY_FRACTION) {
+    violations.push(
+      `liability_low_complexity: single-residue fraction ${maxResidueFraction.toFixed(3)} exceeds the ${MAX_LOW_COMPLEXITY_FRACTION.toFixed(1)} low-complexity cap`
+    );
+  }
 
   const gravyScore = computeGravy(seq);
   if (gravyScore < spec.gravyMin || gravyScore > spec.gravyMax) {
@@ -440,6 +451,12 @@ export function auditPeptideCandidate(
   if (isomerization !== null) {
     violations.push(
       `liability_isomerization: 'DG' at index ${isomerization.index} is an aspartate isomerization hotspot`
+    );
+  }
+  const acidLabile = ACID_LABILE_PATTERN.exec(seq);
+  if (acidLabile !== null) {
+    violations.push(
+      `liability_acid_labile: 'DP' at index ${acidLabile.index} is an acid-labile bond (stomach-acid cleavage risk)`
     );
   }
 
@@ -496,6 +513,10 @@ export function auditFailureModes(audit: SymbolicAuditResult): string[] {
       modes.add("DEAMIDATION_HOTSPOT");
     } else if (violation.startsWith("liability_isomerization:")) {
       modes.add("ISOMERIZATION_HOTSPOT");
+    } else if (violation.startsWith("liability_acid_labile:")) {
+      modes.add("ACID_LABILE_BOND");
+    } else if (violation.startsWith("liability_low_complexity:")) {
+      modes.add("LOW_COMPLEXITY_SEQUENCE");
     } else {
       modes.add("AUDIT_VIOLATION");
     }
@@ -549,6 +570,8 @@ export function buildVerificationReport(
     oxidation_clean: !has("liability_oxidation:"),
     deamidation_clean: !has("liability_deamidation:"),
     isomerization_clean: !has("liability_isomerization:"),
+    acid_clean: !has("liability_acid_labile:"),
+    complexity_ok: !has("liability_low_complexity:"),
     ick_topology_ok:
       grammar.valid && !has("length:") && !has("cysteines:"),
     passed: grammar.valid && audit.passed,

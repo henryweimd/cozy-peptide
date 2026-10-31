@@ -135,7 +135,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const { candidate, audit, refinementHistory, agentTools } =
+    const { candidate, audit, refinementHistory, agentTools, targetClass } =
       await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
         modality: designModality,
         mechanism,
@@ -150,7 +150,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         refinementHistory,
         manifest,
         designModality,
-        agentTools
+        agentTools,
+        targetClass
       ),
       200
     );

@@ -16,6 +16,7 @@ import {
 } from "./modality";
 import { buildVerificationReport } from "./symbolic-auditor";
 import { buildCloningPayload, constructTag } from "./lab-handoff";
+import type { TargetClass } from "./prompt-steering";
 
 const LINGUISTIC_PARADIGM = "context_sensitive_loop_grammar";
 const PROPOSER_MODEL = "Meta-Spark-1.3-Contributor";
@@ -56,7 +57,8 @@ export function buildNeurosymbolicPayload(
   history: RefinementTurn[],
   manifest: LabHandoffManifest,
   modality: Modality = DEFAULT_MODALITY,
-  agentTools: AgentToolResult[] = []
+  agentTools: AgentToolResult[] = [],
+  targetClass: TargetClass = "general"
 ): ApiResponse {
   const grammar = parseModalityGrammar(candidate, modality);
   const spec = specForModality(modality);
@@ -81,6 +83,7 @@ export function buildNeurosymbolicPayload(
       proposer_model: PROPOSER_MODEL,
       linguistic_paradigm: LINGUISTIC_PARADIGM,
       compiler_refinement_cycles: refinementCycles(history),
+      target_class: targetClass,
       refinement_trace: history,
     },
     candidate: {
@@ -134,6 +137,8 @@ export function buildNeurosymbolicPayload(
       cai: manifest.cai,
       restriction_scrub: manifest.restriction_scrub,
       synthesis_order: manifest.synthesis_order,
+      synthesis_difficulty: manifest.synthesis_difficulty,
+      order_csv: manifest.order_csv,
     },
   } as unknown as ApiResponse;
 }
