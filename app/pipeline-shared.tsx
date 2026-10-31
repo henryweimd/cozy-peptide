@@ -148,20 +148,32 @@ export const STAGES: StageDef[] = [
   { name: "handoff", title: "Lab handoff", sub: "Yeast cassette and DNA order" },
 ];
 
-export type StageState = "idle" | "active" | "done" | "bypassed";
+export type StageState =
+  | "idle"
+  | "active"
+  | "done"
+  | "bypassed"
+  | "error"
+  | "unreached";
 
 export function stageState(
   events: StageEvent[],
   finished: boolean,
-  stage: StageName
+  stage: StageName,
+  failed = false
 ): StageState {
   const seen = events.some((event) => event.stage === stage);
   if (!seen) {
+    if (failed) return "unreached";
     if (finished && (stage === "repair" || stage === "research")) {
       return "bypassed";
     }
+    // A finished, unfailed run necessarily passed through its core
+    // stages; unseen ones aged out of the capped event window.
+    if (finished) return "done";
     return "idle";
   }
+  if (failed && events[events.length - 1]?.stage === stage) return "error";
   if (finished) return "done";
   const latest = events[events.length - 1];
   return latest?.stage === stage ? "active" : "done";
@@ -281,70 +293,110 @@ export function gblockFasta(name: string, dna: string): string {
 }
 
 function stageGlyph(state: StageState): string {
-  return state === "done"
-    ? "✓"
-    : state === "active"
-      ? "●"
-      : state === "bypassed"
-        ? "–"
-        : "○";
+  switch (state) {
+    case "done":
+      return "✓";
+    case "active":
+      return "●";
+    case "bypassed":
+      return "–";
+    case "error":
+      return "✗";
+    default:
+      return "○";
+  }
 }
 
-/** Compact one-line stage strip. */
-export function StageStrip({
-  events,
-  finished,
-}: {
-  events: StageEvent[];
-  finished: boolean;
-}): React.ReactElement {
-  const showSynthesis = events.some(
-    (event) => event.stage === "synthesize"
-  );
-  return (
-    <ol className={styles.strip} aria-label="Pipeline stages">
-      {STAGES.filter(
-        (stage) => stage.name !== "synthesize" || showSynthesis
-      ).map((stage) => (
-        <li
-          key={stage.name}
-          data-state={stageState(events, finished, stage.name)}
-        >
-          <span aria-hidden="true">
-            {stageGlyph(stageState(events, finished, stage.name))}
-          </span>{" "}
-          {stage.title}
-        </li>
-      ))}
-    </ol>
-  );
+function stageLabel(state: StageState, isNext: boolean): string {
+  if (isNext) return "Next";
+  switch (state) {
+    case "done":
+      return "Done";
+    case "active":
+      return "Running";
+    case "bypassed":
+      return "Skipped";
+    case "error":
+      return "Failed";
+    case "unreached":
+      return "Not reached";
+    default:
+      return "Pending";
+  }
 }
 
-/** Stage list with subtitles and per-stage timestamps. */
+function stageReason(stage: StageName, state: StageState): string | null {
+  if (state === "bypassed") {
+    return stage === "research"
+      ? "Static prompt used"
+      : "No repair needed";
+  }
+  if (state === "error") return "Failed here — see the error below";
+  if (state === "unreached") return "Run stopped before this stage";
+  return null;
+}
+
+/**
+ * Vertical pipeline timeline: every stage with an explicit status
+ * word (Running, Done, Next, Pending, Skipped, Failed, Not reached),
+ * the skip/failure reason inline, and per-stage timestamps.
+ */
 export function StageDetail({
   events,
   finished,
+  failed = false,
 }: {
   events: StageEvent[];
   finished: boolean;
+  failed?: boolean;
 }): React.ReactElement {
   const showSynthesis = events.some(
     (event) => event.stage === "synthesize"
   );
+  const visible = STAGES.filter(
+    (stage) => stage.name !== "synthesize" || showSynthesis
+  );
+  const states = visible.map((stage) =>
+    stageState(events, finished, stage.name, failed)
+  );
+  // Next: the first pending stage at or after the running one, or the
+  // first stage when the run has emitted nothing yet.
+  let nextIndex = -1;
+  if (!finished && !failed) {
+    const activeIndex = states.findIndex((state) => state === "active");
+    nextIndex = visible.findIndex(
+      (_stage, index) =>
+        index >= activeIndex &&
+        (states[index] === "idle" || states[index] === "unreached")
+    );
+  }
   return (
-    <ol className={styles.stages}>
-      {STAGES.filter(
-        (stage) => stage.name !== "synthesize" || showSynthesis
-      ).map((stage) => {
-        const state = stageState(events, finished, stage.name);
+    <ol className={styles.stages} aria-label="Pipeline stages">
+      {visible.map((stage, index) => {
+        const state = states[index] ?? "idle";
+        const isNext = index === nextIndex;
         const stamp = stageElapsed(events, stage.name);
+        const reason = stageReason(stage.name, state);
         return (
-          <li key={stage.name} data-state={state}>
+          <li
+            key={stage.name}
+            data-state={state}
+            data-next={isNext || undefined}
+            aria-current={state === "active" ? "step" : undefined}
+          >
             <span className={styles.stagemark} aria-hidden="true">
               {stageGlyph(state)}
             </span>
             <span className={styles.stageline}>
-              <strong>{stage.title}</strong> <span>{stage.sub}</span>
+              <span className={styles.stagerow}>
+                <strong>{stage.title}</strong>
+                <span className={styles.stagepill}>
+                  {stageLabel(state, isNext)}
+                </span>
+              </span>
+              <span className={styles.stagesub}>
+                {reason ?? stage.sub}
+              </span>
             </span>
             {stamp !== null && (
               <span className={styles.stagestamp}>{stamp}</span>

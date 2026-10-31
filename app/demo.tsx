@@ -21,7 +21,6 @@ import {
   EventLog,
   HandoffDownloads,
   StageDetail,
-  StageStrip,
   formatCountdown,
   parseSseFrame,
 } from "./pipeline-shared";
@@ -303,13 +302,12 @@ export default function Demo() {
                 : "standby"}
           </span>
         </div>
-        <StageStrip events={events} finished={finished} />
-        {showFeed && (
-          <>
-            <StageDetail events={events} finished={finished} />
-            <EventLog events={events} logRef={logRef} />
-          </>
-        )}
+        <StageDetail
+          events={events}
+          finished={finished}
+          failed={error !== null && !loading}
+        />
+        {showFeed && <EventLog events={events} logRef={logRef} />}
       </div>
 
       {error !== null && !loading && (

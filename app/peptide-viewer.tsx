@@ -60,7 +60,13 @@ export default function PeptideViewer({
   const [status, setStatus] = useState<ViewerStatus>("loading");
   const [message, setMessage] = useState("Folding with ESMFold…");
   const [plddt, setPlddt] = useState<number | null>(null);
-  const [spin, setSpin] = useState(false);
+  // Spin on arrival so the fold reads as 3D at once; users can
+  // still stop it, and reduced-motion users start stopped.
+  const [spin, setSpin] = useState(
+    () =>
+      typeof window === "undefined" ||
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
   const [scheme, setScheme] = useState<ColorScheme>("plddt");
   const [attempt, setAttempt] = useState(0);
 

@@ -406,9 +406,29 @@
   color: var(--color-muted);
 }
 
-.stages li[data-state="active"] .stagemark,
-.stages li[data-state="done"] .stagemark {
+.stages li[data-state="active"] .stagemark {
   color: var(--color-accent);
+  animation: stagepulse 1.6s ease-in-out infinite;
+}
+
+.stages li[data-state="done"] .stagemark {
+  color: var(--color-success);
+}
+
+.stages li[data-state="error"] .stagemark {
+  color: var(--color-error);
+}
+
+.stages li[data-state="idle"] .stageline strong,
+.stages li[data-state="unreached"] .stageline strong {
+  font-weight: 500;
+  color: var(--color-muted);
+}
+
+@keyframes stagepulse {
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .stageline {
@@ -424,6 +444,46 @@
 
 .stageline span {
   color: var(--color-muted);
+}
+
+.stagerow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.stagepill {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-sm);
+  white-space: nowrap;
+}
+
+.stages li[data-state="active"] .stagepill {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.stages li[data-state="done"] .stagepill {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.stages li[data-state="error"] .stagepill {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.stages li[data-next="true"] .stagepill {
+  color: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
+}
+
+.stagesub {
+  display: block;
 }
 
 .stagestamp {
@@ -1668,6 +1728,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .spinner {
+    animation: none;
+  }
+  .stages li[data-state="active"] .stagemark {
     animation: none;
   }
 }
