@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import styles from "./page.module.css";
 
-const SEQUENCE = "CPRVTCSNDTVCKVRTSKCSVCRISVNTC";
+const SEQUENCE = "CSRTTCSQDTVCKVSKCSVCRIKSVNTC";
 const RAW_ALPHABET = "ACDEFGHIKLMNPQRSTVWY";
 const RAMP = ".:-=+*#%@";
 
@@ -20,7 +20,7 @@ function mulberry32(seed: number): () => number {
 
 /**
  * Cobalt ASCII field: the product's own traffic on an 8 by 16 cell. Raw
- * amino-acid proposals on the left resolve into the verified 29-mer on the
+ * amino-acid proposals on the left resolve into the verified 28-mer on the
  * right. Painted once as a composed still; a dot grid stands in without
  * script, and the still is identical under reduced motion.
  */

@@ -24,7 +24,7 @@ const RESPONSE_EXAMPLE = `{
     "refinement_trace": [
       {
         "turn": 0,
-        "candidate": "CPRVTCSNDTVCKVRTSKCSVCRISVNTC",
+        "candidate": "CSRTTCSQDTVCKVSKCSVCRIKSVNTC",
         "grammar_valid": true,
         "audit_passed": true,
         "disposition": "accepted",
@@ -33,26 +33,26 @@ const RESPONSE_EXAMPLE = `{
     ]
   },
   "candidate": {
-    "mature_sequence": "CPRVTCSNDTVCKVRTSKCSVCRISVNTC",
+    "mature_sequence": "CSRTTCSQDTVCKVSKCSVCRIKSVNTC",
     "topology": "C1-C4, C2-C5, C3-C6 ICK",
-    "grammar_breakdown": { "L1": "PRVT", "...": "..." }
+    "grammar_breakdown": { "L1": "SRTT", "...": "..." }
   },
   "symbolic_audit": {
     "passed": true,
     "charge": 4,
-    "gravy": 0.04,
-    "boman_index": 1.06,
-    "aliphatic_index": 63.45,
-    "therapeutic_index": 76.37,
-    "safety_index": 88.6,
+    "gravy": -0.061,
+    "boman_index": 1.075,
+    "aliphatic_index": 55.36,
+    "therapeutic_index": 83.91,
+    "safety_index": 88.37,
     "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin", "..."]
   },
   "lab_handoff": {
     "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",
     "secretion_leader": "MF-alpha-1 (85 aa) + Kex2 (KR)",
-    "cai": 0.989,
+    "cai": 0.9865,
     "restriction_scrub": { "status": "clean" },
-    "synthesis_order": { "sequence_name": "SB-KNOT-0SIFTQ", "...": "..." }
+    "synthesis_order": { "sequence_name": "SB-KNOT-1V315H", "...": "..." }
   }
 }`;
 
@@ -751,10 +751,10 @@ export default function Home() {
               </div>
               <div className={`${styles.tile} ${styles.tileSeq}`}>
                 <span className={styles.tileLabel}>
-                  The C. difficile design, 29 amino acids
+                  The C. difficile design, 28 amino acids
                 </span>
                 <code className={styles.tileSeqCode}>
-                  CPRVTCSNDTVCKVRTSKCSVCRISVNTC
+                  CSRTTCSQDTVCKVSKCSVCRIKSVNTC
                 </code>
               </div>
               <div className={`${styles.tile} ${styles.tileAudit}`}>
@@ -768,23 +768,23 @@ export default function Home() {
                   </div>
                   <div>
                     <dt>GRAVY</dt>
-                    <dd>+0.04</dd>
+                    <dd>-0.06</dd>
                   </div>
                   <div>
                     <dt>Boman</dt>
-                    <dd>1.06</dd>
+                    <dd>1.08</dd>
                   </div>
                   <div>
                     <dt>Aliphatic</dt>
-                    <dd>63.45</dd>
+                    <dd>55.36</dd>
                   </div>
                   <div>
                     <dt>Therapeutic</dt>
-                    <dd>76.4</dd>
+                    <dd>83.9</dd>
                   </div>
                   <div>
                     <dt>Safety</dt>
-                    <dd>88.6</dd>
+                    <dd>88.4</dd>
                   </div>
                 </dl>
                 <p>

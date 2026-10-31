@@ -132,7 +132,7 @@ milasen, NEJM 2019). Full version:
 ## 🔬 Watch a prompt become a protein
 
 <p align="center">
-  <img src="assets/CPRVTCSNDTVCKVRTSKCSVCRISVNTC.png" width="380" alt="Structural cartoon of a Muse Spark 1.3-designed knottin">
+  <img src="assets/CSRTTCSQDTVCKVSKCSVCRIKSVNTC.png" width="380" alt="Structural cartoon of a Muse Spark 1.3-designed knottin">
 </p>
 
 *A never-before-seen mini-protein, invented from scratch by Muse Spark 1.3
@@ -143,14 +143,17 @@ intestine. No human drew this molecule and it exists in no natural genome —
 it was reasoned into being, then verified, in a single API call.*
 
 *Technical details: proposed by `muse-spark-1.3-contributor` for target
-"C. difficile TcdA mucosal colonization" (`charge_target` 4) and accepted
-at refinement turn 0 with grammar and audit both passing. 29-aa knottin,
-6-Cys ICK topology (C1–C4, C2–C5, C3–C6), formal charge +4, GRAVY +0.04,
-Boman index 1.06, aliphatic index 63.45; liabilities cleared: trypsin,
-pepsin, chymotrypsin, Asp-Gly, Asn-Gly, Met-oxidation. Compiled to an
-S. boulardii (ATCC MYA-796) MFα1/SLDKR secretion cassette (CAI 0.989,
-restriction scrub clean, 422-bp gBlock). Mature sequence:
-`CPRVTCSNDTVCKVRTSKCSVCRISVNTC` (also the image filename). Structural
+"C. difficile TcdA mucosal colonization" (`charge_target` 4), repaired by
+the compiler from the original draft (clearing a Kex2 site, an
+N-glycosylation sequon, and an L3 envelope fault), and accepted with
+grammar and audit both passing. 28-aa knottin, 6-Cys ICK topology (C1–C4,
+C2–C5, C3–C6), formal charge +4, GRAVY -0.061, Boman index 1.075,
+aliphatic index 55.36, therapeutic index 83.91, safety index 88.37;
+liabilities cleared: trypsin, pepsin, chymotrypsin, Asp-Gly, Asn-Gly,
+Met-oxidation. Compiled to an S. boulardii (ATCC MYA-796) MFα1/SLDKR
+secretion cassette (CAI 0.9865, restriction scrub clean, 419-bp gBlock,
+SB-KNOT-1V315H). Mature sequence:
+`CSRTTCSQDTVCKVSKCSVCRIKSVNTC` (also the image filename). Structural
 cartoon shown for illustration — verify experimentally before any
 therapeutic use.*
 
