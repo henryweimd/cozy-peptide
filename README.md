@@ -401,6 +401,18 @@ per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
   Built for CRO pre-screening of candidate peptides.
 - **`GET /api/modalities`** (public, no token) — lists the compiler's design
   modalities with length windows, cysteine rules, and hydropathy windows.
+- **`GET /api/recent-peptides?limit=&offset=`** (public) — newest
+  successful runs with candidate, indices, and research status;
+  powers the landing strip and the design page's runs table.
+- **`GET /api/peptide-run?id=`** (public) — one run with its full
+  blobs: parameters, stage trace, candidate, audit, specificity,
+  provenance, research, handoff, and stored structure.
+- **`POST /api/research-report`** — the run's literature brief as a
+  referenced document (Spark-synthesized narrative plus numbered
+  references with URLs); accepts `{runId}` or an inline
+  `{target, brief, evidence}` payload. **`POST
+  /api/research-report/docx`** returns the same brief as a
+  downloadable `.docx` file.
 
 ### Try it in the browser
 
@@ -459,6 +471,26 @@ services. Production note: `api.esmatlas.com` is a shared public
 endpoint with rate limits of its own. The viewer retries cleanly on
 429s; for batch inference over many candidates, prefer queuing folds
 with backoff (or a self-hosted ESMFold) over parallel bursts.
+
+## 🗄️ The run ledger remembers everything
+
+With Supabase configured, every generation — web or API, success or
+failure — lands in the `peptide_runs` table with its request
+parameters, stage-by-step trace, candidate, symbolic audit,
+specificity review, refinement provenance, research brief, lab
+handoff, and (once viewed) the ESMFold structure. Literature
+evidence lands alongside as first-class `research_citations` rows so
+titles and URLs survive independently of the brief prose. All writes
+are best-effort: a dead or unmigrated database degrades to warnings,
+never request faults.
+
+That ledger powers the design page's **Recent designs** table (ten
+at a time with a pager), where any past run reopens as the full
+pipeline output — status timeline, 3D structure, downloads — plus
+the **literature brief** reader, which synthesizes the stored
+citations into a referenced document downloadable as `.docx`, `.html`,
+or print PDF. Schema lives in `supabase/migrations/`; apply each
+file once in the Supabase SQL editor.
 
 ## Run the compiler locally
 
