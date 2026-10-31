@@ -29,6 +29,33 @@ is needed.
 Disease target in, lab-ready DNA out — with a full audit trail anyone can
 inspect.
 
+## The language of life
+
+We think of language models as predictors of words. But words are not the
+only language — and arguably not the most important one. The language of
+life is written in DNA, translated into amino acids, and strung into
+proteins: the molecular machines that digest food, fight infection, and
+build bodies. If amino acids are words, proteins are the sentences of
+life — and most random sentences are gibberish.
+
+This project teaches Muse Spark 1.3 to write in that language. Science long
+ago assigned every amino acid a single-letter abbreviation — A, C, D, E…
+— which means a protein is literally a string of text. cozy-peptide adapts
+Muse Spark to generate not essays or code, but text-as-amino-acids:
+candidate protein sentences, composed under the grammatical constraints of
+one of nature's toughest architectures, the knottin.
+
+And just as English has grammar separating sense from nonsense, proteins
+have a grammar too — cysteine knots must close, charges must balance,
+fragile motifs must be absent. So every AI-written sentence is compiled:
+parsed against the knottin loop grammar, audited for stability and safety,
+and either accepted or returned with compiler diagnostics for revision.
+Muse Spark drafts; the compiler edits; only fluent, grammatical,
+manufacturable proteins survive.
+
+A language model that writes valid sentences in the language of life is not
+a chatbot trick. It is a drug-discovery engine.
+
 ## Why it matters
 
 - **Designed, not discovered.** Drug hunting today means screening libraries

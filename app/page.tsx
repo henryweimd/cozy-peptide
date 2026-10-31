@@ -105,6 +105,31 @@ export default function Home() {
           </ul>
         </section>
 
+        <section aria-labelledby="language">
+          <h2 id="language">The language of life</h2>
+          <p>
+            We think of language models as predictors of words. But the
+            most important language isn&apos;t made of words — it&apos;s
+            written in DNA, translated into amino acids, and strung into
+            proteins. If amino acids are words, proteins are the sentences
+            of life.
+          </p>
+          <p>
+            Science gave every amino acid a single-letter abbreviation, so
+            a protein is literally text — and cozy-peptide lets Muse Spark
+            1.3 write in that language. Every AI-written sentence is then
+            compiled: knot grammar, charge, stability, safety. Drafts that
+            don&apos;t make sense get edited until they do.
+          </p>
+          <p>
+            <strong>
+              A model that writes fluent sentences in the language of life
+              isn&apos;t a chatbot trick — it&apos;s a drug-discovery
+              engine.
+            </strong>
+          </p>
+        </section>
+
         <section aria-labelledby="pipeline">
           <h2 id="pipeline">How it works</h2>
           <ol className={styles.pipeline}>
