@@ -14,6 +14,7 @@ import {
   optimizePayloadCds,
 } from "./codon-optimizer";
 import { computeFormalCharge, computeIsoelectricPoint } from "./symbolic-auditor";
+import { type Modality, specForModality } from "./modality";
 
 /**
  * 85-aa Saccharomyces cerevisiae MF-alpha-1 pre-pro secretion leader
@@ -200,11 +201,15 @@ export function constructTag(mature: string): string {
  * arms, biophysics, restriction-scrub verification, and a vendor-ready
  * synthesis order payload.
  */
-export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
+export function buildLabHandoff(
+  matureSeq: string,
+  modality: Modality = "knottin-6c"
+): LabHandoffManifest {
   const mature = matureSeq.trim().toUpperCase();
   if (mature.length === 0) {
     throw new Error("buildLabHandoff: empty mature sequence.");
   }
+  const spec = specForModality(modality);
 
   const precursor = `${ALPHA_FACTOR_LEADER_85}${mature}`;
   const { dna: cdna } = optimizeForSboulardii(precursor);
@@ -219,7 +224,7 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
 
   return {
     mature_fasta: toFasta(
-      `mature_knottin length=${mature.length} charge=${computeFormalCharge(mature)}`,
+      `mature_${spec.payloadNoun} length=${mature.length} charge=${computeFormalCharge(mature)}`,
       mature
     ),
     precursor_fasta: toFasta(
@@ -246,7 +251,8 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
       gibson_arm_length: GIBSON_ARM_5.length,
       cai,
       restriction_site_check: residualSite ?? "clean",
-      disulfide_topology: "C1-C4,C2-C5,C3-C6",
+      disulfide_topology:
+        modality === "knottin-6c" ? "C1-C4,C2-C5,C3-C6" : spec.topologyLabel,
       mature_cys_count: countResidues(mature, "C"),
       mature_formal_charge: computeFormalCharge(mature),
       stop_codon_note:
@@ -262,7 +268,7 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
       sites_verified: [...RESTRICTION_SITES],
     },
     synthesis_order: {
-      sequence_name: `SB-KNOT-${constructTag(mature)}`,
+      sequence_name: `${spec.idPrefix}${constructTag(mature)}`,
       dna_length: dnaGblock.length,
       gc_percent: gcPercent,
       volume: "500 ng lyophilized dsDNA fragment",
@@ -331,7 +337,10 @@ function scrubPayloadJunctions(payloadCds: string, mature: string): string {
  * payload CDS, dual stop codon, and the CYC1 terminator — verified free
  * of Golden Gate / cloning sites.
  */
-export function buildCloningPayload(matureSeq: string): CloningPayload {
+export function buildCloningPayload(
+  matureSeq: string,
+  modality: Modality = "knottin-6c"
+): CloningPayload {
   const mature = matureSeq.trim().toUpperCase();
   if (mature.length === 0) {
     throw new Error("buildCloningPayload: empty mature sequence.");
@@ -345,7 +354,7 @@ export function buildCloningPayload(matureSeq: string): CloningPayload {
 
   return {
     dna_sequence: payloadCds,
-    cassette_format: CASSETTE_FORMAT,
+    cassette_format: specForModality(modality).cassetteFormat,
     leader_dna_5flank: LEADER_CDS_5FLANK,
     payload_cds: payloadCds,
     stop_codon: DUAL_STOP_CODON,

@@ -98,7 +98,9 @@ section below is a full tab there.
 
 **cozy-peptide wraps Muse Spark.** A raw model proposes; most proposals
 would fail in a real body. Around the model sits a compiler that proves
-each design — knot, charge, safety — before anything touches a cell:
+each design — structure, safety, therapeutic promise — before anything
+touches a cell. Four scaffold modalities, from the flagship 6-cysteine
+knottin down to simple linear peptides:
 
 ```text
 name the disease → [ cozy-peptide [ compiler [ Muse Spark ] ] ] → yeast cassette
@@ -165,37 +167,57 @@ flowchart LR
 ```
 
 1. **Ingestion** — `POST /api/generate-peptide` accepts a therapeutic `target`,
-   optional `mechanism`, and optional integer `charge_target` (1, 2, 3, or 4).
-2. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) — the Contributor
-   API proposes knottin *secretion payloads* for continuous *S. boulardii*
-   expression (MFalpha1 pre-pro leader) under a context-sensitive loop-grammar
-   paradigm (`C1-C4, C2-C5, C3-C6 ICK` topology, canonical loop envelopes),
-   anchored by few-shot natural knottins (EETI-II, MCoTI-II) for cysteine
-   pacing.
-3. **Deterministic Symbolic Compiler** (`lib/symbolic-auditor.ts`,
-   `lib/protein-grammar.ts`) — each proposal is audited for:
-   - Length 28-36 aa with **6-Cys parity** and canonical **ICK loop
-     envelopes** (L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10)
+   optional `mechanism`, optional integer `charge_target` (1, 2, 3, or 4),
+   and optional `modality` (`knottin-6c` default, `disulfide-4c`,
+   `disulfide-2c`, or `linear`).
+2. **System prompt steering** (`lib/prompt-steering.ts`) — the system infers
+   the therapeutic target class (bacterial colonization, toxin blockade,
+   barrier repair, inflammation, pain/motility, metabolic, general) and
+   authors the brief: per-class design directives plus a non-negotiable
+   safety contract. The caller names the disease; the system engineers the
+   rest, threading the advisory `mechanism` note through.
+3. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) — the Contributor
+   API proposes peptide *secretion payloads* for continuous *S. boulardii*
+   expression (MFalpha1 pre-pro leader) under the modality grammar
+   (knottins: `C1-C4, C2-C5, C3-C6 ICK` topology with canonical loop
+   envelopes, anchored by few-shot natural knottins EETI-II and MCoTI-II
+   for cysteine pacing).
+4. **Deterministic Symbolic Compiler** (`lib/symbolic-auditor.ts`,
+   `lib/protein-grammar.ts`, `lib/modality.ts`) — each proposal is audited for:
+   - Modality topology: knottin 28-36 aa with **6-Cys parity** and canonical
+     **ICK loop envelopes** (L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10);
+     4-Cys 20-36 aa, 2-Cys 12-30 aa with disulfide loop floors; linear
+     8-30 aa cysteine-free
    - **Net charge** exactly matching the requested target, inside the
      **+1…+4 window at pH 7.4**
-   - **GRAVY** hydropathy within [-0.4, 0.1], plus Boman, aliphatic index, pI,
-     mucosal adhesion, cleavage susceptibility, and hydrophobic-run metrics
+   - **GRAVY** hydropathy inside the modality-calibrated window, plus Boman,
+     aliphatic index, pI, mucosal adhesion, cleavage susceptibility, and
+     hydrophobic-run metrics
    - **Bioprocess liability filtering** — zero Kex2 sites (`KR|RR|KK|RK`,
      `PR`), zero N-glycosylation sequons (`N[^P][ST]`), zero exposed
      chymotrypsin sites (`[FYW][^P][KR]`), a clean post-Kex2 N-terminus
-     (never P/F/Y/W), and hydrophobic runs capped at 3 over `[VILMFW]`
-4. **Closed-loop compiler diagnostic feedback** — failures return structured
+     (never P/F/Y/W), hydrophobic runs capped at 3 over `[VILMFW]`, at most
+     one methionine (oxidation), and zero NG deamidation / DG
+     isomerization hotspots
+   - **Therapeutic and safety indices** (0-100, `lib/therapeutic-index.ts`) —
+     deterministic composites of protease resistance, charge and solubility
+     balance, binding potential, mucosal dwell, chemical stability,
+     aggregation margin, and membrane selectivity, reported per candidate
+     and used to rank passing pools
+5. **Closed-loop compiler diagnostic feedback** — failures return structured
    diagnostics with machine-readable failure modes (`KEX2_SITE_DETECTED`,
-   `CHARGE_OUT_OF_BOUNDS`, …) to the proposer for repair at a penalized
-   temperature; the loop runs until a candidate passes or turns are
-   exhausted. Passing pools keep their best candidate by GRAVY centrality
-   and cleavage index, not first-pass order.
-5. **Round-trip specificity review** (`lib/specificity.ts`) — before
+   `CHARGE_OUT_OF_BOUNDS`, `DEAMIDATION_HOTSPOT`, …) plus recurring-fault
+   steering (whatever keeps failing gets fixed first) to the proposer for
+   repair at a penalized temperature; the loop runs until a candidate passes
+   or turns are exhausted. Passing pools keep their best candidate by GRAVY
+   centrality, cleavage index, and therapeutic/safety indices, not
+   first-pass order.
+6. **Round-trip specificity review** (`lib/specificity.ts`) — before
    acceptance, the top candidate goes back to Muse Spark 1.3 *blinded*,
    which must independently rank the intended target first and flag no
    high-risk off-targets (hERG, human ion channels, hemolysis, clotting).
    Mismatches trigger revision; the verdict ships in the response.
-6. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
+7. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
    candidates are compiled for *S. boulardii* (ATCC MYA-796) with:
    - A ready-to-clone **`cloning_payload`** cassette:
      `MFalpha1-Kex2-Knottin-CYC1term` — 255-nt MFalpha1 5′ flank with the
@@ -217,8 +239,9 @@ flowchart LR
 - **Catalytic-enzyme refusal** — enzyme targets (lactase, polymerase, kinase,
   protease, catalytic triads/pockets, enzyme replacement, and related terms)
   or requests implying folds **>45 aa** are refused with `422 Unprocessable`,
-  since catalytic pockets require large globular folds outside the 28-36 aa
-  knottin modality. The response suggests sourcing a natural homolog instead.
+  since catalytic pockets require large globular folds outside the 8-36 aa
+  short-peptide modalities. The response suggests sourcing a natural homolog
+  instead.
 
 ## Generate a peptide in one API call
 
@@ -234,7 +257,8 @@ curl -X POST http://localhost:3000/api/generate-peptide \
   -d '{
     "target": "Clostridioides difficile colonization in the gut",
     "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
-    "charge_target": 4
+    "charge_target": 4,
+    "modality": "knottin-6c"
   }'
 ```
 
@@ -244,7 +268,8 @@ Sample payload:
 {
   "target": "Clostridioides difficile colonization in the gut",
   "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
-  "charge_target": 4
+  "charge_target": 4,
+  "modality": "knottin-6c"
 }
 ```
 

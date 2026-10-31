@@ -4,6 +4,7 @@ import type {
   VerificationReport,
 } from "../types/peptide";
 import { parseKnottinGrammar } from "./protein-grammar";
+import { type Modality, specForModality } from "./modality";
 
 export const KNOTTIN_MIN_LENGTH = 28;
 export const KNOTTIN_MAX_LENGTH = 36;
@@ -24,6 +25,12 @@ export const CHYMOTRYPSIN_EXPOSED_PATTERN = /[FYW][^P][KR]/;
 export const GLYCOSYLATION_SEQUON_PATTERN = /N[^P][ST]/;
 /** Residues forbidden at position 1 (Kex2 N-terminal processing). */
 export const BLOCKED_N_TERMINI = new Set(["P", "F", "Y", "W"]);
+/** Maximum methionines per payload (oxidation risk). */
+export const MAX_METHIONINES = 1;
+/** Asparagine-glycine deamidation hotspot. */
+export const DEAMIDATION_PATTERN = /NG/;
+/** Aspartate-glycine isomerization hotspot. */
+export const ISOMERIZATION_PATTERN = /DG/;
 
 /** Full Kyte-Doolittle hydropathy scale. */
 export const KYTE_DOOLITTLE: Record<string, number> = {
@@ -305,27 +312,32 @@ export function computeMaxResidueFraction(sequence: string): number {
 }
 
 /**
- * Deterministic symbolic verification of one knottin secretion payload,
+ * Deterministic symbolic verification of one peptide secretion payload,
  * plus the developability ledger (Boman, aliphatic, pI, mucosal adhesion,
  * cleavage, hydrophobic runs).
  *
- * Pass/fail invariants:
- * - Length 28-36 aa
- * - Exactly 6 cysteines (canonical C1-C4, C2-C5, C3-C6 knottin)
+ * Pass/fail invariants (knottin defaults; other modalities substitute
+ * their own length window, cysteine count, and GRAVY window):
+ * - Length inside the modality window (knottin: 28-36 aa)
+ * - Exact cysteine count (knottin: 6, canonical C1-C4/C2-C5/C3-C6)
  * - Formal charge exactly equals the target and sits in [+1, +4]
  * - No Kex2 liabilities: (KR|RR|KK|RK) dibasics and PR
  * - No N-glycosylation sequon N[^P][ST]
  * - No exposed chymotrypsin sites [FYW][^P][KR]
  * - Residue 1 (post-Kex2 N-terminus) is not P, F, Y, or W
  * - No hydrophobic run of 4+ over [VILMFW]
- * - GRAVY strictly within [-0.40, +0.10]
+ * - GRAVY strictly inside the modality window (knottin: [-0.40, +0.10])
+ * - At most one methionine (oxidation risk)
+ * - No NG deamidation or DG isomerization hotspots
  */
 export function auditPeptideCandidate(
   sequence: string,
-  targetCharge: number
+  targetCharge: number,
+  modality: Modality = "knottin-6c"
 ): SymbolicAuditResult {
   const violations: string[] = [];
   const seq = sequence.trim().toUpperCase();
+  const spec = specForModality(modality);
 
   for (const aa of seq) {
     if (!CANONICAL_AA.has(aa)) {
@@ -337,16 +349,19 @@ export function auditPeptideCandidate(
   }
 
   const length = seq.length;
-  if (length < KNOTTIN_MIN_LENGTH || length > KNOTTIN_MAX_LENGTH) {
+  if (length < spec.minLength || length > spec.maxLength) {
     violations.push(
-      `length: expected ${KNOTTIN_MIN_LENGTH}-${KNOTTIN_MAX_LENGTH} aa, got ${length}`
+      `length: expected ${spec.minLength}-${spec.maxLength} aa for ${spec.noun}, got ${length}`
     );
   }
 
   const cysCount = countResidues(seq, "C");
-  if (cysCount !== KNOTTIN_CYS_COUNT) {
+  const expectedCys = spec.cysteines ?? cysCount;
+  if (spec.cysteines !== null && cysCount !== spec.cysteines) {
+    const detail =
+      modality === "knottin-6c" ? " (C1-C4, C2-C5, C3-C6)" : "";
     violations.push(
-      `cysteines: expected exactly ${KNOTTIN_CYS_COUNT} (C1-C4, C2-C5, C3-C6), got ${cysCount}`
+      `cysteines: expected exactly ${expectedCys}${detail}, got ${cysCount}`
     );
   }
 
@@ -403,9 +418,28 @@ export function auditPeptideCandidate(
   const maxResidueFraction = computeMaxResidueFraction(seq);
 
   const gravyScore = computeGravy(seq);
-  if (gravyScore < GRAVY_MIN || gravyScore > GRAVY_MAX) {
+  if (gravyScore < spec.gravyMin || gravyScore > spec.gravyMax) {
     violations.push(
-      `gravy: expected within [${GRAVY_MIN.toFixed(2)}, +${GRAVY_MAX.toFixed(2)}], got ${gravyScore.toFixed(3)}`
+      `gravy: expected within [${spec.gravyMin.toFixed(2)}, +${spec.gravyMax.toFixed(2)}], got ${gravyScore.toFixed(3)}`
+    );
+  }
+
+  const metCount = countResidues(seq, "M");
+  if (metCount > MAX_METHIONINES) {
+    violations.push(
+      `liability_oxidation: ${metCount} methionines exceed the ${MAX_METHIONINES}-residue oxidation cap`
+    );
+  }
+  const deamidation = DEAMIDATION_PATTERN.exec(seq);
+  if (deamidation !== null) {
+    violations.push(
+      `liability_deamidation: 'NG' at index ${deamidation.index} is an asparagine deamidation hotspot`
+    );
+  }
+  const isomerization = ISOMERIZATION_PATTERN.exec(seq);
+  if (isomerization !== null) {
+    violations.push(
+      `liability_isomerization: 'DG' at index ${isomerization.index} is an aspartate isomerization hotspot`
     );
   }
 
@@ -456,6 +490,12 @@ export function auditFailureModes(audit: SymbolicAuditResult): string[] {
       modes.add("HYDROPHOBIC_RUN_TOO_LONG");
     } else if (violation.startsWith("gravy:")) {
       modes.add("GRAVY_OUT_OF_BOUNDS");
+    } else if (violation.startsWith("liability_oxidation:")) {
+      modes.add("OXIDATION_LIABILITY");
+    } else if (violation.startsWith("liability_deamidation:")) {
+      modes.add("DEAMIDATION_HOTSPOT");
+    } else if (violation.startsWith("liability_isomerization:")) {
+      modes.add("ISOMERIZATION_HOTSPOT");
     } else {
       modes.add("AUDIT_VIOLATION");
     }
@@ -506,6 +546,9 @@ export function buildVerificationReport(
     n_terminus_ok: !has("n_terminus:"),
     hydrophobic_runs_ok: !has("liability_aggregation:"),
     gravy_ok: !has("gravy:"),
+    oxidation_clean: !has("liability_oxidation:"),
+    deamidation_clean: !has("liability_deamidation:"),
+    isomerization_clean: !has("liability_isomerization:"),
     ick_topology_ok:
       grammar.valid && !has("length:") && !has("cysteines:"),
     passed: grammar.valid && audit.passed,

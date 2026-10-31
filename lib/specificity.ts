@@ -8,6 +8,7 @@ import {
   META_SPARK_TIMEOUT_MS,
   getMetaSparkApiUrl,
 } from "./spark-config";
+import { type Modality, specForModality } from "./modality";
 
 /**
  * Review token budget. 512 is too small: the model's reasoning trace
@@ -114,11 +115,18 @@ export function flagsHighRisk(offTargets: string[]): string[] {
  */
 export function buildSpecificityPrompt(
   candidate: string,
-  chargeTarget: number
+  chargeTarget: number,
+  modality: Modality = "knottin-6c"
 ): string {
+  const descriptor =
+    modality === "knottin-6c"
+      ? "6-cysteine ICK knot"
+      : specForModality(modality).topologyLabel.toLowerCase();
+  const noun =
+    modality === "knottin-6c" ? "knottin" : specForModality(modality).noun;
   return [
-    "You are a peptide pharmacologist reviewing a candidate knottin.",
-    `Candidate: ${candidate} (${candidate.length} amino acids, 6-cysteine ICK knot, formal charge +${chargeTarget}).`,
+    `You are a peptide pharmacologist reviewing a candidate ${noun}.`,
+    `Candidate: ${candidate} (${candidate.length} amino acids, ${descriptor}, formal charge +${chargeTarget}).`,
     "1. List its 3 most likely molecular targets in the human gut, most likely first.",
     "Format each on its own line exactly as: TARGET: <name> — <one-line rationale>",
     "2. List any concerning off-target activity.",
@@ -221,7 +229,8 @@ export async function checkSpecificity(
   candidate: string,
   intendedTarget: string,
   chargeTarget: number,
-  timeoutMs = META_SPARK_TIMEOUT_MS
+  timeoutMs = META_SPARK_TIMEOUT_MS,
+  modality: Modality = "knottin-6c"
 ): Promise<SpecificityReport> {
   const apiKey = process.env.META_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) {
@@ -233,12 +242,11 @@ export async function checkSpecificity(
     messages: [
       {
         role: "system",
-        content:
-          "You are a peptide pharmacologist reviewing candidate knottins with strict output formatting.",
+        content: `You are a peptide pharmacologist reviewing candidate ${modality === "knottin-6c" ? "knottins" : `${specForModality(modality).noun}s`} with strict output formatting.`,
       },
       {
         role: "user",
-        content: buildSpecificityPrompt(candidate, chargeTarget),
+        content: buildSpecificityPrompt(candidate, chargeTarget, modality),
       },
     ],
     temperature: SPECIFICITY_TEMPERATURE,

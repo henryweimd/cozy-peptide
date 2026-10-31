@@ -1,13 +1,18 @@
 import { z } from "zod";
 
 /**
- * Incoming client request for a gut-delivered knottin (28-36 aa).
+ * Incoming client request for a gut-delivered peptide. Defaults to the
+ * flagship knottin modality; callers may request simpler disulfide or
+ * linear scaffolds instead.
  */
 export const PeptideRequestSchema = z.object({
   target: z.string().min(1).max(500),
   mechanism: z.string().max(2000).optional(),
   charge_target: z
     .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+    .optional(),
+  modality: z
+    .enum(["knottin-6c", "disulfide-4c", "disulfide-2c", "linear"])
     .optional(),
 });
 export type PeptideRequest = z.infer<typeof PeptideRequestSchema>;
@@ -136,6 +141,8 @@ export const SymbolicAuditResultSchema = z.object({
   cleavage_susceptibility_index: z.number(),
   hydrophobic_run_max: z.number().int(),
   max_residue_fraction: z.number(),
+  therapeutic_index: z.number().optional(),
+  safety_index: z.number().optional(),
 });
 export type SymbolicAuditResult = z.infer<typeof SymbolicAuditResultSchema>;
 
@@ -171,6 +178,9 @@ export const VerificationReportSchema = z.object({
   n_terminus_ok: z.boolean(),
   hydrophobic_runs_ok: z.boolean(),
   gravy_ok: z.boolean(),
+  oxidation_clean: z.boolean().optional(),
+  deamidation_clean: z.boolean().optional(),
+  isomerization_clean: z.boolean().optional(),
   ick_topology_ok: z.boolean(),
   passed: z.boolean(),
   failure_modes: z.array(z.string()),
@@ -209,8 +219,8 @@ export const CandidatePayloadSchema = z.object({
   id: z.string(),
   sequence: z.string(),
   length: z.number().int(),
-  cysteine_indices: z.array(z.number().int()).length(6),
-  loop_segments: z.array(z.string()).length(5),
+  cysteine_indices: z.array(z.number().int()).max(6),
+  loop_segments: z.array(z.string()).max(5),
   biophysical_profile: BiophysicalProfileSchema,
   cloning_payload: CloningPayloadSchema,
   verification_report: VerificationReportSchema,

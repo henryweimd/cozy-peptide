@@ -5,13 +5,18 @@ import type {
   SpecificityReport,
   SymbolicAuditResult,
 } from "../types/peptide";
-import { cysteineIndices, parseKnottinGrammar } from "./protein-grammar";
+import { cysteineIndices } from "./protein-grammar";
+import {
+  DEFAULT_MODALITY,
+  type Modality,
+  loopSegmentsForModality,
+  parseModalityGrammar,
+  specForModality,
+} from "./modality";
 import { buildVerificationReport } from "./symbolic-auditor";
 import { buildCloningPayload, constructTag } from "./lab-handoff";
 
-const MODALITY = "engineered_knottin_microprotein";
 const LINGUISTIC_PARADIGM = "context_sensitive_loop_grammar";
-const TOPOLOGY_LABEL = "C1-C4, C2-C5, C3-C6 ICK";
 const PROPOSER_MODEL = "Meta-Spark-1.3-Contributor";
 
 /** Human-readable liability names cleared by the strict audit motifs. */
@@ -48,9 +53,11 @@ export function buildNeurosymbolicPayload(
   candidate: string,
   audit: SymbolicAuditResult,
   history: RefinementTurn[],
-  manifest: LabHandoffManifest
+  manifest: LabHandoffManifest,
+  modality: Modality = DEFAULT_MODALITY
 ): ApiResponse {
-  const grammar = parseKnottinGrammar(candidate);
+  const grammar = parseModalityGrammar(candidate, modality);
+  const spec = specForModality(modality);
   const accepted = history.find((entry) => entry.disposition === "accepted");
   const specificity: SpecificityReport = accepted?.specificity ?? {
     checked: false,
@@ -65,7 +72,7 @@ export function buildNeurosymbolicPayload(
   return {
     success: true,
     target,
-    modality: MODALITY,
+    modality: spec.responseId,
     specificity,
     neurosymbolic_provenance: {
       proposer_model: PROPOSER_MODEL,
@@ -74,27 +81,21 @@ export function buildNeurosymbolicPayload(
       refinement_trace: history,
     },
     candidate: {
-      id: `SB-KNOT-${constructTag(candidate)}`,
+      id: `${spec.idPrefix}${constructTag(candidate)}`,
       sequence: candidate,
       length: candidate.length,
       cysteine_indices: cysteineIndices(candidate),
-      loop_segments: [
-        grammar.loops["L1"] ?? "",
-        grammar.loops["L2"] ?? "",
-        grammar.loops["L3"] ?? "",
-        grammar.loops["L4"] ?? "",
-        grammar.loops["L5"] ?? "",
-      ],
+      loop_segments: loopSegmentsForModality(grammar, modality),
       biophysical_profile: {
         net_charge_ph74: audit.net_charge_ph74,
         isoelectric_point: audit.isoelectric_point,
         gravy_score: audit.gravy_score,
         boman_index: audit.boman_index,
       },
-      cloning_payload: buildCloningPayload(candidate),
+      cloning_payload: buildCloningPayload(candidate, modality),
       verification_report: buildVerificationReport(grammar, audit),
       mature_sequence: candidate,
-      topology: TOPOLOGY_LABEL,
+      topology: spec.topologyLabel,
       grammar_breakdown: grammar.loops,
     },
     symbolic_audit: {
@@ -110,6 +111,8 @@ export function buildNeurosymbolicPayload(
       isoelectric_point: audit.isoelectric_point,
       mucosal_adhesion_ratio: audit.mucosal_adhesion_ratio,
       cleavage_susceptibility_index: audit.cleavage_susceptibility_index,
+      therapeutic_index: audit.therapeutic_index,
+      safety_index: audit.safety_index,
       liabilities_cleared: liabilitiesCleared(candidate),
       violations: audit.violations,
     },

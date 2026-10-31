@@ -71,5 +71,20 @@
   "notes": [
    "static sweep 0 FAIL 0 WARN; tests 27/27; desktop+mobile section shots verified"
   ]
+ },
+ {
+  "date": "2026-10-31",
+  "mode": "feature",
+  "scope": "api+page+docs",
+  "entry": "/",
+  "theme": "cobalt",
+  "added": [
+   "therapeutic compiler: system prompt steering, 4 design modalities, oxidation/deamidation/isomerization gates, therapeutic+safety indices",
+   "page: pipeline steps, API band modality field, bento indices, structure/safety/potency trio",
+   "README: steering + modality docs, renumbered pipeline"
+  ],
+  "notes": [
+   "tests 37/37; source lint clean; static sweep 0 FAIL; section shots verified"
+  ]
  }
 ]

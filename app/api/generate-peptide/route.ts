@@ -83,8 +83,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { target, mechanism, charge_target } = parsed.data;
+  const { target, mechanism, charge_target, modality } = parsed.data;
   const chargeTarget = charge_target ?? 4;
+  const designModality = modality ?? "knottin-6c";
   const screeningText = `${target}\n${mechanism ?? ""}`.trim();
 
   const safety = validateRequestSafety(
@@ -97,10 +98,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         {
           success: false,
           error:
-            "Unprocessable target: catalytic enzymes are outside the knottin modality.",
+            "Unprocessable target: catalytic enzymes are outside the short-peptide modalities.",
           details: {
             diagnostic: safety.reason,
-            modality: "gut-delivered knottins, 28-36 amino acids",
+            modality: "gut-delivered peptides, 8-36 amino acids",
             guidance: CATALYTIC_ENZYME_GUIDANCE,
             suggested_alternative:
               "Source the enzyme fold from a natural homolog (UniProt/BLAST) and express it directly.",
@@ -121,8 +122,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const { candidate, audit, refinementHistory } =
-      await generateVerifiedPeptide(target, chargeTarget);
-    const manifest = buildLabHandoff(candidate);
+      await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
+        modality: designModality,
+        mechanism,
+      });
+    const manifest = buildLabHandoff(candidate, designModality);
     return json(
       buildNeurosymbolicPayload(
         target,
@@ -130,7 +134,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         candidate,
         audit,
         refinementHistory,
-        manifest
+        manifest,
+        designModality
       ),
       200
     );

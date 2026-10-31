@@ -27,7 +27,7 @@ const TOXIC_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Catalytic-enzyme targets that cannot be served as short de novo knottins.
+ * Catalytic-enzyme targets that cannot be served as short de novo peptides.
  * Catalytic pockets require large globular folds from natural homologs.
  */
 const CATALYTIC_ENZYME_PATTERNS: RegExp[] = [
@@ -77,10 +77,10 @@ export function extractRequestedLength(text: string): number | undefined {
 
 export const CATALYTIC_ENZYME_GUIDANCE =
   "Catalytic pockets require large globular folds sourced from natural " +
-  "homologs (UniProt), not short de novo knottins (28-36 aa). Gut-delivered " +
-  "knottins are suited to binding, blockade, or local modulation of a " +
+  "homologs (UniProt), not short de novo peptides (8-36 aa). Gut-delivered " +
+  "peptides are suited to binding, blockade, or local modulation of a " +
   "target, not to de novo catalysis. For enzyme function, express a natural " +
-  "homolog identified via UniProt/BLAST instead of requesting a knottin.";
+  "homolog identified via UniProt/BLAST instead of requesting a peptide.";
 
 /**
  * Upfront safety screen for an incoming generation request.
@@ -103,7 +103,7 @@ export function validateRequestSafety(
         category: "biosecurity",
         reason:
           `Request blocked by the biosecurity filter: the target matches a prohibited toxic-agent motif (${pattern.source}). ` +
-          "This API only designs therapeutic gut-delivered knottins and refuses toxin, translocation-domain, and bioweapon-adjacent requests.",
+          "This API only designs therapeutic gut-delivered peptides and refuses toxin, translocation-domain, and bioweapon-adjacent requests.",
       };
     }
   }
@@ -114,7 +114,7 @@ export function validateRequestSafety(
       safe: false,
       category: "catalytic-enzyme",
       reason:
-        `Requested length ${lengthHint} aa exceeds the knottin modality (28-36 aa) and implies a catalytic enzyme fold. ` +
+        `Requested length ${lengthHint} aa exceeds the short-peptide modalities (8-36 aa) and implies a catalytic enzyme fold. ` +
         CATALYTIC_ENZYME_GUIDANCE,
     };
   }

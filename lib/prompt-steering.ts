@@ -1,0 +1,240 @@
+import type { RefinementTurn } from "../types/peptide";
+import type { Modality } from "./modality";
+import { specForModality } from "./modality";
+
+/**
+ * Therapeutic target classes inferred from the request text. The system
+ * steers every proposal with the matching design brief — the caller only
+ * names the disease.
+ */
+export type TargetClass =
+  | "bacterial-colonization"
+  | "toxin-blockade"
+  | "barrier-repair"
+  | "inflammation"
+  | "pain-motility"
+  | "metabolic"
+  | "general";
+
+const CLASS_PATTERNS: Array<{ cls: TargetClass; patterns: RegExp[] }> = [
+  {
+    cls: "bacterial-colonization",
+    patterns: [
+      /clostrid/i,
+      /difficile/i,
+      /c\.?\s*diff/i,
+      /colonization/i,
+      /e\.?\s*coli/i,
+      /etec/i,
+      /ehec/i,
+      /salmonella/i,
+      /shigella/i,
+      /campylobacter/i,
+      /h\.?\s*pylori/i,
+      /pylori/i,
+      /klebsiella/i,
+      /vancomycin-resistant/i,
+      /\bvre\b/i,
+      /mrsa/i,
+      /biofilm/i,
+      /adhesin/i,
+      /fimbri/i,
+    ],
+  },
+  {
+    cls: "toxin-blockade",
+    patterns: [
+      /tcda/i,
+      /tcdb/i,
+      /toxin\s*[ab]\b/i,
+      /toxin.?mediated/i,
+      /enterotoxin/i,
+      /shiga-like/i,
+      /neutraliz/i,
+      /antitoxin/i,
+    ],
+  },
+  {
+    cls: "barrier-repair",
+    patterns: [
+      /barrier/i,
+      /leaky\s*gut/i,
+      /tight\s*junction/i,
+      /claudin/i,
+      /occludin/i,
+      /zonulin/i,
+      /mucosal\s*healing/i,
+      /mucositis/i,
+      /ulcer/i,
+      /fistula/i,
+    ],
+  },
+  {
+    cls: "inflammation",
+    patterns: [
+      /inflam/i,
+      /\bibd\b/i,
+      /crohn/i,
+      /colitis/i,
+      /tnf/i,
+      /cytokine/i,
+      /interleukin/i,
+      /autoimmun/i,
+    ],
+  },
+  {
+    cls: "pain-motility",
+    patterns: [
+      /\bibs\b/i,
+      /irritable/i,
+      /\bpain\b/i,
+      /visceral/i,
+      /motility/i,
+      /constipation/i,
+      /diarrhea/i,
+      /diarrhoea/i,
+      /cramp/i,
+      /spasm/i,
+      /protease-activated receptor/i,
+    ],
+  },
+  {
+    cls: "metabolic",
+    patterns: [
+      /diabet/i,
+      /obes/i,
+      /glp-?1/i,
+      /incretin/i,
+      /metabolic/i,
+      /glycemi/i,
+      /insulin/i,
+      /bile\s*acid/i,
+      /cholesterol/i,
+      /lipid/i,
+    ],
+  },
+];
+
+/**
+ * Infers the therapeutic target class from the target and mechanism
+ * text. First matching class wins; order runs from most to least
+ * specific. Falls back to `general`.
+ */
+export function inferTargetClass(
+  target: string,
+  mechanism?: string
+): TargetClass {
+  const text = `${target}\n${mechanism ?? ""}`;
+  for (const entry of CLASS_PATTERNS) {
+    if (entry.patterns.some((pattern) => pattern.test(text))) {
+      return entry.cls;
+    }
+  }
+  return "general";
+}
+
+const CLASS_BRIEFS: Record<TargetClass, string> = {
+  "bacterial-colonization":
+    "Therapeutic brief (bacterial colonization): bias cationic residues toward the most solvent-exposed loop to engage anionic bacterial surfaces; favor amphipathic balance over raw hydrophobicity; keep the scaffold protease-tight since the gut lumen is the battlefield.",
+  "toxin-blockade":
+    "Therapeutic brief (toxin blockade): design a binding interface, never a toxin fragment — shape a stable loop that can occlude a toxin receptor-binding surface; prioritize loop rigidity and charge complementarity to the toxin target; no translocation-domain content of any kind.",
+  "barrier-repair":
+    "Therapeutic brief (barrier repair): favor gentle mucosal retention — moderate cationic charge spread across loops, low hydrophobicity, minimal protease footprint — so the peptide lingers at the epithelium; avoid anything membrane-lytic.",
+  inflammation:
+    "Therapeutic brief (inflammation): aim for a compact, stable binding surface that can modulate an inflammatory mediator locally; keep immunogenic risk low — no aggregation-prone runs, no deamidation hotspots; stability first, since inflamed mucosa is protease-rich.",
+  "pain-motility":
+    "Therapeutic brief (pain/motility): design for local luminal or mucosal action with minimal systemic exposure risk; stable, compact, and clean — no channel-blocking pharmacophores, no hemolytic character; the peptide must calm the gut, never excite it.",
+  metabolic:
+    "Therapeutic brief (metabolic): favor receptor-engaging loop geometry with high stability for sustained luminal presence; keep the design soluble and non-aggregating; charge placement should aid mucosal dwell without membrane disruption.",
+  general:
+    "Therapeutic brief (general): maximize specific binding potential with a well-ordered loop display; keep charge, solubility, and protease resistance balanced for gut delivery; stability and safety dominate every trade-off.",
+};
+
+/**
+ * Safety-first instruction block injected into every proposal prompt.
+ * Kept free of human-harm example terms: the upstream API rejects such
+ * prompts with content-policy violations, so the preamble steers by
+ * exclusion without naming toxins, channels, or hemolysis triggers.
+ */
+export const SAFETY_PREAMBLE = [
+  "Safety contract (non-negotiable): gut-stable, non-toxic design for local mucosal action only.",
+  "No toxin, venom, or translocation-domain content; no membrane-lytic or pore-forming character.",
+  "No activity against human cardiac, neural, or clotting pathways; flag and avoid any such pharmacophore.",
+  "Prefer stable, soluble, non-aggregating compositions a human gut can tolerate continuously.",
+].join(" ");
+
+/**
+ * Builds the system-authored steering brief for a request: target-class
+ * design directives plus the safety preamble. The caller names the
+ * disease; the system engineers the rest.
+ */
+export function buildSteeringBrief(
+  target: string,
+  mechanism?: string
+): { targetClass: TargetClass; brief: string } {
+  const targetClass = inferTargetClass(target, mechanism);
+  const parts = [CLASS_BRIEFS[targetClass], SAFETY_PREAMBLE];
+  if (mechanism !== undefined && mechanism.trim().length > 0) {
+    parts.push(`Caller mechanism note (advisory, constraints win): ${mechanism.trim()}`);
+  }
+  return { targetClass, brief: parts.join(" ") };
+}
+
+/**
+ * Constraint block for a design modality, in prompt prose. Knottin text
+ * is kept byte-identical to the legacy prompt lines so existing prompt
+ * contracts hold; other modalities get their own windows.
+ */
+export function constraintBlockForModality(
+  modality: Modality,
+  chargeTarget: number
+): string[] {
+  if (modality === "knottin-6c") {
+    return [
+      "Knottin cysteine topology: C-X(3,7)-C-X(3,6)-C-X(1,4)-C-X(2,6)-C-X(4,10)-C (exactly 6 cysteines, C1-C4 / C2-C5 / C3-C6); total length 28-36 amino acids.",
+      "Zero Kex2 internal cleavage: no KR, RR, PR, or KK motifs anywhere (they fragment during Golgi processing); also no RK dibasic.",
+      "Zero N-linked glycosylation: no N[^P][ST] sequon (yeast hyper-mannosylation would occlude binding loops).",
+      "Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
+      `Charge and hydropathy: net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4 for gentle mucosal retention); Kyte-Doolittle GRAVY between -0.40 and +0.10; hydrophobic runs over [VILMFW] at most 3 consecutive residues.`,
+      "No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
+      "No deamidation (NG) or isomerization (DG) hotspots; at most one methionine (oxidation risk).",
+    ];
+  }
+  const spec = specForModality(modality);
+  const cysLine =
+    spec.cysteines === 0
+      ? "Linear topology: no cysteines at all (unpaired thiols oxidize and dimerize); total length 8-30 amino acids."
+      : `Disulfide topology: exactly ${spec.cysteines} cysteines with at least ${spec.minCysSpacing} residues between consecutive cysteines; total length ${spec.minLength}-${spec.maxLength} amino acids.`;
+  return [
+    cysLine,
+    "Zero Kex2 internal cleavage: no KR, RR, PR, or KK motifs anywhere (they fragment during Golgi processing); also no RK dibasic.",
+    "Zero N-linked glycosylation: no N[^P][ST] sequon (yeast hyper-mannosylation would occlude binding loops).",
+    "Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
+    `Charge and hydropathy: net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4 for gentle mucosal retention); Kyte-Doolittle GRAVY between ${spec.gravyMin.toFixed(2)} and +${spec.gravyMax.toFixed(2)}; hydrophobic runs over [VILMFW] at most 3 consecutive residues.`,
+    "No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
+    "No deamidation (NG) or isomerization (DG) hotspots; at most one methionine (oxidation risk).",
+  ];
+}
+
+/**
+ * Repair steering: summarizes failure modes across the refinement
+ * history so the repair prompt prioritizes whatever keeps failing.
+ * Returns null when there is no history to learn from.
+ */
+export function buildRepairSteering(
+  history: RefinementTurn[]
+): string | null {
+  const counts = new Map<string, number>();
+  for (const entry of history) {
+    for (const mode of entry.failure_modes ?? []) {
+      counts.set(mode, (counts.get(mode) ?? 0) + 1);
+    }
+  }
+  if (counts.size === 0) return null;
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const top = ranked
+    .slice(0, 3)
+    .map(([mode, count]) => `${mode} (x${count})`)
+    .join(", ");
+  return `Repair steering: across ${history.length} prior turn(s) the recurring faults are ${top}. Fix these first; do not trade a recurring fault for a new one.`;
+}

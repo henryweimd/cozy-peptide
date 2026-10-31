@@ -8,7 +8,9 @@ import {
   type SymbolicAuditResult,
 } from "../types/peptide";
 import {
+  BLOCKED_N_TERMINI,
   HYDROPHOBIC_RUN_SET,
+  MAX_METHIONINES,
   auditFailureModes,
   auditPeptideCandidate,
   grammarFailureModes,
@@ -18,7 +20,18 @@ import {
   summarizeSpecificity,
   uncheckedSpecificity,
 } from "./specificity";
-import { parseKnottinGrammar } from "./protein-grammar";
+import {
+  DEFAULT_MODALITY,
+  type Modality,
+  parseModalityGrammar,
+  specForModality,
+} from "./modality";
+import {
+  buildRepairSteering,
+  buildSteeringBrief,
+  constraintBlockForModality,
+} from "./prompt-steering";
+import { assessCandidate } from "./therapeutic-index";
 import {
   META_SPARK_MODEL,
   META_SPARK_DEFAULT_URL,
@@ -79,84 +92,136 @@ function scaffoldLines(): string[] {
 }
 
 /**
- * Structured prompt instructing Meta Spark 1.3 to propose 3-5 knottin
- * secretion payloads conforming to the canonical ICK cysteine topology
- * and the MFalpha1 bioprocess constraints.
+ * Structured prompt instructing Meta Spark 1.3 to propose 3-5 peptide
+ * secretion payloads for a design modality, defaulting to the canonical
+ * ICK knottin topology with MFalpha1 bioprocess constraints. An optional
+ * system-authored steering brief (target-class directives plus the safety
+ * contract) focuses proposals on therapeutic potential.
  */
 export function buildKnottinPrompt(
   target: string,
-  chargeTarget: number
+  chargeTarget: number,
+  steering?: string,
+  modality: Modality = "knottin-6c"
 ): string {
-  return [
-    "You are Meta Spark 1.3, a protein-design contributor for therapeutic gut-delivered knottins.",
+  const spec = specForModality(modality);
+  const lines = [
+    `You are Meta Spark 1.3, a protein-design contributor for therapeutic gut-delivered ${modality === "knottin-6c" ? "knottins" : `${spec.noun}s`}.`,
     `Target: ${target}.`,
-    "Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) optimized specifically as 6-cysteine knottin payloads (ICK topology C1-C4 / C2-C5 / C3-C6) for continuous secretion by eukaryotic probiotics (Saccharomyces boulardii via the MFalpha1 pre-pro leader).",
+    modality === "knottin-6c"
+      ? "Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) optimized specifically as 6-cysteine knottin payloads (ICK topology C1-C4 / C2-C5 / C3-C6) for continuous secretion by engineered yeast (Saccharomyces boulardii via the MFalpha1 pre-pro leader)."
+      : `Propose 3-5 candidate ${spec.noun} sequences (single-letter amino acid code) for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
     "Every candidate MUST satisfy all of the following hard constraints:",
-    `1. Knottin cysteine topology: ${KNOTTIN_TOPOLOGY} (exactly 6 cysteines, C1-C4 / C2-C5 / C3-C6); total length 28-36 amino acids.`,
-    "2. Zero Kex2 internal cleavage: no KR, RR, PR, or KK motifs anywhere (they fragment during Golgi processing); also no RK dibasic.",
-    "3. Zero N-linked glycosylation: no N[^P][ST] sequon (yeast hyper-mannosylation would occlude binding loops).",
-    "4. Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
-    `5. Charge and hydropathy: net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4 for gentle mucosal retention); Kyte-Doolittle GRAVY between -0.40 and +0.10; hydrophobic runs over [VILMFW] at most 3 consecutive residues.`,
-    "6. No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
-    "7. Gut-stable, non-toxic, non-antimicrobial design; no toxin or translocation-domain content.",
-    "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
-    ...scaffoldLines(),
-    "Output format: respond with ONLY the candidates, one per line, as bare uppercase sequences with no numbering, no headers, no FASTA headers, and no commentary.",
-  ].join("\n");
+    ...constraintBlockForModality(modality, chargeTarget).map(
+      (rule, index) => `${index + 1}. ${rule}`
+    ),
+  ];
+  if (modality === "knottin-6c") {
+    lines.push(
+      "Gut-stable, non-toxic, non-antimicrobial design; no toxin or translocation-domain content.",
+      "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
+      ...scaffoldLines()
+    );
+  }
+  if (steering !== undefined && steering.length > 0) {
+    lines.push(`System steering: ${steering}`);
+  }
+  lines.push(
+    modality === "knottin-6c"
+      ? "Output format: respond with ONLY the candidates, one per line, as bare uppercase sequences with no numbering, no headers, no FASTA headers, and no commentary."
+      : "Output format: respond with ONLY the candidates, one per line, each labeled exactly as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>. No FASTA headers, no commentary."
+  );
+  return lines.join("\n");
 }
 
 /**
  * Turn-0 semantic prompt: frames generation as evolutionary adaptation of
- * knottin secretion payloads to a clinical gut target, demanding an
- * explicit <scratchpad> reasoning trace per candidate.
+ * peptide secretion payloads to a clinical gut target, demanding an
+ * explicit <scratchpad> reasoning trace per candidate. An optional
+ * system-authored steering brief focuses the model on the therapeutic
+ * goal; non-knottin modalities substitute their own grammar lines.
  */
 export function buildSemanticProposePrompt(
   target: string,
-  chargeTarget: number
+  chargeTarget: number,
+  steering?: string,
+  modality: Modality = "knottin-6c"
 ): string {
-  return [
-    "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
-    `Clinical gut target: ${target}. Adapt knottin secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
-    "Express exactly 3 candidate knottins in the loop grammar L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6 with ICK pairing C1-C4, C2-C5, C3-C6.",
-    "Hard syntactic and bioprocess constraints for every candidate:",
-    `1. Canonical ICK loop envelopes: L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10; total 28-36 aa; sequence starts and ends with cysteine.`,
-    "2. Zero Kex2 internal cleavage: no KR, RR, PR, KK, or RK motifs.",
-    "3. Zero N-linked glycosylation: no N[^P][ST] sequon (X != P).",
-    "4. Clean N-terminal processing: residue 1 must be A, S, G, or C — never P, F, Y, or W.",
-    `5. Net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4); allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
-    "6. No exposed chymotrypsin sites [FYW][^P][KR]; hydrophobic runs over [VILMFW] at most 3 consecutive residues.",
-    "7. GRAVY between -0.40 and +0.10; gut-stable and non-toxic.",
-    "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
-    ...scaffoldLines(),
-    "For each candidate, first write a <scratchpad> trace of exactly one sentence explaining why its loop composition satisfies the target receptor interface without triggering host mucosal clearance, then emit the candidate on its own line as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>.",
-  ].join("\n");
+  const spec = specForModality(modality);
+  const lines =
+    modality === "knottin-6c"
+      ? [
+          "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+          `Clinical gut target: ${target}. Adapt knottin secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
+          "Express exactly 3 candidate knottins in the loop grammar L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6 with ICK pairing C1-C4, C2-C5, C3-C6.",
+          "Hard syntactic and bioprocess constraints for every candidate:",
+          `1. Canonical ICK loop envelopes: L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10; total 28-36 aa; sequence starts and ends with cysteine.`,
+          "2. Zero Kex2 internal cleavage: no KR, RR, PR, KK, or RK motifs.",
+          "3. Zero N-linked glycosylation: no N[^P][ST] sequon (X != P).",
+          "4. Clean N-terminal processing: residue 1 must be A, S, G, or C — never P, F, Y, or W.",
+          `5. Net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4); allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
+          "6. No exposed chymotrypsin sites [FYW][^P][KR]; hydrophobic runs over [VILMFW] at most 3 consecutive residues.",
+          "7. GRAVY between -0.40 and +0.10; no NG or DG hotspots; at most one methionine; gut-stable and non-toxic.",
+          "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
+          ...scaffoldLines(),
+        ]
+      : [
+          "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+          `Clinical gut target: ${target}. Adapt ${spec.noun} secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
+          `Express exactly 3 candidate ${spec.noun}s.`,
+          "Hard syntactic and bioprocess constraints for every candidate:",
+          ...constraintBlockForModality(modality, chargeTarget).map(
+            (rule, index) => `${index + 1}. ${rule}`
+          ),
+        ];
+  if (steering !== undefined && steering.length > 0) {
+    lines.push(`System steering: ${steering}`);
+  }
+  lines.push(
+    "For each candidate, first write a <scratchpad> trace of exactly one sentence explaining why its loop composition satisfies the target receptor interface without triggering host mucosal clearance, then emit the candidate on its own line as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>."
+  );
+  return lines.join("\n");
 }
 
 /**
  * Repair prompt: hands a failed candidate plus its symbolic compiler
- * diagnostic back to the model for token-level repair.
+ * diagnostic back to the model for token-level repair. Optional repair
+ * steering (recurring faults across turns) prioritizes whatever keeps
+ * failing; non-knottin modalities substitute their own contract lines.
  */
 export function buildRepairPrompt(
   failedSequence: string,
   compilerDiagnostic: string,
   chargeTarget: number,
-  preservedCassette?: string
+  preservedCassette?: string,
+  steering?: string,
+  modality: Modality = "knottin-6c"
 ): string {
+  const spec = specForModality(modality);
   const lines = [
-    "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin secretion payload.",
+    `You are Meta Spark 1.3 performing deterministic compiler-guided repair of a ${modality === "knottin-6c" ? "knottin" : spec.noun} secretion payload.`,
     `Failed candidate: ${failedSequence}`,
     `Symbolic compiler diagnostic: ${compilerDiagnostic}`,
-    "Repair the semantic tokens to eliminate every listed fault while satisfying the full knottin secretion contract:",
-    "L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6, ICK pairing C1-C4/C2-C5/C3-C6, L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10, total 28-36 aa,",
-    `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [-0.40, +0.10].`,
+    `Repair the semantic tokens to eliminate every listed fault while satisfying the full ${modality === "knottin-6c" ? "knottin" : spec.noun} secretion contract:`,
+    modality === "knottin-6c"
+      ? "L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6, ICK pairing C1-C4/C2-C5/C3-C6, L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10, total 28-36 aa,"
+      : `${spec.noun} topology: exactly ${spec.cysteines} cysteines, total ${spec.minLength}-${spec.maxLength} aa,`,
+    modality === "knottin-6c"
+      ? `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [-0.40, +0.10], no NG/DG hotspots, at most one M.`
+      : `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [${spec.gravyMin.toFixed(2)}, +${spec.gravyMax.toFixed(2)}], no NG/DG hotspots, at most one M.`,
   ];
   if (preservedCassette !== undefined && preservedCassette.length > 0) {
     lines.push(
       `Preserve the functional L3 epitope cassette '${preservedCassette}' unless it carries a fault.`
     );
   }
+  if (steering !== undefined && steering.length > 0) {
+    lines.push(steering);
+  }
   lines.push(
-    "Respond with ONLY 1-3 repaired candidates, one per line, as bare uppercase sequences with no commentary."
+    modality === "knottin-6c"
+      ? "Respond with ONLY 1-3 repaired candidates, one per line, as bare uppercase sequences with no commentary."
+      : "Respond with ONLY 1-3 repaired candidates, one per line, each labeled exactly as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>. No commentary."
   );
   return lines.join("\n");
 }
@@ -166,20 +231,27 @@ const CANONICAL_AA_PATTERN = /^[ACDEFGHIKLMNPQRSTVWY]+$/;
 /**
  * Extracts pure candidate sequences from a model completion via regex,
  * preserving document order across FASTA blocks, CANDIDATE labels, and
- * bare sequences (including <scratchpad> interleavings).
+ * bare sequences (including <scratchpad> interleavings). Shorter
+ * modalities disable bare-word extraction: English prose words would
+ * otherwise match, so labeled candidates are required.
  */
-export function extractCandidateSequences(completion: string): string[] {
+export function extractCandidateSequences(
+  completion: string,
+  minLength = 28,
+  maxLength = 36,
+  allowBare = true
+): string[] {
   const hits: Array<{ index: number; seq: string }> = [];
+  const inWindow = (seq: string): boolean =>
+    seq.length >= minLength &&
+    seq.length <= maxLength &&
+    CANONICAL_AA_PATTERN.test(seq);
 
   const fastaRe = />[^\n]*\n([A-Za-z\s]+)/g;
   let fastaMatch: RegExpExecArray | null;
   while ((fastaMatch = fastaRe.exec(completion)) !== null) {
     const body = (fastaMatch[1] ?? "").replace(/\s+/g, "").toUpperCase();
-    if (
-      body.length >= 28 &&
-      body.length <= 36 &&
-      CANONICAL_AA_PATTERN.test(body)
-    ) {
+    if (inWindow(body)) {
       hits.push({ index: fastaMatch.index, seq: body });
     }
   }
@@ -194,23 +266,24 @@ export function extractCandidateSequences(completion: string): string[] {
       const seq = (candidateMatch[1] ?? "")
         .replace(/\s+/g, "")
         .toUpperCase();
-      if (
-        seq.length >= 28 &&
-        seq.length <= 36 &&
-        CANONICAL_AA_PATTERN.test(seq)
-      ) {
+      if (inWindow(seq)) {
         hits.push({ index: lineStart + candidateMatch.index, seq });
       }
     }
     lineStart += line.length + 1;
   }
 
-  const bareRe = /\b[ACDEFGHIKLMNPQRSTVWYacdefghiklmnpqrstvwy]{28,36}\b/g;
-  let bareMatch: RegExpExecArray | null;
-  while ((bareMatch = bareRe.exec(completion)) !== null) {
-    const seq = (bareMatch[0] ?? "").toUpperCase();
-    if (CANONICAL_AA_PATTERN.test(seq)) {
-      hits.push({ index: bareMatch.index, seq });
+  if (allowBare) {
+    const bareRe = new RegExp(
+      `\\b[ACDEFGHIKLMNPQRSTVWYacdefghiklmnpqrstvwy]{${minLength},${maxLength}}\\b`,
+      "g"
+    );
+    let bareMatch: RegExpExecArray | null;
+    while ((bareMatch = bareRe.exec(completion)) !== null) {
+      const seq = (bareMatch[0] ?? "").toUpperCase();
+      if (CANONICAL_AA_PATTERN.test(seq)) {
+        hits.push({ index: bareMatch.index, seq });
+      }
     }
   }
 
@@ -230,11 +303,31 @@ export function extractCandidateSequences(completion: string): string[] {
  * Sends one chat completion to the Meta Spark 1.3 Contributor API and
  * returns extracted candidates, or an empty array on any failure.
  */
+export interface CandidateExtraction {
+  minLength: number;
+  maxLength: number;
+  allowBare: boolean;
+}
+
+export function extractionForModality(modality: Modality): CandidateExtraction {
+  const spec = specForModality(modality);
+  return {
+    minLength: spec.minLength,
+    maxLength: spec.maxLength,
+    allowBare: modality === "knottin-6c",
+  };
+}
+
 export async function requestSparkCandidates(
   messages: MetaSparkMessage[],
   maxTokens = META_SPARK_PROPOSE_MAX_TOKENS,
   timeoutMs = META_SPARK_TIMEOUT_MS,
-  temperature = META_SPARK_BASE_TEMPERATURE
+  temperature = META_SPARK_BASE_TEMPERATURE,
+  extraction: CandidateExtraction = {
+    minLength: 28,
+    maxLength: 36,
+    allowBare: true,
+  }
 ): Promise<string[]> {
   const apiKey = process.env.META_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) return [];
@@ -284,7 +377,12 @@ export async function requestSparkCandidates(
       console.warn(`[meta-spark] empty completion (finish=${finish})`);
       return [];
     }
-    const candidates = extractCandidateSequences(completion);
+    const candidates = extractCandidateSequences(
+      completion,
+      extraction.minLength,
+      extraction.maxLength,
+      extraction.allowBare
+    );
     if (candidates.length === 0) {
       console.warn(
         `[meta-spark] zero candidates extracted from ${completion.length} chars (finish=${finish})`
@@ -307,18 +405,30 @@ export async function requestSparkCandidates(
  */
 export async function callMetaSpark(
   target: string,
-  chargeTarget: number
+  chargeTarget: number,
+  options: { modality?: Modality; mechanism?: string } = {}
 ): Promise<string[]> {
-  const candidates = await requestSparkCandidates([
-    {
-      role: "system",
-      content:
-        "You design therapeutic gut-delivered knottin secretion payloads for Saccharomyces boulardii (MFalpha1 pre-pro leader) under strict bioprocess constraints.",
-    },
-    { role: "user", content: buildKnottinPrompt(target, chargeTarget) },
-  ]);
+  const modality = options.modality ?? DEFAULT_MODALITY;
+  const spec = specForModality(modality);
+  const { brief } = buildSteeringBrief(target, options.mechanism);
+  const candidates = await requestSparkCandidates(
+    [
+      {
+        role: "system",
+        content: `You design therapeutic gut-delivered ${spec.noun} secretion payloads for Saccharomyces boulardii (MFalpha1 pre-pro leader) under strict bioprocess constraints.`,
+      },
+      {
+        role: "user",
+        content: buildKnottinPrompt(target, chargeTarget, brief, modality),
+      },
+    ],
+    META_SPARK_PROPOSE_MAX_TOKENS,
+    META_SPARK_TIMEOUT_MS,
+    META_SPARK_BASE_TEMPERATURE,
+    extractionForModality(modality)
+  );
   if (candidates.length === 0) {
-    return sampleFallbackCandidates(target, chargeTarget);
+    return sampleFallbackCandidates(target, chargeTarget, 5, modality);
   }
   return candidates;
 }
@@ -407,10 +517,17 @@ interface Verification {
 
 function verifyCandidate(
   candidate: string,
-  chargeTarget: number
+  chargeTarget: number,
+  modality: Modality
 ): Verification {
-  const grammar = parseKnottinGrammar(candidate);
-  const audit = auditPeptideCandidate(candidate, chargeTarget);
+  const grammar = parseModalityGrammar(candidate, modality);
+  const baseAudit = auditPeptideCandidate(candidate, chargeTarget, modality);
+  const assessment = assessCandidate(candidate, modality, chargeTarget);
+  const audit: SymbolicAuditResult = {
+    ...baseAudit,
+    therapeutic_index: assessment.therapeutic_index,
+    safety_index: assessment.safety_index,
+  };
   return {
     grammar,
     audit,
@@ -453,11 +570,20 @@ export interface PipelineEvent {
 
 /**
  * Best-of-pool ranking score (lower wins): GRAVY centrality within the
- * allowed window, then cleavage susceptibility. Stable sort keeps pool
- * order as the final tiebreak.
+ * allowed window, then cleavage susceptibility, then the therapeutic
+ * and safety indices (higher wins, hence subtracted). Stable sort keeps
+ * pool order as the final tiebreak.
  */
-function auditScore(audit: SymbolicAuditResult): number {
-  return Math.abs(audit.gravy_score + 0.15) * 10 + audit.cleavage_susceptibility_index;
+function auditScore(audit: SymbolicAuditResult, modality: Modality): number {
+  const therapeutic = audit.therapeutic_index ?? 50;
+  const safety = audit.safety_index ?? 50;
+  const spec = specForModality(modality);
+  const center = (spec.gravyMin + spec.gravyMax) / 2;
+  return (
+    Math.abs(audit.gravy_score - center) * 10 +
+    audit.cleavage_susceptibility_index -
+    (therapeutic + safety) / 100
+  );
 }
 
 interface SyncVerdict {
@@ -480,6 +606,7 @@ interface SyncVerdict {
 async function evaluatePool(
   pool: string[],
   chargeTarget: number,
+  modality: Modality,
   turn: number,
   source: RefinementTurn["source"],
   terminal: boolean,
@@ -490,7 +617,7 @@ async function evaluatePool(
   temperature?: number
 ): Promise<{ candidate: string; audit: SymbolicAuditResult } | null> {
   const sync: SyncVerdict[] = pool.map((candidate, index) => {
-    const verification = verifyCandidate(candidate, chargeTarget);
+    const verification = verifyCandidate(candidate, chargeTarget, modality);
     return {
       index,
       candidate,
@@ -521,7 +648,7 @@ async function evaluatePool(
 
   const ranked = sync
     .filter((entry) => entry.pass)
-    .sort((a, b) => auditScore(a.audit) - auditScore(b.audit));
+    .sort((a, b) => auditScore(a.audit, modality) - auditScore(b.audit, modality));
 
   const specByIndex = new Map<number, SpecificityReport>();
   let winner: SyncVerdict | null = null;
@@ -602,10 +729,16 @@ async function evaluatePool(
   return null;
 }
 
+export interface GenerationOptions {
+  modality?: Modality;
+  mechanism?: string;
+}
+
 /**
  * Neurosymbolic closed-loop reflection engine. Proposes candidates with
- * Meta Spark 1.3, intercepts them with the grammar parser and symbolic
- * auditor, and feeds compiler diagnostics back for deterministic repair
+ * Meta Spark 1.3 under a system-authored steering brief, intercepts them
+ * with the grammar parser and symbolic auditor, and feeds compiler
+ * diagnostics plus recurring-fault steering back for deterministic repair
  * instead of discarding failures. Every automatic retry re-prompts with
  * a penalized temperature. Repairs are never cut short for fallback;
  * only when turns or the API time budget are exhausted does the
@@ -617,7 +750,8 @@ export async function generateVerifiedPeptide(
   target: string,
   chargeTarget: number,
   maxRefinementTurns = 3,
-  onEvent?: (event: PipelineEvent) => void
+  onEvent?: (event: PipelineEvent) => void,
+  options: GenerationOptions = {}
 ): Promise<{
   candidate: string;
   audit: SymbolicAuditResult;
@@ -626,6 +760,13 @@ export async function generateVerifiedPeptide(
   const refinementHistory: RefinementTurn[] = [];
   const apiKey = process.env.META_API_KEY;
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
+  const modality = options.modality ?? DEFAULT_MODALITY;
+  const spec = specForModality(modality);
+  const { brief: steeringBrief } = buildSteeringBrief(
+    target,
+    options.mechanism
+  );
+  const extraction = extractionForModality(modality);
 
   const synthesize = async (
     turn: number,
@@ -641,10 +782,11 @@ export async function generateVerifiedPeptide(
       source: "deterministic-synthesis",
       message: reason,
     });
-    const pool = sampleFallbackCandidates(target, chargeTarget, 5);
+    const pool = sampleFallbackCandidates(target, chargeTarget, 5, modality);
     const accepted = await evaluatePool(
       pool,
       chargeTarget,
+      modality,
       turn,
       "deterministic-synthesis",
       true,
@@ -689,7 +831,8 @@ export async function generateVerifiedPeptide(
       candidate,
       target,
       chargeTarget,
-      Math.min(META_SPARK_TIMEOUT_MS, remaining)
+      Math.min(META_SPARK_TIMEOUT_MS, remaining),
+      modality
     );
   };
 
@@ -708,7 +851,8 @@ export async function generateVerifiedPeptide(
       messages,
       maxTokens,
       Math.min(META_SPARK_TIMEOUT_MS, remaining),
-      temperature
+      temperature,
+      extraction
     );
   };
 
@@ -748,16 +892,23 @@ export async function generateVerifiedPeptide(
     },
     {
       role: "user",
-      content: buildSemanticProposePrompt(target, chargeTarget),
+      content: buildSemanticProposePrompt(
+        target,
+        chargeTarget,
+        steeringBrief,
+        modality
+      ),
     },
   ];
+  const proposalNoun =
+    modality === "knottin-6c" ? "knottin" : spec.noun;
 
   let pool = await fetchPool(
     proposeMessages(),
     META_SPARK_PROPOSE_MAX_TOKENS,
     0,
     "propose",
-    "Requesting knottin proposals from Muse Spark 1.3…",
+    `Requesting ${proposalNoun} proposals from Muse Spark 1.3…`,
     repairTemperatureForCycle(0)
   );
   let cycle = 0;
@@ -766,6 +917,7 @@ export async function generateVerifiedPeptide(
     const accepted = await evaluatePool(
       pool,
       chargeTarget,
+      modality,
       cycle,
       "meta-spark-1.3",
       cycle >= maxRefinementTurns,
@@ -801,7 +953,7 @@ export async function generateVerifiedPeptide(
         META_SPARK_PROPOSE_MAX_TOKENS,
         cycle + 1,
         "propose",
-        `Re-requesting knottin proposals from Muse Spark 1.3 (temperature penalized to ${retryTemperature.toFixed(2)})…`,
+        `Re-requesting ${proposalNoun} proposals from Muse Spark 1.3 (temperature penalized to ${retryTemperature.toFixed(2)})…`,
         retryTemperature
       );
     } else {
@@ -815,15 +967,18 @@ export async function generateVerifiedPeptide(
         if (failureWeight(entry) < bestIssues) best = entry;
       }
       const failedCandidate = best?.candidate ?? "";
-      const failedGrammar = parseKnottinGrammar(failedCandidate);
+      const failedGrammar = parseModalityGrammar(failedCandidate, modality);
       const failedIssues =
         (best?.syntax_errors.length ?? 0) + (best?.violations.length ?? 0);
+      const repairSteering =
+        buildRepairSteering(refinementHistory) ?? steeringBrief;
+      const repairNoun =
+        modality === "knottin-6c" ? "knottin" : spec.noun;
       pool = await fetchPool(
         [
           {
             role: "system",
-            content:
-              "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin secretion payload.",
+            content: `You are Meta Spark 1.3 performing deterministic compiler-guided repair of a ${repairNoun} secretion payload.`,
           },
           {
             role: "user",
@@ -831,7 +986,9 @@ export async function generateVerifiedPeptide(
               failedCandidate,
               best?.compiler_diagnostic ?? "",
               chargeTarget,
-              failedGrammar.loops["L3"]
+              failedGrammar.loops["L3"],
+              repairSteering,
+              modality
             ),
           },
         ],
@@ -1002,12 +1159,60 @@ function sampleTopologySequence(
   pos += 1 + (d ?? 0);
   cysPositions.push(pos);
   cysPositions.push(plan.total - 1);
-  const cys = new Set(cysPositions);
+  return fillSequence(rand, plan.total, new Set(cysPositions), chargeTarget);
+}
 
+/**
+ * Samples framework cysteine positions for a non-knottin modality:
+ * a random total inside the length window with the required cysteine
+ * count placed at least minCysSpacing apart.
+ */
+function sampleDisulfidePositions(
+  rand: () => number,
+  spec: { minLength: number; maxLength: number; cysteines: number | null; minCysSpacing: number }
+): { total: number; cys: Set<number> } | null {
+  const count = spec.cysteines ?? 0;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const total = randInt(rand, spec.minLength, spec.maxLength);
+    if (count === 0) return { total, cys: new Set() };
+    const slots: number[] = [];
+    for (let i = 0; i < total; i += 1) slots.push(i);
+    for (let i = slots.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rand() * (i + 1));
+      const tmp = slots[i] ?? 0;
+      slots[i] = slots[j] ?? 0;
+      slots[j] = tmp;
+    }
+    const chosen: number[] = [];
+    for (const slot of slots) {
+      if (chosen.length >= count) break;
+      if (
+        chosen.every((other) => Math.abs(other - slot) - 1 >= spec.minCysSpacing)
+      ) {
+        chosen.push(slot);
+      }
+    }
+    if (chosen.length === count) return { total, cys: new Set(chosen) };
+  }
+  return null;
+}
+
+/**
+ * Shared sequence fill: places chargeTarget non-adjacent K/R residues,
+ * fills the rest with neutral residues, then repairs every motif
+ * liability (sequons, PR, chymotrypsin, hotspots, runs, N-terminus).
+ * Cysteine and positive slots are never rewritten by repairs.
+ */
+function fillSequence(
+  rand: () => number,
+  total: number,
+  cys: Set<number>,
+  chargeTarget: number
+): string | null {
   // Choose chargeTarget positive (K/R) positions, never adjacent to
   // each other (no dibasic Kex2 pairs).
   const slots: number[] = [];
-  for (let i = 0; i < plan.total; i += 1) {
+  for (let i = 0; i < total; i += 1) {
     if (!cys.has(i)) slots.push(i);
   }
   for (let i = slots.length - 1; i > 0; i -= 1) {
@@ -1025,7 +1230,7 @@ function sampleTopologySequence(
   if (positives.size < chargeTarget) return null;
 
   const out: string[] = [];
-  for (let i = 0; i < plan.total; i += 1) {
+  for (let i = 0; i < total; i += 1) {
     if (cys.has(i)) {
       out.push("C");
       continue;
@@ -1101,6 +1306,62 @@ function sampleTopologySequence(
     if (!swapped) return null;
   }
 
+  // Cap methionines (oxidation risk): extras become leucine, a
+  // hydrophobic-neutral swap repaired runs revisit below if needed.
+  for (let repair = 0; repair < 20; repair += 1) {
+    const mets: number[] = [];
+    for (let i = 0; i < out.length; i += 1) {
+      if ((out[i] ?? "") === "M") mets.push(i);
+    }
+    if (mets.length <= MAX_METHIONINES) break;
+    let swapped = false;
+    for (const slot of mets.slice(MAX_METHIONINES)) {
+      for (const aa of ["L", "A", "V"]) {
+        if (fitsNeighbors(out, slot, aa)) {
+          out[slot] = aa;
+          swapped = true;
+          break;
+        }
+      }
+      if (swapped) break;
+    }
+    if (!swapped) return null;
+  }
+
+  // Break NG deamidation and DG isomerization hotspots by swapping the
+  // glycine (always a neutral filler slot) to a small stable residue.
+  for (let repair = 0; repair < 20; repair += 1) {
+    const joined = out.join("");
+    const ng = /NG/.exec(joined);
+    const dg = /DG/.exec(joined);
+    const hit = ng !== null ? ng : dg;
+    if (hit === null || hit.index === undefined) break;
+    const slot = hit.index + 1;
+    let swapped = false;
+    for (const aa of ["A", "S", "Q", "T"]) {
+      if (fitsNeighbors(out, slot, aa)) {
+        out[slot] = aa;
+        swapped = true;
+        break;
+      }
+    }
+    if (!swapped) return null;
+  }
+
+  // Fix a blocked N-terminus (non-knottin position 0 is filler, never
+  // framework): P/F/Y/W become small unhindered residues.
+  if (BLOCKED_N_TERMINI.has(out[0] ?? "")) {
+    let swapped = false;
+    for (const aa of ["A", "S", "G"]) {
+      if (fitsNeighbors(out, 0, aa)) {
+        out[0] = aa;
+        swapped = true;
+        break;
+      }
+    }
+    if (!swapped) return null;
+  }
+
   // Break secretion-blocking hydrophobic runs via polar swaps. Run
   // positions are always neutral filler (K/R/C are outside the run set).
   for (let repair = 0; repair < 20; repair += 1) {
@@ -1122,26 +1383,38 @@ function sampleTopologySequence(
 }
 
 /**
- * Deterministic algorithmic fallback: samples knottin-topology sequences
+ * Deterministic algorithmic fallback: samples modality-topology sequences
  * and keeps only candidates that pass both the grammar parser and the
  * symbolic auditor.
  */
 export function sampleFallbackCandidates(
   target: string,
   chargeTarget: number,
-  count = 5
+  count = 5,
+  modality: Modality = "knottin-6c"
 ): string[] {
   const kept: string[] = [];
   const seen = new Set<string>();
-  const rand = mulberry32(hashSeed(`${target}|${chargeTarget}|knottin-v2`));
+  const seedTag = modality === "knottin-6c" ? "knottin-v2" : `${modality}-v1`;
+  const rand = mulberry32(hashSeed(`${target}|${chargeTarget}|${seedTag}`));
+  const spec = specForModality(modality);
 
   for (let attempt = 0; attempt < 5000 && kept.length < count; attempt += 1) {
-    const seq = sampleTopologySequence(rand, chargeTarget);
+    let seq: string | null;
+    if (modality === "knottin-6c") {
+      seq = sampleTopologySequence(rand, chargeTarget);
+    } else {
+      const frame = sampleDisulfidePositions(rand, spec);
+      seq =
+        frame === null
+          ? null
+          : fillSequence(rand, frame.total, frame.cys, chargeTarget);
+    }
     if (seq === null || seen.has(seq)) continue;
     seen.add(seq);
     if (
-      parseKnottinGrammar(seq).valid &&
-      auditPeptideCandidate(seq, chargeTarget).passed
+      parseModalityGrammar(seq, modality).valid &&
+      auditPeptideCandidate(seq, chargeTarget, modality).passed
     ) {
       kept.push(seq);
     }

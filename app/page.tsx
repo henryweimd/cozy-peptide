@@ -8,7 +8,8 @@ const CURL_EXAMPLE = `curl -X POST https://cozy-peptide.vercel.app/api/generate-
   -H "Authorization: Bearer $API_BEARER_TOKEN" \\
   -d '{
     "target": "Clostridioides difficile colonization in the gut",
-    "charge_target": 4
+    "charge_target": 4,
+    "modality": "knottin-6c"
   }'`;
 
 const RESPONSE_EXAMPLE = `{
@@ -41,6 +42,8 @@ const RESPONSE_EXAMPLE = `{
     "gravy": 0.04,
     "boman_index": 1.06,
     "aliphatic_index": 63.45,
+    "therapeutic_index": 76.37,
+    "safety_index": 88.6,
     "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin", "..."]
   },
   "lab_handoff": {
@@ -173,7 +176,7 @@ export default function Home() {
                     a folded, working molecule
                   </td>
                   <td data-label="Muse Spark writes">
-                    passes the compiler: knot, charge, safety
+                    passes the compiler: structure, safety, potency
                   </td>
                 </tr>
               </tbody>
@@ -182,9 +185,9 @@ export default function Home() {
               <p>
                 A raw model proposes; most proposals would fail in a
                 real body. cozy-peptide wraps Muse Spark in a compiler
-                that proves each design &mdash; knot, charge, safety
-                &mdash; before anything touches a cell. Only proven
-                winners ship.
+                that proves each design &mdash; structure, safety,
+                therapeutic promise &mdash; before anything touches a
+                cell. Only proven winners ship.
               </p>
             </div>
             <figure className={styles.wrapDiagram}>
@@ -268,7 +271,7 @@ export default function Home() {
                     fill: "var(--color-ink-2)",
                   }}
                 >
-                  compiler proves it: knot, charge, safety
+                  compiler proves it: structure, safety, potency
                 </text>
                 <rect
                   x="272"
@@ -550,10 +553,22 @@ export default function Home() {
                   <td data-label="Field">
                     <code>charge_target</code>
                   </td>
-                  <td data-label="Type">3 | 4 | 5</td>
+                  <td data-label="Type">1 | 2 | 3 | 4</td>
                   <td data-label="Required">no</td>
                   <td data-label="Description">
                     Exact formal charge required at neutral pH. Default 4.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Field">
+                    <code>modality</code>
+                  </td>
+                  <td data-label="Type">string</td>
+                  <td data-label="Required">no</td>
+                  <td data-label="Description">
+                    Scaffold: <code>knottin-6c</code> (default),{" "}
+                    <code>disulfide-4c</code>, <code>disulfide-2c</code>,
+                    or <code>linear</code>.
                   </td>
                 </tr>
               </tbody>
@@ -610,7 +625,8 @@ export default function Home() {
                     <code className={styles.statuscode}>422</code>
                   </td>
                   <td data-label="Meaning">
-                    Catalytic-enzyme refusal, outside the knottin modality.
+                    Catalytic-enzyme refusal, outside the short-peptide
+                    modalities.
                   </td>
                 </tr>
                 <tr>
@@ -650,7 +666,7 @@ export default function Home() {
                     Catalytic-enzyme targets and folds over 45 aa get{" "}
                     <code>422</code> with guidance to source a natural homolog
                     instead. Catalysis needs globular folds, not short
-                    knottins.
+                    peptides.
                   </p>
                 </div>
               </div>
@@ -699,7 +715,7 @@ export default function Home() {
                 >
                   <li>28 to 36 aa</li>
                   <li>6-Cys ICK knot</li>
-                  <li>charge +3…+5</li>
+                  <li>charge +1…+4</li>
                   <li>CAI &gt; 0.85</li>
                 </ul>
               </div>
@@ -732,6 +748,14 @@ export default function Home() {
                     <dt>Aliphatic</dt>
                     <dd>63.45</dd>
                   </div>
+                  <div>
+                    <dt>Therapeutic</dt>
+                    <dd>76.4</dd>
+                  </div>
+                  <div>
+                    <dt>Safety</dt>
+                    <dd>88.6</dd>
+                  </div>
                 </dl>
                 <p>
                   Trypsin, pepsin, and chymotrypsin cleared, CAI over 0.85.
@@ -749,7 +773,8 @@ export default function Home() {
                 <p>
                   Muse Spark 1.3 reasons over the grammar of proteins to
                   propose truly novel sequences. A compiler, not vibes,
-                  verifies topology, charge, stability, and safety.
+                  verifies topology, charge, stability, safety, and
+                  therapeutic promise.
                 </p>
               </div>
               <div className={`${styles.tile} ${styles.tileWhy}`}>
@@ -783,31 +808,34 @@ export default function Home() {
                   <h3>Ingest</h3>
                   <p>
                     <code>POST /api/generate-peptide</code> takes a
-                    therapeutic target, an optional mechanism, and an
-                    optional charge target (3, 4, or 5).
+                    therapeutic target, an optional mechanism, an optional
+                    charge target (1 to 4), and an optional modality:
+                    knottin, disulfide, or linear.
                   </p>
                 </li>
                 <li>
                   <h3>Propose</h3>
                   <p>
-                    Meta Spark 1.3 drafts knottin candidates in the loop
-                    grammar <code>L0–C1…C6–L6</code> with{" "}
-                    <code>C1–C4, C2–C5, C3–C6</code> ICK pairing.
+                    The system steers Meta Spark 1.3 with a
+                    target-class brief and a safety contract, and the
+                    model drafts candidates in the modality grammar.
                   </p>
                 </li>
                 <li>
                   <h3>Verify</h3>
                   <p>
-                    Every candidate must pass the symbolic audit: 28 to 36
-                    aa, 6-Cys parity, exact formal charge, GRAVY in{" "}
-                    <code>[−0.40, +0.10]</code>, and zero protease,
-                    glycosylation, aggregation, or chemical liabilities.
+                    Every candidate must pass the symbolic audit:
+                    topology, exact formal charge, hydropathy window, and
+                    zero protease, glycosylation, aggregation, oxidation,
+                    or deamidation liabilities, scored with therapeutic
+                    and safety indices.
                   </p>
                 </li>
                 <li>
                   <h3>Repair</h3>
                   <p>
-                    Failures return structured compiler diagnostics for
+                    Failures return structured compiler diagnostics,
+                    prioritized by recurring-fault steering, for
                     model-guided repair instead of being discarded;
                     survivors face a blinded specificity review that must
                     independently confirm the target. The full trace ships
@@ -817,7 +845,7 @@ export default function Home() {
                 <li>
                   <h3>Hand off</h3>
                   <p>
-                    Verified knottins compile to a yeast cassette: 85-aa
+                    Verified peptides compile to a yeast cassette: 85-aa
                     MFα1 leader with the SLDKR Kex2 junction, yeast codon
                     optimization, 40-bp Gibson arms, and a synthesis order
                     manifest, everything needed to install the miniature
@@ -884,8 +912,8 @@ export default function Home() {
                 <tr>
                   <th scope="row">Proven before release</th>
                   <td>
-                    Every peptide passes the compiler first: knot,
-                    charge, safety.
+                    Every peptide passes the compiler first: structure,
+                    safety, potency.
                   </td>
                 </tr>
               </tbody>
