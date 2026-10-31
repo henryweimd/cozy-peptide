@@ -3,7 +3,13 @@
 *Built for the Meta Global AI Hackathon. Live API docs:
 https://cozy-peptide.vercel.app*
 
-## What this is (the 30-second version)
+*Describe the disease. Muse Spark designs the probiotic. Your medicine, brewed around the clock.*
+
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Next.js](https://img.shields.io/badge/built_with-Next.js-black?logo=next.js)
+![Model](https://img.shields.io/badge/model-Muse_Spark_1.3-blue)
+
+## 🎯 Turn a disease name into gut medicine
 
 Most medicines are either tiny chemicals or giant antibodies. cozy-peptide
 works in the fertile middle: **knottins** — miniature proteins just 28–36
@@ -23,13 +29,15 @@ passes every check.
 
 The output is not a picture or a score. It is a **DNA synthesis order you can
 send to a vendor**: codon-optimized cDNA encoding a probiotic yeast
-(*Saccharomyces boulardii*) that secretes your therapeutic exactly where it
-is needed.
+(*Saccharomyces boulardii*) — a living miniature factory you install in
+your gut — that manufactures your therapeutic on site, exactly where the
+disease lives. The medicine is not a pill you keep taking; it is a factory
+you swallow once.
 
 Disease target in, lab-ready DNA out — with a full audit trail anyone can
 inspect.
 
-## The language of life
+## 🧬 Teach AI to write the sentences of life
 
 We think of language models as predictors of words. But words are not the
 only language — and arguably not the most important one. The language of
@@ -56,7 +64,7 @@ manufacturable proteins survive.
 A language model that writes valid sentences in the language of life is not
 a chatbot trick. It is a drug-discovery engine.
 
-## Why it matters
+## Change how medicines get made
 
 - **Designed, not discovered.** Drug hunting today means screening libraries
   of molecules found in nature. cozy-peptide flips that: the AI proposes
@@ -73,9 +81,11 @@ a chatbot trick. It is a drug-discovery engine.
   FASTA, restriction-scrubbed cDNA, Gibson assembly arms, CAI/GC reports,
   and a Twist/IDT-compatible order manifest.
 
-## From prompt to protein: a real example
+## 🔬 Watch a prompt become a protein
 
-![Structural cartoon of a Muse Spark 1.3-designed knottin](assets/CPRVTCSNDTVCKVRTSKCSVCRISVNTC.png)
+<p align="center">
+  <img src="assets/CPRVTCSNDTVCKVRTSKCSVCRISVNTC.png" width="380" alt="Structural cartoon of a Muse Spark 1.3-designed knottin">
+</p>
 
 *A never-before-seen mini-protein, invented from scratch by Muse Spark 1.3
 to fight **C. difficile** gut infections. Its knotted, ribbon-like shape is
@@ -96,14 +106,15 @@ restriction scrub clean, 422-bp gBlock). Mature sequence:
 cartoon shown for illustration — verify experimentally before any
 therapeutic use.*
 
-## Architecture
+## Trace a request from prompt to DNA
 
-```text
-Ingestion
-  -> Meta Spark 1.3 sequence proposal
-  -> Deterministic Symbolic Compiler
-  -> Closed-loop compiler diagnostic feedback
-  -> Lab handoff
+```mermaid
+flowchart LR
+    A["🎯 Disease target + charge"] --> B["Muse Spark 1.3 proposes knottins"]
+    B --> C{"Symbolic compiler audit"}
+    C -->|"fail: diagnostics"| D["Repair loop"]
+    D --> B
+    C -->|"pass"| E["Lab handoff: yeast cassette + DNA order"]
 ```
 
 1. **Ingestion** — `POST /api/generate-peptide` accepts a therapeutic `target`,
@@ -132,7 +143,7 @@ Ingestion
    - Restriction-site scrub, mature/precursor FASTA, and a DNA synthesis order
      manifest
 
-## Safety & Biosecurity
+## 🛡️ Block toxins and enzymes before generation
 
 `lib/biosecurity.ts` screens every request before generation:
 
@@ -146,7 +157,7 @@ Ingestion
   since catalytic pockets require large globular folds outside the 28-36 aa
   knottin modality. The response suggests sourcing a natural homolog instead.
 
-## API Specs
+## Generate a peptide in one API call
 
 ### `POST /api/generate-peptide`
 
@@ -212,11 +223,23 @@ Sample JSON response (truncated):
 }
 ```
 
-Error codes: `401` invalid/missing Bearer token, `400` validation failure,
-`403` biosecurity block, `422` catalytic-enzyme refusal, `502` upstream
-generation failure.
+| Code | Meaning |
+| ---- | ------- |
+| `200` | Verified candidate with audit ledger and lab handoff. |
+| `400` | Invalid JSON body or schema validation failure. |
+| `401` | Missing or invalid bearer token. |
+| `403` | Biosecurity block (toxin-signature screening). |
+| `422` | Catalytic-enzyme refusal — outside the knottin modality. |
+| `502` | Generation failure; no verifiable candidate produced. |
 
-## Local Development
+### Try it in the browser
+
+The landing page includes a live demo that runs the real pipeline with no
+token required. It is restricted to five preset gut conditions and one
+design per minute per visitor (server-enforced cooldown), so the shared
+demo stays responsive and the upstream budget stays intact.
+
+## Run the compiler locally
 
 Prerequisites: Node.js 20+ and npm.
 

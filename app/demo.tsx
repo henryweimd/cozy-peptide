@@ -1,0 +1,272 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import styles from "./page.module.css";
+import {
+  DEMO_COOLDOWN_SECONDS,
+  DEMO_PRESETS,
+} from "../lib/demo-config";
+
+interface TraceTurn {
+  turn: number;
+  candidate: string;
+  grammar_valid: boolean;
+  audit_passed: boolean;
+  disposition: string;
+  source: string;
+}
+
+interface DemoPayload {
+  success: boolean;
+  error?: string;
+  details?: { retry_after_seconds?: number };
+  neurosymbolic_provenance?: {
+    compiler_refinement_cycles: number;
+    refinement_trace: TraceTurn[];
+  };
+  candidate?: {
+    mature_sequence: string;
+    topology: string;
+    grammar_breakdown: Record<string, string>;
+  };
+  symbolic_audit?: {
+    passed: boolean;
+    charge: number;
+    gravy: number;
+    boman_index: number;
+    aliphatic_index: number;
+    liabilities_cleared: string[];
+  };
+  lab_handoff?: {
+    cai: number;
+    restriction_scrub: { status: string };
+    synthesis_order: {
+      sequence_name: string;
+      dna_length: number;
+      gc_percent: number;
+    };
+  };
+}
+
+const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
+const LOOP_ORDER = ["L1", "L2", "L3", "L4", "L5"];
+
+function formatCountdown(totalSeconds: number): string {
+  const clamped = Math.max(0, totalSeconds);
+  const minutes = Math.floor(clamped / 60);
+  const seconds = clamped % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+export default function Demo() {
+  const [presetId, setPresetId] = useState<string>(DEMO_PRESETS[0]?.id ?? "");
+  const [loading, setLoading] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [result, setResult] = useState<DemoPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(COOLDOWN_KEY);
+    if (stored !== null) {
+      const until = Number.parseInt(stored, 10);
+      if (Number.isFinite(until) && until > Date.now()) {
+        // Mount-only sync from an external store (localStorage); a lazy
+        // useState initializer would mismatch the server render instead.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCooldownUntil(until);
+      }
+    }
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!loading) return;
+    const started = Date.now();
+    const timer = window.setInterval(
+      () => setElapsed(Math.floor((Date.now() - started) / 1000)),
+      500
+    );
+    return () => window.clearInterval(timer);
+  }, [loading]);
+
+  const remaining =
+    cooldownUntil === null
+      ? 0
+      : Math.ceil((cooldownUntil - now) / 1000);
+  const cooling = remaining > 0;
+  const busy = loading || cooling;
+
+  async function generate(): Promise<void> {
+    const preset = DEMO_PRESETS.find((entry) => entry.id === presetId);
+    if (preset === undefined || loading || cooling) return;
+    setLoading(true);
+    setElapsed(0);
+    setError(null);
+    try {
+      const response = await fetch("/api/demo-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target: preset.target }),
+      });
+      const payload = (await response.json()) as DemoPayload;
+      if (response.ok && payload.success) {
+        setResult(payload);
+      } else {
+        setError(payload.error ?? `Request failed (${response.status}).`);
+      }
+      const retryAfter =
+        payload.details?.retry_after_seconds ?? DEMO_COOLDOWN_SECONDS;
+      const until = Date.now() + retryAfter * 1000;
+      setCooldownUntil(until);
+      window.localStorage.setItem(COOLDOWN_KEY, String(until));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed.");
+      const until = Date.now() + DEMO_COOLDOWN_SECONDS * 1000;
+      setCooldownUntil(until);
+      window.localStorage.setItem(COOLDOWN_KEY, String(until));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const audit = result?.success === true ? result.symbolic_audit : undefined;
+  const candidate =
+    result?.success === true ? result.candidate : undefined;
+  const provenance =
+    result?.success === true ? result.neurosymbolic_provenance : undefined;
+  const handoff = result?.success === true ? result.lab_handoff : undefined;
+
+  return (
+    <div>
+      <div
+        className={styles.presets}
+        role="group"
+        aria-label="Condition to design for"
+      >
+        {DEMO_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            aria-pressed={preset.id === presetId}
+            className={
+              preset.id === presetId
+                ? `${styles.pill} ${styles.pillActive}`
+                : styles.pill
+            }
+            onClick={() => setPresetId(preset.id)}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.generateRow}>
+        <button
+          type="button"
+          className={styles.generateButton}
+          disabled={busy}
+          onClick={() => void generate()}
+        >
+          {loading
+            ? `Designing… ${elapsed}s (about 30 seconds)`
+            : cooling
+              ? `Next design in ${formatCountdown(remaining)}`
+              : "Design my peptide"}
+        </button>
+      </div>
+      <p className={styles.demoNote}>
+        Runs the live pipeline in your browser · one design per minute per
+        visitor · preset conditions only · no token needed.
+      </p>
+
+      {error !== null && !loading && (
+        <p className={styles.errorBox} role="alert">
+          {error}
+        </p>
+      )}
+
+      {result?.success === true &&
+        candidate !== undefined &&
+        audit !== undefined && (
+          <div className={styles.result}>
+            <h3>Designed sequence</h3>
+            <p className={styles.sequence}>{candidate.mature_sequence}</p>
+            <p className={styles.topologyLine}>{candidate.topology}</p>
+
+            <h3>Loop grammar</h3>
+            <ul className={styles.loopChips}>
+              {LOOP_ORDER.map((loop) => (
+                <li key={loop}>
+                  <span>{loop}</span>
+                  <code>
+                    {candidate.grammar_breakdown[loop] ?? "—"}
+                  </code>
+                </li>
+              ))}
+            </ul>
+
+            <h3>Audit ledger</h3>
+            <dl className={styles.metrics}>
+              <div>
+                <dt>Charge</dt>
+                <dd>+{audit.charge}</dd>
+              </div>
+              <div>
+                <dt>GRAVY</dt>
+                <dd>{audit.gravy}</dd>
+              </div>
+              <div>
+                <dt>Boman</dt>
+                <dd>{audit.boman_index}</dd>
+              </div>
+              <div>
+                <dt>Aliphatic</dt>
+                <dd>{audit.aliphatic_index}</dd>
+              </div>
+            </dl>
+            <p className={styles.cleared}>
+              {audit.liabilities_cleared.map((name) => (
+                <span key={name}>✓ {name}</span>
+              ))}
+            </p>
+
+            {provenance !== undefined && (
+              <>
+                <h3>Provenance</h3>
+                <ul className={styles.trace}>
+                  {provenance.refinement_trace.map((turn, index) => (
+                    <li key={`${turn.turn}-${index}`}>
+                      turn {turn.turn} · {turn.source} ·{" "}
+                      {turn.disposition}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {handoff !== undefined && (
+              <>
+                <h3>Lab handoff</h3>
+                <p className={styles.handoffLine}>
+                  {handoff.synthesis_order.sequence_name} ·{" "}
+                  {handoff.synthesis_order.dna_length} bp · CAI{" "}
+                  {handoff.cai} · scrub{" "}
+                  {handoff.restriction_scrub.status}
+                </p>
+              </>
+            )}
+
+            <details className={styles.rawJson}>
+              <summary>Full JSON response</summary>
+              <pre>
+                <code>{JSON.stringify(result, null, 2)}</code>
+              </pre>
+            </details>
+          </div>
+        )}
+    </div>
+  );
+}

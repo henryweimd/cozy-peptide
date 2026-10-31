@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Demo from "./demo";
 import styles from "./page.module.css";
 
 const CURL_EXAMPLE = `curl -X POST https://cozy-peptide.vercel.app/api/generate-peptide \\
@@ -70,43 +72,84 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
-        <h1>An AI that invents gut medicines from scratch.</h1>
-        <p className={styles.lede}>
-          Name a gut disease target — say, <em>C. difficile</em> — and Muse
-          Spark 1.3 dreams up brand-new knottins: tiny knotted proteins,
-          tough enough to survive digestion, that have never existed in
-          nature. A symbolic compiler proves each design sound, and the API
-          returns DNA your lab can order — encoding a probiotic yeast that
-          secretes the drug exactly where it is needed.
-        </p>
+        <div className={styles.hero}>
+          <div>
+            <p className={styles.live}>
+              <span className={styles.dot} aria-hidden="true" />
+              Live API — POST /api/generate-peptide
+            </p>
+            <h1>Describe the disease. Muse Spark designs the probiotic. Your medicine, brewed around the clock.</h1>
+            <p className={styles.lede}>
+              Name a gut disease target — say, <em>C. difficile</em> — and
+              Muse Spark 1.3 dreams up brand-new knottins: tiny knotted
+              proteins, tough enough to survive digestion, that have never
+              existed in nature. A symbolic compiler proves each design
+              sound, and the API returns DNA your lab can order — encoding
+              a probiotic yeast that turns your gut into a miniature
+              factory, manufacturing the drug on site where the disease
+              lives.
+            </p>
+            <ul className={styles.stats} aria-label="Design constraints">
+              <li>28–36 aa</li>
+              <li>6-Cys ICK knot</li>
+              <li>charge +3…+5</li>
+              <li>CAI &gt; 0.85</li>
+            </ul>
+          </div>
+          <figure className={styles.figure}>
+            <Image
+              src="/knottin-exhibit.png"
+              alt="Structural cartoon of a Muse Spark 1.3-designed knottin for C. difficile"
+              width={433}
+              height={453}
+              priority
+            />
+            <figcaption>
+              A knottin invented by Muse Spark 1.3 for{" "}
+              <em>C. difficile</em> — never existed in nature.
+            </figcaption>
+          </figure>
+        </div>
+
+        <section aria-labelledby="demo">
+          <h2 id="demo">Design a peptide in your browser</h2>
+          <p>
+            Pick a gut condition and run the real pipeline — proposal,
+            grammar check, audit, and lab handoff — right here. Limited to
+            one design per minute per visitor so the shared demo stays
+            responsive.
+          </p>
+          <Demo />
+        </section>
 
         <section aria-labelledby="why">
-          <h2 id="why">Why it matters</h2>
+          <h2 id="why">Change how medicines get made</h2>
           <ul className={styles.checklist}>
             <li>
-              <strong>Medicines that survive digestion.</strong> Most protein
+              <strong>🛡️ Medicines that survive digestion.</strong> Most protein
               drugs are destroyed in the stomach before they can work.
               Knottins are tied in a cysteine knot that shrugs off acid and
               enzymes, so they can act right inside the gut.
             </li>
             <li>
-              <strong>Invented, not found.</strong> Rather than screening
+              <strong>💡 Invented, not found.</strong> Rather than screening
               nature&apos;s libraries, Muse Spark 1.3 reasons over the
               grammar of proteins to propose truly novel sequences — then a
               compiler, not vibes, verifies knot topology, charge,
               stability, and safety.
             </li>
             <li>
-              <strong>DNA out, not just data.</strong> A passing design
+              <strong>🧬 DNA out, not just data.</strong> A passing design
               compiles to a vendor-ready synthesis order: codon-optimized
-              DNA, secretion signal, and assembly parts for a probiotic
-              yeast that manufactures the drug on site.
+              DNA, secretion signal, and assembly parts that install a
+              miniature drug factory in the gut — a swallowed probiotic
+              yeast manufacturing the peptide where the disease lives.
             </li>
           </ul>
         </section>
 
         <section aria-labelledby="language">
-          <h2 id="language">The language of life</h2>
+          <h2 id="language">Teach AI to write the sentences of life</h2>
           <p>
             We think of language models as predictors of words. But the
             most important language isn&apos;t made of words — it&apos;s
@@ -131,7 +174,7 @@ export default function Home() {
         </section>
 
         <section aria-labelledby="pipeline">
-          <h2 id="pipeline">How it works</h2>
+          <h2 id="pipeline">Trace a request from prompt to DNA</h2>
           <ol className={styles.pipeline}>
             <li>
               <strong>Ingest.</strong> <code>POST /api/generate-peptide</code>{" "}
@@ -158,13 +201,14 @@ export default function Home() {
               <strong>Hand off.</strong> Verified knottins compile to a yeast
               cassette: 85-aa MFα1 leader with the SLDKR Kex2 junction,
               yeast codon optimization, 40-bp Gibson arms, and a synthesis
-              order manifest.
+              order manifest — everything needed to install the miniature
+              gut factory.
             </li>
           </ol>
         </section>
 
         <section aria-labelledby="api">
-          <h2 id="api">API reference</h2>
+          <h2 id="api">Generate a peptide in one API call</h2>
           <p className={styles.endpoint}>
             <span className={styles.method}>POST</span>
             <code>/api/generate-peptide</code>
@@ -278,7 +322,7 @@ export default function Home() {
         </section>
 
         <section aria-labelledby="safety">
-          <h2 id="safety">Safety</h2>
+          <h2 id="safety">Block toxins and enzymes before generation</h2>
           <ul className={styles.checklist}>
             <li>
               <strong>Toxin screening.</strong> Requests matching ricin,
@@ -296,7 +340,7 @@ export default function Home() {
         </section>
 
         <section aria-labelledby="local">
-          <h2 id="local">Run it locally</h2>
+          <h2 id="local">Run the compiler on your machine</h2>
           <pre className={styles.codeblock}>
             <code>{LOCAL_DEV}</code>
           </pre>

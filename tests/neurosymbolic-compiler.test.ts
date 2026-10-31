@@ -45,6 +45,8 @@ import {
   dynamic,
   maxDuration,
 } from "../app/api/generate-peptide/route";
+import { POST as demoPOST } from "../app/api/demo-generate/route";
+import { DEMO_PRESETS } from "../lib/demo-config";
 
 const TARGET = "TNF-alpha gut inflammation";
 
@@ -316,4 +318,45 @@ test("route exposes the neurosymbolic narrative", async () => {
   }
 
   assert.equal((await OPTIONS()).status, 204);
+});
+
+test("demo presets are biosecurity-clean", () => {
+  assert.ok(DEMO_PRESETS.length >= 3);
+  for (const preset of DEMO_PRESETS) {
+    assert.equal(validateRequestSafety(preset.target).safe, true, preset.id);
+  }
+});
+
+test("demo route serves presets with a per-IP cooldown", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  const demoReq = (body: unknown, ip: string): NextRequest =>
+    ({
+      headers: new Headers({ "x-forwarded-for": ip }),
+      json: async () => body,
+    }) as unknown as NextRequest;
+
+  const preset = DEMO_PRESETS[0];
+  assert.ok(preset !== undefined);
+  const ok = await demoPOST(
+    demoReq({ target: preset.target }, "test-demo-ip-1")
+  );
+  assert.equal(ok.status, 200);
+  const okBody = (await ok.json()) as Record<string, unknown>;
+  assert.equal(okBody["success"], true);
+  const candidate = okBody["candidate"] as Record<string, unknown>;
+  assert.ok((candidate["mature_sequence"] as string).length >= 28);
+
+  const cooled = await demoPOST(
+    demoReq({ target: preset.target }, "test-demo-ip-1")
+  );
+  assert.equal(cooled.status, 429);
+  const cooledBody = (await cooled.json()) as Record<string, unknown>;
+  const details = cooledBody["details"] as Record<string, unknown>;
+  assert.ok((details["retry_after_seconds"] as number) > 0);
+
+  const rejected = await demoPOST(
+    demoReq({ target: "anything not on the allowlist" }, "test-demo-ip-2")
+  );
+  assert.equal(rejected.status, 400);
 });
