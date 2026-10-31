@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ESMFOLD_TIMEOUT_MS } from "../lib/esmfold";
 import type { GLViewer } from "3dmol";
 import styles from "./page.module.css";
 
@@ -18,6 +19,7 @@ interface FoldResponse {
 /** Cold upstream workers answer slowly, then warm: retry those kinds. */
 const RETRYABLE_KINDS = new Set(["rate-limited", "timeout"]);
 const RETRY_DELAYS_MS = [3000, 6000];
+const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -45,21 +47,37 @@ function applyStyles(viewer: GLViewer, scheme: ColorScheme): void {
 }
 
 /**
- * Predicted-structure viewer: folds the sequence on demand through the
- * ESMFold proxy, then renders the backbone cartoon in 3Dmol.js with the
- * cysteine core in sticks. Self-loading with skeleton and error
- * fallback; the parent only passes the accepted sequence.
+ * Predicted-structure viewer: renders the backbone cartoon in 3Dmol.js
+ * with the cysteine core in sticks. When the parent supplies a stored
+ * prediction from the ledger it renders immediately; otherwise it folds
+ * on demand through the ESMFold proxy, linking the fold to runId so
+ * the fresh prediction is stored for next time. Self-loading with
+ * skeleton and error fallback.
  */
 export default function PeptideViewer({
   sequence,
+  runId = null,
+  storedPdb = null,
+  storedPlddt = null,
 }: {
   sequence: string;
+  runId?: string | null;
+  storedPdb?: string | null;
+  storedPlddt?: number | null;
 }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<GLViewer | null>(null);
   const [status, setStatus] = useState<ViewerStatus>("loading");
   const [message, setMessage] = useState("Folding with ESMFold…");
+  const [now, setNow] = useState(() => Date.now());
   const [plddt, setPlddt] = useState<number | null>(null);
+  // Attempt clock for the countdown display: which attempt is in
+  // flight, when it started, and when a backoff sleep ends. The `now`
+  // ticker re-renders twice a second while loading, keeping the
+  // countdowns live.
+  const [attemptNum, setAttemptNum] = useState(0);
+  const [attemptStart, setAttemptStart] = useState(0);
+  const [sleepUntil, setSleepUntil] = useState(0);
   // Spin on arrival so the fold reads as 3D at once; users can
   // still stop it, and reduced-motion users start stopped.
   const [spin, setSpin] = useState(
@@ -77,17 +95,48 @@ export default function PeptideViewer({
 
     const run = async (): Promise<void> => {
       setStatus("loading");
-      setMessage("Folding with ESMFold…");
+      setNow(Date.now());
       setPlddt(null);
+      setAttemptNum(0);
+      setSleepUntil(0);
       try {
+        // A stored prediction skips ESMFold entirely — same structure,
+        // no wait, no upstream load.
+        if (storedPdb !== null && storedPdb.length > 0) {
+          setMessage("Loading saved structure…");
+          const { createViewer } = await import("3dmol");
+          if (cancelled) return;
+          container.replaceChildren();
+          const viewer = createViewer(container, {
+            backgroundColor: "white",
+          });
+          viewerRef.current = viewer;
+          viewer.addModel(storedPdb, "pdb");
+          applyStyles(viewer, scheme);
+          viewer.zoomTo();
+          viewer.render();
+          viewer.spin(spin);
+          setPlddt(storedPlddt);
+          setStatus("ready");
+          return;
+        }
         let body: FoldResponse | null = null;
         let lastError = "Folding failed.";
+        let lastKind: string | null = null;
         for (let retry = 0; ; retry += 1) {
+          setMessage("Folding with ESMFold…");
+          setAttemptNum(retry + 1);
+          setAttemptStart(Date.now());
+          setSleepUntil(0);
           try {
             const response = await fetch("/api/fold-peptide", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ sequence }),
+              body: JSON.stringify(
+                runId !== null && runId.length > 0
+                  ? { sequence, runId }
+                  : { sequence }
+              ),
             });
             const parsed = (await response.json()) as FoldResponse;
             if (cancelled) return;
@@ -101,25 +150,32 @@ export default function PeptideViewer({
             }
             lastError =
               parsed.error ?? `Folding failed (${response.status}).`;
-            const kind = parsed.details?.kind;
+            lastKind = parsed.details?.kind ?? null;
             const delay = RETRY_DELAYS_MS[retry];
             if (
-              kind === undefined ||
-              !RETRYABLE_KINDS.has(kind) ||
+              lastKind === null ||
+              !RETRYABLE_KINDS.has(lastKind) ||
               delay === undefined
             ) {
               break;
             }
-            setMessage("Folding is slow — retrying…");
+            setMessage(
+              `ESM Atlas is warming up — retry ${retry + 1} of ${RETRY_DELAYS_MS.length}…`
+            );
+            setSleepUntil(Date.now() + delay);
             await sleep(delay);
             if (cancelled) return;
           } catch (error) {
             if (cancelled) return;
             lastError =
               error instanceof Error ? error.message : "Folding failed.";
+            lastKind = null;
             const delay = RETRY_DELAYS_MS[retry];
             if (delay === undefined) break;
-            setMessage("Folding is slow — retrying…");
+            setMessage(
+              `ESM Atlas is warming up — retry ${retry + 1} of ${RETRY_DELAYS_MS.length}…`
+            );
+            setSleepUntil(Date.now() + delay);
             await sleep(delay);
             if (cancelled) return;
           }
@@ -127,7 +183,13 @@ export default function PeptideViewer({
         if (cancelled) return;
         if (body === null) {
           setStatus("error");
-          setMessage(lastError);
+          // Overload timeouts are upstream weather, not a bad peptide:
+          // say so plainly instead of quoting milliseconds.
+          setMessage(
+            lastKind !== null && RETRYABLE_KINDS.has(lastKind)
+              ? "ESM Atlas is overloaded right now. Your peptide and everything below are unaffected — retry when ready."
+              : lastError
+          );
           return;
         }
         const { createViewer } = await import("3dmol");
@@ -174,7 +236,15 @@ export default function PeptideViewer({
     };
     // Intentionally not reactive to spin/scheme: those restyle live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sequence, attempt]);
+  }, [sequence, attempt, runId, storedPdb, storedPlddt]);
+
+  // Ticks while a fold is in flight so the attempt countdown
+  // stays live. Stops the moment the fold resolves or fails.
+  useEffect(() => {
+    if (status !== "loading") return;
+    const timer = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, [status, sequence, attempt, runId, storedPdb, storedPlddt]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -187,6 +257,23 @@ export default function PeptideViewer({
     if (viewer === null || status !== "ready") return;
     viewer.spin(spin);
   }, [spin, status]);
+
+  // Live progress suffix: which attempt is in flight with its
+  // response budget counting down, or the backoff sleep counting
+  // down between attempts. Empty for stored-structure loads.
+  let loadingSuffix = "";
+  if (status === "loading" && attemptNum > 0) {
+    if (now < sleepUntil) {
+      const retryIn = Math.max(1, Math.ceil((sleepUntil - now) / 1000));
+      loadingSuffix = ` (${retryIn}s)`;
+    } else {
+      const responseLeft = Math.max(
+        0,
+        Math.ceil((ESMFOLD_TIMEOUT_MS - (now - attemptStart)) / 1000)
+      );
+      loadingSuffix = ` (attempt ${attemptNum} of ${MAX_ATTEMPTS} · ${responseLeft}s left)`;
+    }
+  }
 
   return (
     <div className={styles.viewerwrap}>
@@ -204,7 +291,10 @@ export default function PeptideViewer({
       {status === "loading" && (
         <div className={styles.viewerstatus} role="status">
           <span className={styles.spinner} aria-hidden="true" />
-          <span>{message}</span>
+          <span>
+            {message}
+            {loadingSuffix}
+          </span>
         </div>
       )}
       {status === "error" && (

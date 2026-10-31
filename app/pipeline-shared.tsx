@@ -48,6 +48,7 @@ export interface ResearchEntry {
 
 export interface PipelinePayload {
   success: boolean;
+  run_id?: string;
   error?: string;
   details?: { retry_after_seconds?: number };
   target?: string;
@@ -242,6 +243,7 @@ export function timeAgo(iso: string, now: number): string {
 export type SseFrame =
   | { kind: "stage"; event: StageEvent }
   | { kind: "result"; payload: PipelinePayload }
+  | { kind: "run"; runId: string }
   | { kind: "none" };
 
 /** Parses one SSE frame (events split on blank lines by the caller). */
@@ -264,6 +266,16 @@ export function parseSseFrame(frame: string): SseFrame {
   }
   if (eventName === "result" || eventName === "error") {
     return { kind: "result", payload: data as PipelinePayload };
+  }
+  if (eventName === "run") {
+    const record =
+      typeof data === "object" && data !== null
+        ? (data as Record<string, unknown>)
+        : null;
+    const runId = record !== null ? record["runId"] : null;
+    if (typeof runId === "string" && runId.length > 0) {
+      return { kind: "run", runId };
+    }
   }
   return { kind: "none" };
 }

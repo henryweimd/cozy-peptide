@@ -195,7 +195,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           requestedTarget
         );
         send("result", payload);
-        await recordRun(
+        const runId = await recordRun(
           buildRunRecord({
             source: "demo-stream",
             params: runParams,
@@ -205,6 +205,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             stageTrace,
           })
         );
+        if (runId !== null) send("run", { runId });
       } catch (error) {
         if (error instanceof NeurosymbolicVerificationError) {
           const body = {

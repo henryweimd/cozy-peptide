@@ -311,6 +311,7 @@ export type AgentToolResult = z.infer<typeof AgentToolResultSchema>;
  */
 export const ApiResponseSchema = z.object({
   success: z.boolean(),
+  run_id: z.string().optional(),
   data: z.any().optional(),
   error: z.string().optional(),
   details: z.any().optional(),

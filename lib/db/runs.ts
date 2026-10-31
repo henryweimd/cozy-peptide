@@ -264,32 +264,36 @@ function citationsFromRecord(record: RunRecord): StoredCitation[] {
  * Best-effort ledger write for routes: awaits the run insert plus its
  * citation rows but never throws, warning once when the database is
  * unreachable or unconfigured (silent when unconfigured — local dev
- * without Supabase is normal).
+ * without Supabase is normal). Resolves to the new row id so callers
+ * can link follow-up artifacts (folded structures) back to the run.
  */
 export async function recordRun(
   record: RunRecord,
   options: { fetchImpl?: FetchImpl; timeoutMs?: number } = {}
-): Promise<void> {
+): Promise<string | null> {
   try {
     const result = await saveRun(record, options);
     if (!result.saved) {
       if (result.error !== "Supabase env not configured") {
         console.warn(`[peptide-runs] ledger write failed: ${result.error}`);
       }
-      return;
+      return null;
     }
-    if (result.id === undefined) return;
+    if (result.id === undefined) return null;
     const citations = citationsFromRecord(record);
-    if (citations.length === 0) return;
-    const stored = await saveCitations(result.id, citations, {
-      timeoutMs: options.timeoutMs,
-    });
-    if (stored.error !== undefined) {
-      console.warn(`[peptide-runs] citations write failed: ${stored.error}`);
+    if (citations.length > 0) {
+      const stored = await saveCitations(result.id, citations, {
+        timeoutMs: options.timeoutMs,
+      });
+      if (stored.error !== undefined) {
+        console.warn(`[peptide-runs] citations write failed: ${stored.error}`);
+      }
     }
+    return result.id;
   } catch (error) {
     console.warn(
       `[peptide-runs] ledger write threw: ${error instanceof Error ? error.message : "unknown"}`
     );
+    return null;
   }
 }

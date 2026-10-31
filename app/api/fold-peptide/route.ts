@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { ApiResponse } from "../../../types/peptide";
+import { updateRunStructure } from "../../../lib/db/recent";
 import {
   FoldError,
   FoldRequestSchema,
@@ -13,7 +14,9 @@ export const maxDuration = 30;
 /**
  * Public ESMFold proxy for the 3D viewer. Accepts a short canonical
  * peptide sequence, folds it via the keyless ESM Atlas API, and returns
- * the PDB plus mean C-alpha pLDDT. Clean error JSON on validation
+ * the PDB plus mean C-alpha pLDDT. When the caller supplies the run
+ * id, the prediction is also stored on the run row (best-effort —
+ * storage faults never fail the fold). Clean error JSON on validation
  * faults (400), upstream rate limits (429), timeouts (504), and other
  * upstream failures (502) — the viewer renders each as a fallback.
  */
@@ -41,8 +44,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const { pdb, plddt } = await foldSequence(parsed.data.sequence);
+    const runId = parsed.data.runId;
+    const stored =
+      runId !== undefined
+        ? await updateRunStructure(runId, { pdb, plddt })
+        : false;
     return NextResponse.json(
-      { success: true, pdb, plddt },
+      { success: true, pdb, plddt, stored },
       { status: 200 }
     );
   } catch (error) {

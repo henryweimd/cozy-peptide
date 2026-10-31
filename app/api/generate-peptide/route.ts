@@ -218,7 +218,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       designModel,
       researchProvenance
     );
-    await recordRun(
+    const runId = await recordRun(
       buildRunRecord({
         source: "api",
         params: runParams,
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         stageTrace,
       })
     );
-    return json(payload, 200);
+    return json(runId === null ? payload : { ...payload, run_id: runId }, 200);
   } catch (error) {
     if (error instanceof NeurosymbolicVerificationError) {
       const body = {
@@ -346,7 +346,7 @@ function streamGeneration(
           researchProvenance
         );
         send("result", payload);
-        await recordRun(
+        const runId = await recordRun(
           buildRunRecord({
             source: "api-stream",
             params: {
@@ -363,6 +363,7 @@ function streamGeneration(
             stageTrace,
           })
         );
+        if (runId !== null) send("run", { runId });
       } catch (error) {
         if (error instanceof NeurosymbolicVerificationError) {
           const body = {

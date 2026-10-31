@@ -171,7 +171,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       research,
       requestedTarget
     );
-    await recordRun(
+    const runId = await recordRun(
       buildRunRecord({
         source: "demo",
         params: runParams,
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         stageTrace,
       })
     );
-    return json(payload, 200);
+    return json(runId === null ? payload : { ...payload, run_id: runId }, 200);
   } catch (error) {
     if (error instanceof NeurosymbolicVerificationError) {
       const body = {

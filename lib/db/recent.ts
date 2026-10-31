@@ -87,6 +87,9 @@ export interface RunDetail extends RecentRun {
   agentTools: unknown;
   stageTrace: unknown;
   specificity: unknown;
+  structurePdb: string | null;
+  structurePlddt: number | null;
+  structurePredictedAt: string | null;
 }
 
 function parseDetail(value: unknown): RunDetail | null {
@@ -108,6 +111,9 @@ function parseDetail(value: unknown): RunDetail | null {
     agentTools: record["agent_tools"] ?? null,
     stageTrace: record["stage_trace"] ?? null,
     specificity: record["specificity"] ?? null,
+    structurePdb: asString(record["structure_pdb"]),
+    structurePlddt: asNumber(record["structure_plddt"]),
+    structurePredictedAt: asString(record["structure_predicted_at"]),
   };
 }
 
@@ -284,6 +290,55 @@ export async function updateRunNarrative(
           Prefer: "return=minimal",
         },
         body: JSON.stringify({ research_narrative: narrative }),
+        signal: controller.signal,
+      }
+    );
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Stores an ESMFold prediction on a run row. Best-effort: service-role
+ * key only (anon is INSERT-only), never throws, returns false when the
+ * store cannot be made. First write wins per run — refolds of the
+ * same sequence are deterministic, so repeats are skipped.
+ */
+export async function updateRunStructure(
+  runId: string,
+  structure: { pdb: string; plddt: number },
+  options: { timeoutMs?: number; fetchImpl?: FetchImpl } = {}
+): Promise<boolean> {
+  if (!/^[0-9a-fA-F-]{36}$/.test(runId)) return false;
+  if (structure.pdb.length === 0 || !Number.isFinite(structure.plddt)) {
+    return false;
+  }
+  const baseUrl = process.env["SUPABASE_URL"]?.trim() ?? "";
+  const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"]?.trim() ?? "";
+  if (baseUrl.length === 0 || serviceKey.length === 0) return false;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const timeoutMs = options.timeoutMs ?? RECENT_RUNS_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(
+      `${baseUrl.replace(/\/+$/, "")}/rest/v1/peptide_runs?id=eq.${encodeURIComponent(runId)}&structure_pdb=is.null`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          structure_pdb: structure.pdb,
+          structure_plddt: structure.plddt,
+          structure_predicted_at: new Date().toISOString(),
+        }),
         signal: controller.signal,
       }
     );

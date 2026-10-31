@@ -85,6 +85,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const [events, setEvents] = useState<StageEvent[]>([]);
   const [result, setResult] = useState<PipelinePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [streamRunId, setStreamRunId] = useState<string | null>(null);
   const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
 
@@ -162,6 +163,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
     setError(null);
     setResult(null);
     setEvents([]);
+    setStreamRunId(null);
     try {
       const response = await fetch("/api/demo-stream", {
         method: "POST",
@@ -206,6 +208,8 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             );
           } else if (frame.kind === "result") {
             outcome = frame.payload;
+          } else if (frame.kind === "run") {
+            setStreamRunId(frame.runId);
           }
           split = buffer.indexOf("\n\n");
         }
@@ -444,7 +448,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           <section aria-label="Predicted structure">
             <h3>Predicted structure</h3>
-            <PeptideViewer sequence={candidate.mature_sequence} />
+            <PeptideViewer
+              sequence={candidate.mature_sequence}
+              runId={result?.run_id ?? streamRunId}
+            />
             <StructureGuide />
           </section>
 

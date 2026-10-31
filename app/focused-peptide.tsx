@@ -380,7 +380,17 @@ export default function FocusedPeptide({
                   ))}
                 </ul>
               )}
-              <PeptideViewer key={runId} sequence={sequence} />
+              <PeptideViewer
+                key={runId}
+                sequence={sequence}
+                runId={runId}
+                storedPdb={
+                  shown !== null ? asString(shown["structurePdb"]) : null
+                }
+                storedPlddt={
+                  shown !== null ? asNumber(shown["structurePlddt"]) : null
+                }
+              />
             </>
           )}
 

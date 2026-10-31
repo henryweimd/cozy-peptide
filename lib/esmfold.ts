@@ -22,6 +22,7 @@ export const FoldRequestSchema = z.object({
       /^[ACDEFGHIKLMNPQRSTVWY]+$/,
       "sequence must be single-letter canonical amino acids"
     ),
+  runId: z.string().uuid().optional(),
 });
 export type FoldRequest = z.infer<typeof FoldRequestSchema>;
 
