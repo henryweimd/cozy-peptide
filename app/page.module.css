@@ -45,7 +45,8 @@
   .board,
   .tile,
   .pinplate,
-  .bioFigure {
+  .bioFigure,
+  .wrapDiagram {
     border-radius: var(--cut-l) 4px var(--cut-l) 4px;
     corner-shape: bevel round bevel round;
   }
@@ -1238,6 +1239,71 @@
   font-weight: 500;
   font-size: var(--text-sm);
   color: var(--color-muted);
+}
+
+.wrapDiagram {
+  margin-top: var(--space-xl);
+  max-width: 56rem;
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-card);
+  background: var(--color-paper-2);
+}
+
+.wrapDiagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.wrapDiagram figcaption {
+  padding: var(--space-sm) var(--space-xs) var(--space-2xs);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  max-width: 62ch;
+}
+
+.bioSplit {
+  margin-top: var(--space-2xl);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 18rem);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.bioSplit .bioProse {
+  margin-top: 0;
+}
+
+.bioSplit .bioFigure {
+  margin-top: 0;
+  max-width: none;
+}
+
+.bioSplit .bioFigure figcaption {
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 60rem) {
+  .bioSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .bioSplit .bioFigure {
+    max-width: 22rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .wrapDiagram {
+    overflow-x: auto;
+  }
+
+  .wrapDiagram svg {
+    min-width: 36rem;
+  }
 }
 
 .bioFigure figcaption a {

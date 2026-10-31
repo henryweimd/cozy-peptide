@@ -55,5 +55,21 @@
    "h1 11 words kept per explicit user request (58 NOTE accepted)",
    "render hero: 0 FAIL 0 WARN 1 WAIVED 3 NOTE"
   ]
+ },
+ {
+  "date": "2026-10-31",
+  "mode": "revision",
+  "scope": "page",
+  "entry": "/",
+  "theme": "cobalt",
+  "added": [
+   "wrapper diagram (inline SVG) in #biology",
+   "bioSplit side-graphic row for yeast SEM",
+   "new #safety tab after pipeline: chassis safety layers, FDA LBP pathway, Rebyota/Vowst, n-of-1 future",
+   "nav + footer safety links; guardrail row anchor renamed #guardrails"
+  ],
+  "notes": [
+   "static sweep 0 FAIL 0 WARN; tests 27/27; desktop+mobile section shots verified"
+  ]
  }
 ]

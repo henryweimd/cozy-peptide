@@ -86,6 +86,9 @@ export default function Home() {
             <a className={styles.navlink} href="#pipeline">
               the pipeline
             </a>
+            <a className={styles.navlink} href="#safety">
+              safety
+            </a>
             <a className={`${styles.btn} ${styles.navbtn}`} href="#demo">
               Design a peptide
             </a>
@@ -177,37 +180,277 @@ export default function Home() {
             </table>
             <div className={styles.bioProse}>
               <p>
-                Swallowed peptides rarely survive the trip. Stomach acid
-                shreds them, and pancreatic proteases finish the job in
-                the small intestine. So the winning design never travels
-                as a pill. It is compiled into DNA and installed as a
-                cassette in baker&apos;s yeast, starting with{" "}
-                <em>Saccharomyces boulardii</em>. Not a probiotic: an
-                engineered living therapeutic, a miniature factory that
-                lives in your gut and brews the medicine where the
-                disease lives.
+                A raw model proposes; most proposals would fail in a
+                real body. cozy-peptide wraps Muse Spark in a compiler
+                that proves each design &mdash; knot, charge, safety
+                &mdash; before anything touches a cell. Only proven
+                winners ship.
               </p>
             </div>
-            <figure className={styles.bioFigure}>
-              <Image
-                src="/yeast-sem.jpg"
-                alt="Scanning electron micrograph of budding baker's yeast cells"
-                width={1280}
-                height={826}
-                sizes="(max-width: 60rem) 100vw, 896px"
-                loading="lazy"
-              />
+            <figure className={styles.wrapDiagram}>
+              <svg
+                viewBox="0 0 760 300"
+                role="img"
+                aria-labelledby="wrapDiagramTitle wrapDiagramDesc"
+              >
+                <title id="wrapDiagramTitle">
+                  How cozy-peptide wraps the Muse Spark model
+                </title>
+                <desc id="wrapDiagramDesc">
+                  The disease name flows into nested layers: cozy-peptide
+                  on the outside, the proof compiler in the middle, Muse
+                  Spark inventing peptides at the core. A yeast cassette
+                  comes out.
+                </desc>
+                <defs>
+                  <marker
+                    id="wrapArrow"
+                    viewBox="0 0 10 10"
+                    refX="8"
+                    refY="5"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto-start-reverse"
+                  >
+                    <path
+                      d="M 0 1 L 9 5 L 0 9 z"
+                      style={{ fill: "var(--color-accent)" }}
+                    />
+                  </marker>
+                </defs>
+                <rect
+                  x="170"
+                  y="24"
+                  width="420"
+                  height="252"
+                  rx="10"
+                  style={{
+                    fill: "var(--color-paper)",
+                    stroke: "var(--color-ink)",
+                    strokeWidth: 2,
+                  }}
+                />
+                <text
+                  x="380"
+                  y="54"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    fill: "var(--color-ink)",
+                  }}
+                >
+                  cozy-peptide: the wrapper
+                </text>
+                <rect
+                  x="212"
+                  y="72"
+                  width="336"
+                  height="158"
+                  rx="8"
+                  style={{
+                    fill: "var(--color-paper)",
+                    stroke: "var(--color-muted)",
+                    strokeWidth: 1.5,
+                    strokeDasharray: "6 4",
+                  }}
+                />
+                <text
+                  x="380"
+                  y="100"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    fill: "var(--color-ink-2)",
+                  }}
+                >
+                  compiler proves it: knot, charge, safety
+                </text>
+                <rect
+                  x="272"
+                  y="118"
+                  width="216"
+                  height="84"
+                  rx="8"
+                  style={{
+                    fill: "var(--color-accent-wash)",
+                    stroke: "var(--color-accent)",
+                    strokeWidth: 2,
+                  }}
+                />
+                <text
+                  x="380"
+                  y="152"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 19,
+                    fontWeight: 600,
+                    fill: "var(--color-accent-deep)",
+                  }}
+                >
+                  Muse Spark
+                </text>
+                <text
+                  x="380"
+                  y="176"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fill: "var(--color-ink-2)",
+                  }}
+                >
+                  invents peptides
+                </text>
+                <text
+                  x="380"
+                  y="258"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 13,
+                    fill: "var(--color-muted)",
+                  }}
+                >
+                  grammar + audit filter every proposal
+                </text>
+                <rect
+                  x="8"
+                  y="118"
+                  width="118"
+                  height="64"
+                  rx="8"
+                  style={{
+                    fill: "var(--color-paper)",
+                    stroke: "var(--color-rule-2)",
+                    strokeWidth: 1.5,
+                  }}
+                />
+                <text
+                  x="67"
+                  y="145"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    fill: "var(--color-ink)",
+                  }}
+                >
+                  name the
+                </text>
+                <text
+                  x="67"
+                  y="165"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    fill: "var(--color-ink)",
+                  }}
+                >
+                  disease
+                </text>
+                <line
+                  x1="130"
+                  y1="150"
+                  x2="162"
+                  y2="150"
+                  style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
+                  markerEnd="url(#wrapArrow)"
+                />
+                <rect
+                  x="634"
+                  y="118"
+                  width="118"
+                  height="64"
+                  rx="8"
+                  style={{
+                    fill: "var(--color-paper)",
+                    stroke: "var(--color-rule-2)",
+                    strokeWidth: 1.5,
+                  }}
+                />
+                <text
+                  x="693"
+                  y="145"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    fill: "var(--color-ink)",
+                  }}
+                >
+                  yeast
+                </text>
+                <text
+                  x="693"
+                  y="165"
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    fill: "var(--color-ink)",
+                  }}
+                >
+                  cassette
+                </text>
+                <line
+                  x1="594"
+                  y1="150"
+                  x2="626"
+                  y2="150"
+                  style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
+                  markerEnd="url(#wrapArrow)"
+                />
+              </svg>
               <figcaption>
-                Baker&apos;s yeast, <em>Saccharomyces cerevisiae</em>,
-                budding under the electron microscope. Each cell becomes
-                a miniature factory for the designed peptide. Micrograph:{" "}
-                <a href="https://commons.wikimedia.org/wiki/File:Saccharomyces_cerevisiae_SEM.jpg">
-                  Mogana Das Murtey and Patchamuthu Ramasamy, CC BY 3.0,
-                  via Wikimedia Commons
-                </a>
-                .
+                Muse Spark dreams up new peptides at the core. The
+                compiler around it checks every design, and only proven
+                winners ship as a yeast cassette.
               </figcaption>
             </figure>
+            <div className={styles.bioSplit}>
+              <div className={styles.bioProse}>
+                <p>
+                  Swallowed peptides rarely survive the trip. Stomach
+                  acid shreds them, and pancreatic proteases finish the
+                  job in the small intestine. So the winning design never
+                  travels as a pill. It is compiled into DNA and installed
+                  as a cassette in baker&apos;s yeast, starting with{" "}
+                  <em>Saccharomyces boulardii</em>. Not a probiotic: an
+                  engineered living therapeutic, a miniature factory that
+                  lives in your gut and brews the medicine where the
+                  disease lives.
+                </p>
+              </div>
+              <figure className={styles.bioFigure}>
+                <Image
+                  src="/yeast-sem.jpg"
+                  alt="Scanning electron micrograph of budding baker's yeast cells"
+                  width={1280}
+                  height={826}
+                  sizes="(max-width: 60rem) 100vw, 288px"
+                  loading="lazy"
+                />
+                <figcaption>
+                  Baker&apos;s yeast budding under the electron
+                  microscope: each cell a miniature factory. Micrograph:{" "}
+                  <a href="https://commons.wikimedia.org/wiki/File:Saccharomyces_cerevisiae_SEM.jpg">
+                    Murtey and Ramasamy, CC BY 3.0, via Wikimedia Commons
+                  </a>
+                  .
+                </figcaption>
+              </figure>
+            </div>
             <ul className={styles.statGrid} aria-label="Gut disease burden">
               <li className={styles.stat}>
                 <span className={styles.statFigure}>1 in 10</span>
@@ -389,7 +632,7 @@ export default function Home() {
               <h2 id="safety-local">Safety rules and a local run</h2>
             </div>
             <div className={styles.rows}>
-              <div className={styles.row} id="safety">
+              <div className={styles.row} id="guardrails">
                 <h3 className={styles.rowtitle}>Toxin screening</h3>
                 <div className={styles.rowbody}>
                   <p>
@@ -586,6 +829,106 @@ export default function Home() {
           </div>
         </section>
 
+        <section className={styles.section} aria-labelledby="safety">
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="safety">Safe by design, approved by precedent</h2>
+              <p className="lead">
+                Living medicine, with layers of safety and an FDA path
+                already walked.
+              </p>
+            </div>
+            <div className={styles.bioProse}>
+              <p>
+                The chassis is <em>Saccharomyces boulardii</em>, a yeast
+                with GRAS status and decades of safe clinical use
+                worldwide. It thrives at body temperature, survives the
+                trip through the gut, and never moves in: it clears
+                within days of the last dose, so stopping the dose stops
+                the exposure. Being a eukaryote, not a bacterium, it has
+                no plasmids to trade with gut bacteria, and the
+                therapeutic cassette sits on its chromosome, not on a
+                mobile element.
+              </p>
+            </div>
+            <table className={styles.paperTable}>
+              <thead>
+                <tr>
+                  <th>Safety layer</th>
+                  <th>What it means</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Proven species</th>
+                  <td>
+                    Prescribed for decades on every continent; serious
+                    issues limited to rare cases in severely
+                    immunocompromised patients.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Transient guest</th>
+                  <td>
+                    Does not colonize. Clears within days, so exposure
+                    ends when dosing ends.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Contained chassis</th>
+                  <td>
+                    Engineered auxotrophy: the yeast only grows where it
+                    is fed, with CRISPR kill switches as backup.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Proven before release</th>
+                  <td>
+                    Every peptide passes the compiler first: knot,
+                    charge, safety.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className={styles.bioProse}>
+              <p>
+                Regulators already know this category. Live
+                Biotherapeutic Products are biological products, not
+                supplements: they go through an IND, phased clinical
+                trials, and a full BLA reviewed by the FDA&apos;s Center
+                for Biologics. Rebyota, a single-dose rectal treatment,
+                became the first approved LBP in late 2022; Vowst, an
+                oral spore capsule, followed in April 2023. Both beat
+                placebo in Phase 3 and now prevent recurrent{" "}
+                <em>C. difficile</em> infection. A defined yeast carrying
+                one known cassette is simpler to characterize than
+                donor-derived consortia, and the road it travels is
+                already paved.
+              </p>
+              <p>
+                That platform logic points further. In 2019, milasen
+                became the first drug designed for one person: built,
+                FDA-cleared, and dosed within about a year of diagnosis.
+                Once a chassis-and-compiler platform is proven, a new
+                peptide is a cassette swap, not a new factory. AI-designed
+                peptides, matched to the patient and moved through n-of-1
+                trials, could reach the highest unmet needs on the
+                shortest timelines.
+              </p>
+            </div>
+            <p className={styles.sourceLine}>
+              Sources: FDA approvals of Rebyota (2022) and Vowst (2023);
+              FDA LBP guidance for early clinical trials; biocontainment
+              strategies, Frontiers in Bioengineering and Biotechnology
+              2023; milasen, NEJM 2019.
+            </p>
+            <p className={styles.statement}>
+              Prove the platform once. Then every new disease is a
+              design problem, not a decade.
+            </p>
+          </div>
+        </section>
+
         <section
           className={`${styles.band} ${styles.bandWash}`}
           aria-label="Design another peptide"
@@ -624,9 +967,12 @@ export default function Home() {
             <a className={styles.footlink} href="#pipeline">
               the pipeline
             </a>
+            <a className={styles.footlink} href="#safety">
+              safety
+            </a>
           </nav>
           <nav className={styles.footcol} aria-label="More">
-            <a className={styles.footlink} href="#safety">
+            <a className={styles.footlink} href="#guardrails">
               safety rules
             </a>
             <a className={styles.footlink} href="#local">
