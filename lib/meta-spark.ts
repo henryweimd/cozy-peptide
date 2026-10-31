@@ -9,9 +9,8 @@ import {
 import { auditPeptideCandidate } from "./symbolic-auditor";
 import { L4_HELIX_FORMERS, parseKnottinGrammar } from "./protein-grammar";
 
-export const META_SPARK_MODEL = "meta-spark-1.3-contributor";
-export const META_SPARK_DEFAULT_URL =
-  "https://api.meta.ai/v1/spark/chat/completions";
+export const META_SPARK_MODEL = "muse-spark-1.3-contributor";
+export const META_SPARK_DEFAULT_URL = "https://api.meta.ai/v1/chat/completions";
 export const META_SPARK_TIMEOUT_MS = 15000;
 export const KNOTTIN_TOPOLOGY = "C-X(3,7)-C-X(4,6)-C-X(4,7)-C-X(1,3)-C-X(4,8)-C";
 
@@ -316,12 +315,53 @@ function verifyCandidate(
   };
 }
 
+/** Total upstream API time budget per generation, reserving room for synthesis and handoff inside maxDuration. */
+export const META_SPARK_API_BUDGET_MS = 45000;
+
+/**
+ * Evaluates one candidate pool, recording provenance; returns the first
+ * accepted candidate, or null when the pool holds none.
+ */
+function evaluatePool(
+  pool: string[],
+  chargeTarget: number,
+  turn: number,
+  source: RefinementTurn["source"],
+  terminal: boolean,
+  refinementHistory: RefinementTurn[]
+): { candidate: string; audit: SymbolicAuditResult } | null {
+  for (const candidate of pool) {
+    const verification = verifyCandidate(candidate, chargeTarget);
+    refinementHistory.push({
+      turn,
+      candidate,
+      grammar_valid: verification.grammar.valid,
+      syntax_errors: verification.grammar.syntaxErrors,
+      audit_passed: verification.audit.passed,
+      violations: verification.audit.violations,
+      compiler_diagnostic: verification.diagnostic,
+      disposition: verification.pass
+        ? "accepted"
+        : terminal
+          ? "exhausted"
+          : "repaired",
+      source,
+    });
+    if (verification.pass) {
+      return { candidate, audit: verification.audit };
+    }
+  }
+  return null;
+}
+
 /**
  * Neurosymbolic closed-loop reflection engine. Proposes candidates with
  * Meta Spark 1.3, intercepts them with the grammar parser and symbolic
  * auditor, and feeds compiler diagnostics back for deterministic repair
- * instead of discarding failures. Without an API key, synthesizes from
- * the grammar-constrained deterministic sampler with honest provenance.
+ * instead of discarding failures. Repairs are never cut short for
+ * fallback; only when turns or the API time budget are exhausted does
+ * the grammar-constrained deterministic synthesizer serve as the final
+ * backstop, with source-labeled provenance either way.
  */
 export async function generateVerifiedPeptide(
   target: string,
@@ -336,32 +376,33 @@ export async function generateVerifiedPeptide(
   const apiKey = process.env.META_API_KEY;
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
 
-  if (!apiAvailable) {
+  const synthesize = (
+    turn: number
+  ): {
+    candidate: string;
+    audit: SymbolicAuditResult;
+    refinementHistory: RefinementTurn[];
+  } => {
     const pool = sampleFallbackCandidates(target, chargeTarget, 5);
-    for (const candidate of pool) {
-      const verification = verifyCandidate(candidate, chargeTarget);
-      refinementHistory.push({
-        turn: 0,
-        candidate,
-        grammar_valid: verification.grammar.valid,
-        syntax_errors: verification.grammar.syntaxErrors,
-        audit_passed: verification.audit.passed,
-        violations: verification.audit.violations,
-        compiler_diagnostic: verification.diagnostic,
-        disposition: verification.pass ? "accepted" : "exhausted",
-      });
-      if (verification.pass) {
-        return {
-          candidate,
-          audit: verification.audit,
-          refinementHistory,
-        };
-      }
-    }
-    throw new NeurosymbolicVerificationError(
-      `Deterministic synthesis produced no verifiable candidate for target '${target}'.`,
+    const accepted = evaluatePool(
+      pool,
+      chargeTarget,
+      turn,
+      "deterministic-synthesis",
+      true,
       refinementHistory
     );
+    if (accepted !== null) {
+      return { ...accepted, refinementHistory };
+    }
+    throw new NeurosymbolicVerificationError(
+      `No verifiable candidate for target '${target}' from proposal, repair, or deterministic synthesis.`,
+      refinementHistory
+    );
+  };
+
+  if (!apiAvailable) {
+    return synthesize(0);
   }
 
   let pool = await requestSparkCandidates([
@@ -374,37 +415,25 @@ export async function generateVerifiedPeptide(
   ]);
   let cycle = 0;
 
+  const startedAt = Date.now();
   for (;;) {
-    for (const candidate of pool) {
-      const verification = verifyCandidate(candidate, chargeTarget);
-      refinementHistory.push({
-        turn: cycle,
-        candidate,
-        grammar_valid: verification.grammar.valid,
-        syntax_errors: verification.grammar.syntaxErrors,
-        audit_passed: verification.audit.passed,
-        violations: verification.audit.violations,
-        compiler_diagnostic: verification.diagnostic,
-        disposition: verification.pass
-          ? "accepted"
-          : cycle < maxRefinementTurns
-            ? "repaired"
-            : "exhausted",
-      });
-      if (verification.pass) {
-        return {
-          candidate,
-          audit: verification.audit,
-          refinementHistory,
-        };
-      }
+    const accepted = evaluatePool(
+      pool,
+      chargeTarget,
+      cycle,
+      "meta-spark-1.3",
+      cycle >= maxRefinementTurns,
+      refinementHistory
+    );
+    if (accepted !== null) {
+      return { ...accepted, refinementHistory };
     }
 
-    if (cycle >= maxRefinementTurns) {
-      throw new NeurosymbolicVerificationError(
-        `Exhausted ${maxRefinementTurns} refinement turns without a verifiable candidate for target '${target}'.`,
-        refinementHistory
-      );
+    const turnsExhausted = cycle >= maxRefinementTurns;
+    const budgetExhausted =
+      Date.now() - startedAt >= META_SPARK_API_BUDGET_MS;
+    if (turnsExhausted || budgetExhausted) {
+      return synthesize(cycle);
     }
 
     const failures = refinementHistory.filter(
@@ -449,7 +478,7 @@ export async function generateVerifiedPeptide(
             ),
           },
         ],
-        512
+        1024
       );
     }
     cycle += 1;

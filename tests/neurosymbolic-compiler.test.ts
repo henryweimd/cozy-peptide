@@ -34,6 +34,7 @@ import {
   generateVerifiedPeptide,
   sampleFallbackCandidates,
 } from "../lib/meta-spark";
+import { MetaSparkResponseSchema } from "../types/peptide";
 import {
   POST,
   OPTIONS,
@@ -185,21 +186,49 @@ test("completion extraction handles scratchpad prose and labels", () => {
 
 test("generateVerifiedPeptide synthesizes with provenance and no key", async () => {
   delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
   const result = await generateVerifiedPeptide(TARGET, 4, 3);
   assert.equal(result.audit.passed, true);
   assert.ok(result.refinementHistory.length >= 1);
-  assert.equal(
-    result.refinementHistory[result.refinementHistory.length - 1]?.disposition,
-    "accepted"
-  );
+  const last = result.refinementHistory[result.refinementHistory.length - 1];
+  assert.equal(last?.disposition, "accepted");
+  assert.equal(last?.source, "deterministic-synthesis");
   await assert.rejects(
     generateVerifiedPeptide(TARGET, 99, 1),
     NeurosymbolicVerificationError
   );
 });
 
+test("completion schema tolerates null message content", () => {
+  const parsed = MetaSparkResponseSchema.safeParse({
+    id: "chatcmpl-test",
+    choices: [
+      { index: 0, message: { role: "assistant", content: null } },
+      { index: 1, message: null },
+    ],
+  });
+  assert.equal(parsed.success, true);
+});
+
+test("dead upstream degrades to synthesis instead of empty 502", async () => {
+  process.env.META_API_KEY = "dummy-key-for-dead-endpoint-test";
+  process.env.META_SPARK_API_URL = "http://127.0.0.1:1/unreachable";
+  try {
+    const result = await generateVerifiedPeptide(TARGET, 4, 1);
+    assert.equal(result.audit.passed, true);
+    assert.ok(result.refinementHistory.length >= 1);
+    for (const turn of result.refinementHistory) {
+      assert.equal(turn.source, "deterministic-synthesis");
+    }
+  } finally {
+    delete process.env.META_API_KEY;
+    delete process.env.META_SPARK_API_URL;
+  }
+});
+
 test("route exposes the neurosymbolic narrative", async () => {
   delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
   process.env.API_BEARER_TOKEN = "test-token";
   const req = (body: unknown, token?: string | null): NextRequest =>
     ({

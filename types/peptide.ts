@@ -45,8 +45,9 @@ export const MetaSparkResponseSchema = z.object({
         message: z
           .object({
             role: z.string().optional(),
-            content: z.string(),
+            content: z.string().nullable().optional(),
           })
+          .nullable()
           .optional(),
         text: z.string().optional(),
       })
@@ -78,6 +79,7 @@ export const RefinementTurnSchema = z.object({
   violations: z.array(z.string()),
   compiler_diagnostic: z.string(),
   disposition: z.enum(["accepted", "repaired", "exhausted"]),
+  source: z.enum(["meta-spark-1.3", "deterministic-synthesis"]),
 });
 export type RefinementTurn = z.infer<typeof RefinementTurnSchema>;
 
