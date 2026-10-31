@@ -4,30 +4,84 @@ import {
   type MetaSparkMessage,
   type MetaSparkRequest,
   type RefinementTurn,
+  type SpecificityReport,
   type SymbolicAuditResult,
 } from "../types/peptide";
-import { auditPeptideCandidate } from "./symbolic-auditor";
-import { L4_HELIX_FORMERS, parseKnottinGrammar } from "./protein-grammar";
+import {
+  HYDROPHOBIC_RUN_SET,
+  auditFailureModes,
+  auditPeptideCandidate,
+  grammarFailureModes,
+} from "./symbolic-auditor";
+import {
+  checkSpecificity,
+  summarizeSpecificity,
+  uncheckedSpecificity,
+} from "./specificity";
+import { parseKnottinGrammar } from "./protein-grammar";
+import {
+  META_SPARK_MODEL,
+  META_SPARK_DEFAULT_URL,
+  META_SPARK_TIMEOUT_MS,
+  getMetaSparkApiUrl,
+} from "./spark-config";
 
-export const META_SPARK_MODEL = "muse-spark-1.3-contributor";
-export const META_SPARK_DEFAULT_URL = "https://api.meta.ai/v1/chat/completions";
-export const META_SPARK_TIMEOUT_MS = 30000;
+export {
+  META_SPARK_MODEL,
+  META_SPARK_DEFAULT_URL,
+  META_SPARK_TIMEOUT_MS,
+  getMetaSparkApiUrl,
+};
 export const META_SPARK_REASONING_EFFORT = "minimal";
 export const META_SPARK_PROPOSE_MAX_TOKENS = 4096;
 export const META_SPARK_REPAIR_MAX_TOKENS = 2048;
 /** Minimum remaining API budget (ms) required to start another request. */
 export const META_SPARK_MIN_REQUEST_BUDGET_MS = 10000;
-export const KNOTTIN_TOPOLOGY = "C-X(3,7)-C-X(4,6)-C-X(4,7)-C-X(1,3)-C-X(4,8)-C";
+export const KNOTTIN_TOPOLOGY = "C-X(3,7)-C-X(3,6)-C-X(1,4)-C-X(2,6)-C-X(4,10)-C";
 
-export function getMetaSparkApiUrl(): string {
-  const override = process.env.META_SPARK_API_URL;
-  if (override !== undefined && override.trim().length > 0) return override.trim();
-  return META_SPARK_DEFAULT_URL;
+/**
+ * Sampling temperature schedule. The first proposal uses the base
+ * temperature; every automatic retry re-prompts with a penalized
+ * (lower, more deterministic) temperature until the batch requirement
+ * is met or the budget is exhausted.
+ */
+export const META_SPARK_BASE_TEMPERATURE = 0.7;
+export const META_SPARK_TEMPERATURE_PENALTY = 0.15;
+export const META_SPARK_MIN_TEMPERATURE = 0.1;
+
+/** Penalized temperature for refinement cycle `cycle` (0 = propose). */
+export function repairTemperatureForCycle(cycle: number): number {
+  const penalized =
+    META_SPARK_BASE_TEMPERATURE - META_SPARK_TEMPERATURE_PENALTY * cycle;
+  return Math.max(META_SPARK_MIN_TEMPERATURE, penalized);
+}
+
+/**
+ * Natural knottin style anchors (UniProt P12071 / P82409) shown to the
+ * proposer as few-shot pacing examples. The model must learn cysteine
+ * pacing from them and invent novel loops — never copy them.
+ */
+export const KNOTTIN_SCAFFOLDS: Array<{ name: string; sequence: string }> = [
+  {
+    name: "EETI-II",
+    sequence: "GCPRILMRCKQDSDCLAGCVCGPNGFCGSP",
+  },
+  {
+    name: "MCoTI-II",
+    sequence: "SGSDGGVCPKILKKCRRDSDCPGACICRGNGYCG",
+  },
+];
+
+function scaffoldLines(): string[] {
+  return KNOTTIN_SCAFFOLDS.map(
+    (scaffold) => `  ${scaffold.name}: ${scaffold.sequence}`
+  );
 }
 
 /**
  * Structured prompt instructing Meta Spark 1.3 to propose 3-5 knottin
- * candidates conforming to the canonical knottin cysteine topology.
+ * secretion payloads conforming to the canonical ICK cysteine topology
+ * and the MFalpha1 bioprocess constraints.
  */
 export function buildKnottinPrompt(
   target: string,
@@ -36,22 +90,24 @@ export function buildKnottinPrompt(
   return [
     "You are Meta Spark 1.3, a protein-design contributor for therapeutic gut-delivered knottins.",
     `Target: ${target}.`,
-    "Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) that could bind or modulate the target in the gut lumen.",
+    "Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) optimized specifically as 6-cysteine knottin payloads (ICK topology C1-C4 / C2-C5 / C3-C6) for continuous secretion by eukaryotic probiotics (Saccharomyces boulardii via the MFalpha1 pre-pro leader).",
     "Every candidate MUST satisfy all of the following hard constraints:",
-    `1. Knottin cysteine topology: ${KNOTTIN_TOPOLOGY} (exactly 6 cysteines, C1-C4 / C2-C5 / C3-C6).`,
-    "2. Total length 28-36 amino acids.",
-    `3. Formal charge (K+R-D-E) exactly +${chargeTarget} at neutral pH.`,
-    "4. No dibasic [KR]{2} motif (trypsin site) and no [FYW]L motif (pepsin/chymotrypsin site).",
-    "5. No N[GS] or D[GS] motifs and no methionine (chemical liabilities).",
-    "6. Balanced hydropathy: GRAVY (Kyte-Doolittle mean) between -0.40 and +0.10.",
+    `1. Knottin cysteine topology: ${KNOTTIN_TOPOLOGY} (exactly 6 cysteines, C1-C4 / C2-C5 / C3-C6); total length 28-36 amino acids.`,
+    "2. Zero Kex2 internal cleavage: no KR, RR, PR, or KK motifs anywhere (they fragment during Golgi processing); also no RK dibasic.",
+    "3. Zero N-linked glycosylation: no N[^P][ST] sequon (yeast hyper-mannosylation would occlude binding loops).",
+    "4. Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
+    `5. Charge and hydropathy: net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4 for gentle mucosal retention); Kyte-Doolittle GRAVY between -0.40 and +0.10; hydrophobic runs over [VILMFW] at most 3 consecutive residues.`,
+    "6. No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
     "7. Gut-stable, non-toxic, non-antimicrobial design; no toxin or translocation-domain content.",
+    "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
+    ...scaffoldLines(),
     "Output format: respond with ONLY the candidates, one per line, as bare uppercase sequences with no numbering, no headers, no FASTA headers, and no commentary.",
   ].join("\n");
 }
 
 /**
  * Turn-0 semantic prompt: frames generation as evolutionary adaptation of
- * knottin linguistic grammar to a clinical gut target, demanding an
+ * knottin secretion payloads to a clinical gut target, demanding an
  * explicit <scratchpad> reasoning trace per candidate.
  */
 export function buildSemanticProposePrompt(
@@ -60,16 +116,18 @@ export function buildSemanticProposePrompt(
 ): string {
   return [
     "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
-    `Clinical gut target: ${target}. Adapt knottin linguistic grammar to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience.`,
+    `Clinical gut target: ${target}. Adapt knottin secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
     "Express exactly 3 candidate knottins in the loop grammar L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6 with ICK pairing C1-C4, C2-C5, C3-C6.",
-    "Hard syntactic constraints for every candidate:",
-    `1. Loop lengths: L1 3-7, L2 4-6, L3 4-7, L4 1-3, L5 4-8; total 28-36 aa; sequence starts and ends with cysteine.`,
-    "2. L1 must contain a turn-inducer (P or G) for C1-C2 loop closure.",
-    "3. L2 bulky aromatics (W, F) at most 40% of the loop.",
-    "4. L4 must contain no helix-forming residues (A, E, K, L, M, Q).",
-    `5. Formal charge (K+R-D-E) exactly +${chargeTarget}; allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
-    "6. No [KR]{2}, no [FYW]L, no N[GS], no D[GS], no methionine.",
+    "Hard syntactic and bioprocess constraints for every candidate:",
+    `1. Canonical ICK loop envelopes: L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10; total 28-36 aa; sequence starts and ends with cysteine.`,
+    "2. Zero Kex2 internal cleavage: no KR, RR, PR, KK, or RK motifs.",
+    "3. Zero N-linked glycosylation: no N[^P][ST] sequon (X != P).",
+    "4. Clean N-terminal processing: residue 1 must be A, S, G, or C — never P, F, Y, or W.",
+    `5. Net charge exactly +${chargeTarget} (inside the +1 to +4 window at pH 7.4); allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
+    "6. No exposed chymotrypsin sites [FYW][^P][KR]; hydrophobic runs over [VILMFW] at most 3 consecutive residues.",
     "7. GRAVY between -0.40 and +0.10; gut-stable and non-toxic.",
+    "Style anchors from nature — learn their cysteine pacing, then invent novel loops (do not copy these sequences):",
+    ...scaffoldLines(),
     "For each candidate, first write a <scratchpad> trace of exactly one sentence explaining why its loop composition satisfies the target receptor interface without triggering host mucosal clearance, then emit the candidate on its own line as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>.",
   ].join("\n");
 }
@@ -85,12 +143,12 @@ export function buildRepairPrompt(
   preservedCassette?: string
 ): string {
   const lines = [
-    "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
+    "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin secretion payload.",
     `Failed candidate: ${failedSequence}`,
     `Symbolic compiler diagnostic: ${compilerDiagnostic}`,
-    "Repair the semantic tokens to eliminate every listed fault while satisfying the full knottin grammar:",
-    "L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6, ICK pairing C1-C4/C2-C5/C3-C6, L1 3-7 with P/G, L2 4-6 with W/F <= 40%, L3 4-7, L4 1-3 without helix formers (A,E,K,L,M,Q), L5 4-8, total 28-36 aa,",
-    `formal charge exactly +${chargeTarget}, no [KR]{2}, no [FYW]L, no N[GS], no D[GS], no M, GRAVY in [-0.40, +0.10].`,
+    "Repair the semantic tokens to eliminate every listed fault while satisfying the full knottin secretion contract:",
+    "L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6, ICK pairing C1-C4/C2-C5/C3-C6, L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10, total 28-36 aa,",
+    `zero Kex2 motifs (KR, RR, PR, KK, RK), zero N[^P][ST] sequons, residue 1 in {A,S,G,C}, net charge exactly +${chargeTarget} (window +1 to +4 at pH 7.4), no [FYW][^P][KR], hydrophobic runs over [VILMFW] of at most 3, GRAVY in [-0.40, +0.10].`,
   ];
   if (preservedCassette !== undefined && preservedCassette.length > 0) {
     lines.push(
@@ -175,7 +233,8 @@ export function extractCandidateSequences(completion: string): string[] {
 export async function requestSparkCandidates(
   messages: MetaSparkMessage[],
   maxTokens = META_SPARK_PROPOSE_MAX_TOKENS,
-  timeoutMs = META_SPARK_TIMEOUT_MS
+  timeoutMs = META_SPARK_TIMEOUT_MS,
+  temperature = META_SPARK_BASE_TEMPERATURE
 ): Promise<string[]> {
   const apiKey = process.env.META_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) return [];
@@ -183,7 +242,7 @@ export async function requestSparkCandidates(
   const payload: MetaSparkRequest = {
     model: META_SPARK_MODEL,
     messages,
-    temperature: 0.7,
+    temperature,
     max_tokens: maxTokens,
     reasoning_effort: META_SPARK_REASONING_EFFORT,
   };
@@ -254,7 +313,7 @@ export async function callMetaSpark(
     {
       role: "system",
       content:
-        "You design therapeutic gut-delivered knottin peptides under strict biophysical constraints.",
+        "You design therapeutic gut-delivered knottin secretion payloads for Saccharomyces boulardii (MFalpha1 pre-pro leader) under strict bioprocess constraints.",
     },
     { role: "user", content: buildKnottinPrompt(target, chargeTarget) },
   ]);
@@ -275,7 +334,8 @@ function findMotif(
 
 /**
  * Renders the symbolic compiler diagnostic for a failed candidate,
- * detailing exact grammar and audit faults with motif positions.
+ * detailing exact grammar and audit faults with motif positions and the
+ * machine-readable failure modes that drive the automatic retry.
  */
 export function buildCompilerDiagnostic(
   candidate: string,
@@ -293,22 +353,24 @@ export function buildCompilerDiagnostic(
       `Formal charge ${sign}${audit.formal_charge} deviates from target +${chargeTarget}`
     );
   }
-  const dibasic = findMotif(candidate, /[KR]{2}/);
-  if (dibasic !== null) {
+  const kex2 = findMotif(candidate, /(KR|RR|KK|RK|PR)/);
+  if (kex2 !== null) {
     faults.push(
-      `Trypsin cleavage liability at index ${dibasic.index} ('${dibasic.match}')`
+      `Kex2 cleavage liability at index ${kex2.index} ('${kex2.match}')`
     );
   }
-  const aromaticLeu = findMotif(candidate, /[FYW]L/);
-  if (aromaticLeu !== null) {
+  const chymo = findMotif(candidate, /[FYW][^P][KR]/);
+  if (chymo !== null) {
     faults.push(
-      `Pepsin/chymotrypsin liability at index ${aromaticLeu.index} ('${aromaticLeu.match}')`
+      `Exposed chymotrypsin site at index ${chymo.index} ('${chymo.match}')`
     );
   }
   for (const violation of audit.violations) {
     if (
       violation.startsWith("formal_charge:") ||
-      violation.startsWith("protease_")
+      violation.startsWith("formal_charge_window:") ||
+      violation.startsWith("kex2_site:") ||
+      violation.startsWith("chymotrypsin_exposed:")
     ) {
       continue;
     }
@@ -317,7 +379,11 @@ export function buildCompilerDiagnostic(
   if (faults.length === 0) {
     return `Sequence ${candidate}: clean, satisfies grammar and audit.`;
   }
-  return `Sequence ${candidate}: ${faults.length} fault(s). ${faults.join("; ")}.`;
+  const modes = [
+    ...grammarFailureModes(grammar),
+    ...auditFailureModes(audit),
+  ];
+  return `Sequence ${candidate}: ${faults.length} fault(s) [${modes.join(", ")}]. ${faults.join("; ")}.`;
 }
 
 /** Thrown when refinement turns are exhausted; carries the trace. */
@@ -335,6 +401,7 @@ interface Verification {
   grammar: KnottinGrammarParse;
   audit: SymbolicAuditResult;
   diagnostic: string;
+  failureModes: string[];
   pass: boolean;
 }
 
@@ -348,12 +415,20 @@ function verifyCandidate(
     grammar,
     audit,
     diagnostic: buildCompilerDiagnostic(candidate, grammar, audit, chargeTarget),
+    failureModes: [
+      ...grammarFailureModes(grammar),
+      ...auditFailureModes(audit),
+    ],
     pass: grammar.valid && audit.passed,
   };
 }
 
 /** Total upstream API time budget per generation, reserving room for synthesis and handoff inside maxDuration. */
 export const META_SPARK_API_BUDGET_MS = 50000;
+/** Minimum remaining budget to start a specificity review. */
+export const SPECIFICITY_MIN_BUDGET_MS = 20000;
+/** Cap on blinded specificity reviews per generation. */
+export const MAX_SPECIFICITY_CHECKS = 4;
 
 /** Pipeline stages emitted as live telemetry during generation. */
 export type PipelineStage =
@@ -373,56 +448,156 @@ export interface PipelineEvent {
   auditPassed?: boolean;
   issues?: number;
   diagnostic?: string;
+  temperature?: number;
 }
 
 /**
- * Evaluates one candidate pool, recording provenance; returns the first
- * accepted candidate, or null when the pool holds none.
+ * Best-of-pool ranking score (lower wins): GRAVY centrality within the
+ * allowed window, then cleavage susceptibility. Stable sort keeps pool
+ * order as the final tiebreak.
  */
-function evaluatePool(
+function auditScore(audit: SymbolicAuditResult): number {
+  return Math.abs(audit.gravy_score + 0.15) * 10 + audit.cleavage_susceptibility_index;
+}
+
+interface SyncVerdict {
+  index: number;
+  candidate: string;
+  grammar: KnottinGrammarParse;
+  audit: SymbolicAuditResult;
+  diagnostic: string;
+  failureModes: string[];
+  issues: number;
+  pass: boolean;
+}
+
+/**
+ * Evaluates one candidate pool, recording provenance in pool order, and
+ * returns the best accepted candidate — or null when the pool holds none.
+ * Model-proposed pools pass through the blinded specificity gate (top
+ * ranked candidates first); synthesis pools accept on audit alone.
+ */
+async function evaluatePool(
   pool: string[],
   chargeTarget: number,
   turn: number,
   source: RefinementTurn["source"],
   terminal: boolean,
   refinementHistory: RefinementTurn[],
-  onEvent?: (event: PipelineEvent) => void
-): { candidate: string; audit: SymbolicAuditResult } | null {
-  for (const candidate of pool) {
+  onEvent?: (event: PipelineEvent) => void,
+  checkSpecificityGated?: (candidate: string) => Promise<SpecificityReport>,
+  gateSpecificity?: boolean,
+  temperature?: number
+): Promise<{ candidate: string; audit: SymbolicAuditResult } | null> {
+  const sync: SyncVerdict[] = pool.map((candidate, index) => {
     const verification = verifyCandidate(candidate, chargeTarget);
-    const issues =
-      verification.grammar.syntaxErrors.length +
-      verification.audit.violations.length;
-    refinementHistory.push({
-      turn,
+    return {
+      index,
       candidate,
-      grammar_valid: verification.grammar.valid,
-      syntax_errors: verification.grammar.syntaxErrors,
-      audit_passed: verification.audit.passed,
-      violations: verification.audit.violations,
-      compiler_diagnostic: verification.diagnostic,
-      disposition: verification.pass
-        ? "accepted"
-        : terminal
-          ? "exhausted"
-          : "repaired",
-      source,
-    });
+      grammar: verification.grammar,
+      audit: verification.audit,
+      diagnostic: verification.diagnostic,
+      failureModes: verification.failureModes,
+      issues:
+        verification.grammar.syntaxErrors.length +
+        verification.audit.violations.length,
+      pass: verification.pass,
+    };
+  });
+  for (const entry of sync) {
     onEvent?.({
       stage: "verify",
       turn,
       source,
-      candidate,
-      grammarValid: verification.grammar.valid,
-      auditPassed: verification.audit.passed,
-      issues,
-      message: verification.pass
-        ? "Accepted — grammar and audit clean"
-        : `${issues} fault(s) found`,
+      candidate: entry.candidate,
+      grammarValid: entry.grammar.valid,
+      auditPassed: entry.audit.passed,
+      issues: entry.issues,
+      message: entry.pass
+        ? "Grammar and audit clean"
+        : `${entry.issues} fault(s) found`,
     });
-    if (verification.pass) {
-      return { candidate, audit: verification.audit };
+  }
+
+  const ranked = sync
+    .filter((entry) => entry.pass)
+    .sort((a, b) => auditScore(a.audit) - auditScore(b.audit));
+
+  const specByIndex = new Map<number, SpecificityReport>();
+  let winner: SyncVerdict | null = null;
+  if (checkSpecificityGated !== undefined && gateSpecificity === true) {
+    for (const entry of ranked.slice(0, 2)) {
+      onEvent?.({
+        stage: "verify",
+        turn,
+        source,
+        candidate: entry.candidate,
+        message: "Requesting blinded specificity review…",
+      });
+      const report = await checkSpecificityGated(entry.candidate);
+      specByIndex.set(entry.index, report);
+      onEvent?.({
+        stage: "verify",
+        turn,
+        source,
+        candidate: entry.candidate,
+        message: report.pass
+          ? `Specificity ✓ — ${report.predicted_targets[0] ?? "confirmed"}`
+          : `Specificity ✗ — ${report.reason}`,
+      });
+      if (report.pass) {
+        winner = entry;
+        break;
+      }
     }
+  } else if (ranked.length > 0) {
+    winner = ranked[0] ?? null;
+  }
+
+  for (const entry of sync) {
+    const spec = specByIndex.get(entry.index);
+    const specFailed = spec !== undefined && !spec.pass;
+    const isWinner = winner !== null && entry.index === winner.index;
+    refinementHistory.push({
+      turn,
+      candidate: entry.candidate,
+      grammar_valid: entry.grammar.valid,
+      syntax_errors: entry.grammar.syntaxErrors,
+      audit_passed: entry.audit.passed,
+      violations: entry.audit.violations,
+      compiler_diagnostic:
+        entry.diagnostic +
+        (specFailed && spec !== undefined
+          ? ` Specificity review failed: ${summarizeSpecificity(spec)}.`
+          : ""),
+      disposition: isWinner
+        ? "accepted"
+        : specFailed
+          ? "repaired"
+          : entry.pass
+            ? "superseded"
+            : terminal
+              ? "exhausted"
+              : "repaired",
+      source,
+      specificity: spec,
+      failure_modes: entry.failureModes,
+      temperature,
+    });
+  }
+
+  if (winner !== null) {
+    onEvent?.({
+      stage: "verify",
+      turn,
+      source,
+      candidate: winner.candidate,
+      grammarValid: true,
+      auditPassed: true,
+      issues: 0,
+      message: "Accepted as cycle winner",
+    });
+    return { candidate: winner.candidate, audit: winner.audit };
   }
   return null;
 }
@@ -431,9 +606,10 @@ function evaluatePool(
  * Neurosymbolic closed-loop reflection engine. Proposes candidates with
  * Meta Spark 1.3, intercepts them with the grammar parser and symbolic
  * auditor, and feeds compiler diagnostics back for deterministic repair
- * instead of discarding failures. Repairs are never cut short for
- * fallback; only when turns or the API time budget are exhausted does
- * the grammar-constrained deterministic synthesizer serve as the final
+ * instead of discarding failures. Every automatic retry re-prompts with
+ * a penalized temperature. Repairs are never cut short for fallback;
+ * only when turns or the API time budget are exhausted does the
+ * grammar-constrained deterministic synthesizer serve as the final
  * backstop, with source-labeled provenance either way. An optional
  * event callback receives live pipeline telemetry for streaming UIs.
  */
@@ -451,14 +627,14 @@ export async function generateVerifiedPeptide(
   const apiKey = process.env.META_API_KEY;
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
 
-  const synthesize = (
+  const synthesize = async (
     turn: number,
     reason: string
-  ): {
+  ): Promise<{
     candidate: string;
     audit: SymbolicAuditResult;
     refinementHistory: RefinementTurn[];
-  } => {
+  }> => {
     onEvent?.({
       stage: "synthesize",
       turn,
@@ -466,7 +642,7 @@ export async function generateVerifiedPeptide(
       message: reason,
     });
     const pool = sampleFallbackCandidates(target, chargeTarget, 5);
-    const accepted = evaluatePool(
+    const accepted = await evaluatePool(
       pool,
       chargeTarget,
       turn,
@@ -492,6 +668,30 @@ export async function generateVerifiedPeptide(
   }
 
   const startedAt = Date.now();
+  let specificityChecks = 0;
+
+  /**
+   * Budgeted blinded specificity review. Skips honestly (unchecked report)
+   * when the check allowance or API budget is spent.
+   */
+  const checkBudgeted = async (
+    candidate: string
+  ): Promise<SpecificityReport> => {
+    const remaining = META_SPARK_API_BUDGET_MS - (Date.now() - startedAt);
+    specificityChecks += 1;
+    if (specificityChecks > MAX_SPECIFICITY_CHECKS) {
+      return uncheckedSpecificity(target, "Specificity check budget spent");
+    }
+    if (remaining < SPECIFICITY_MIN_BUDGET_MS) {
+      return uncheckedSpecificity(target, "API budget reserved for generation");
+    }
+    return checkSpecificity(
+      candidate,
+      target,
+      chargeTarget,
+      Math.min(META_SPARK_TIMEOUT_MS, remaining)
+    );
+  };
 
   /**
    * One budgeted upstream request: capped by the remaining API budget,
@@ -499,14 +699,16 @@ export async function generateVerifiedPeptide(
    */
   const requestBudgeted = async (
     messages: MetaSparkMessage[],
-    maxTokens: number
+    maxTokens: number,
+    temperature: number
   ): Promise<string[] | null> => {
     const remaining = META_SPARK_API_BUDGET_MS - (Date.now() - startedAt);
     if (remaining < META_SPARK_MIN_REQUEST_BUDGET_MS) return null;
     return requestSparkCandidates(
       messages,
       maxTokens,
-      Math.min(META_SPARK_TIMEOUT_MS, remaining)
+      Math.min(META_SPARK_TIMEOUT_MS, remaining),
+      temperature
     );
   };
 
@@ -520,10 +722,11 @@ export async function generateVerifiedPeptide(
     turn: number,
     stage: "propose" | "repair",
     requestMessage: string,
+    temperature: number,
     extra?: Partial<PipelineEvent>
   ): Promise<string[]> => {
-    onEvent?.({ stage, turn, message: requestMessage, ...extra });
-    const pool = (await requestBudgeted(messages, maxTokens)) ?? [];
+    onEvent?.({ stage, turn, message: requestMessage, temperature, ...extra });
+    const pool = (await requestBudgeted(messages, maxTokens, temperature)) ?? [];
     onEvent?.({
       stage,
       turn,
@@ -531,6 +734,7 @@ export async function generateVerifiedPeptide(
         pool.length > 0
           ? `Received ${pool.length} candidate(s)`
           : "Upstream returned no parseable candidates",
+      temperature,
       ...extra,
     });
     return pool;
@@ -553,19 +757,23 @@ export async function generateVerifiedPeptide(
     META_SPARK_PROPOSE_MAX_TOKENS,
     0,
     "propose",
-    "Requesting knottin proposals from Muse Spark 1.3…"
+    "Requesting knottin proposals from Muse Spark 1.3…",
+    repairTemperatureForCycle(0)
   );
   let cycle = 0;
 
   for (;;) {
-    const accepted = evaluatePool(
+    const accepted = await evaluatePool(
       pool,
       chargeTarget,
       cycle,
       "meta-spark-1.3",
       cycle >= maxRefinementTurns,
       refinementHistory,
-      onEvent
+      onEvent,
+      checkBudgeted,
+      true,
+      repairTemperatureForCycle(cycle)
     );
     if (accepted !== null) {
       return { ...accepted, refinementHistory };
@@ -582,23 +790,29 @@ export async function generateVerifiedPeptide(
     }
 
     const failures = refinementHistory.filter(
-      (entry) => entry.disposition !== "accepted"
+      (entry) =>
+        entry.disposition !== "accepted" &&
+        entry.disposition !== "superseded"
     );
+    const retryTemperature = repairTemperatureForCycle(cycle + 1);
     if (failures.length === 0) {
       pool = await fetchPool(
         proposeMessages(),
         META_SPARK_PROPOSE_MAX_TOKENS,
         cycle + 1,
         "propose",
-        "Re-requesting knottin proposals from Muse Spark 1.3…"
+        `Re-requesting knottin proposals from Muse Spark 1.3 (temperature penalized to ${retryTemperature.toFixed(2)})…`,
+        retryTemperature
       );
     } else {
+      const failureWeight = (entry: RefinementTurn): number =>
+        entry.syntax_errors.length +
+        entry.violations.length +
+        (entry.specificity !== undefined && !entry.specificity.pass ? 3 : 0);
       let best = failures[0];
       for (const entry of failures) {
-        const bestIssues =
-          (best?.syntax_errors.length ?? 0) + (best?.violations.length ?? 0);
-        const entryIssues = entry.syntax_errors.length + entry.violations.length;
-        if (entryIssues < bestIssues) best = entry;
+        const bestIssues = best === undefined ? 0 : failureWeight(best);
+        if (failureWeight(entry) < bestIssues) best = entry;
       }
       const failedCandidate = best?.candidate ?? "";
       const failedGrammar = parseKnottinGrammar(failedCandidate);
@@ -609,7 +823,7 @@ export async function generateVerifiedPeptide(
           {
             role: "system",
             content:
-              "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
+              "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin secretion payload.",
           },
           {
             role: "user",
@@ -624,7 +838,8 @@ export async function generateVerifiedPeptide(
         META_SPARK_REPAIR_MAX_TOKENS,
         cycle + 1,
         "repair",
-        `Repairing best candidate (${failedIssues} fault(s))…`,
+        `Repairing best candidate (${failedIssues} fault(s), temperature penalized to ${retryTemperature.toFixed(2)})…`,
+        retryTemperature,
         {
           candidate: failedCandidate,
           diagnostic: best?.compiler_diagnostic ?? "",
@@ -661,42 +876,89 @@ function randInt(rand: () => number, min: number, max: number): number {
   return min + Math.floor(rand() * (max - min + 1));
 }
 
-/** Neutral filler alphabet: no C (framework only), no M, no charged residues. */
+/** Neutral filler alphabet: no C (framework only), no charged residues. */
 const NEUTRAL_FILLER = "AFGHILNPQSTVWY";
 
-/** L4 filler alphabet: additionally excludes helix-forming residues. */
-const L4_FILLER = NEUTRAL_FILLER.split("")
-  .filter((aa) => !L4_HELIX_FORMERS.has(aa))
-  .join("");
-
-/** Non-aromatic neutrals for L2 aromatic-cap repair. */
-const L2_REPAIR_ALPHABET = "AGHILNPQSTV";
+const BASIC_RESIDUES = new Set(["K", "R"]);
+const AROMATIC_CHYMO = new Set(["F", "Y", "W"]);
 
 function fitsNeighbors(seq: string[], index: number, aa: string): boolean {
   const prev = index > 0 ? (seq[index - 1] ?? "") : "";
+  const prevprev = index > 1 ? (seq[index - 2] ?? "") : "";
   const next = index + 1 < seq.length ? (seq[index + 1] ?? "") : "";
-  if ((prev === "F" || prev === "Y" || prev === "W") && aa === "L") return false;
-  if (prev === "N" && (aa === "G" || aa === "S")) return false;
-  if ((prev === "K" || prev === "R") && (aa === "K" || aa === "R")) return false;
-  if ((aa === "F" || aa === "Y" || aa === "W") && next === "L") return false;
-  if (aa === "N" && (next === "G" || next === "S")) return false;
-  if ((aa === "K" || aa === "R") && (next === "K" || next === "R")) return false;
+  const nextnext = index + 2 < seq.length ? (seq[index + 2] ?? "") : "";
+  // No dibasic Kex2/trypsin pairs.
+  if (BASIC_RESIDUES.has(prev) && BASIC_RESIDUES.has(aa)) return false;
+  if (BASIC_RESIDUES.has(aa) && BASIC_RESIDUES.has(next)) return false;
+  // No PR Kex2 liability.
+  if (prev === "P" && aa === "R") return false;
+  if (aa === "P" && next === "R") return false;
+  // No N-X-[ST] sequon completed as third or first residue.
+  if (prevprev === "N" && prev !== "" && prev !== "P" && (aa === "S" || aa === "T")) {
+    return false;
+  }
+  if (aa === "N" && next !== "" && next !== "P" && (nextnext === "S" || nextnext === "T")) {
+    return false;
+  }
+  // No exposed chymotrypsin site completed in any of the three roles.
+  if (AROMATIC_CHYMO.has(aa) && next !== "" && next !== "P" && BASIC_RESIDUES.has(nextnext)) {
+    return false;
+  }
+  if (AROMATIC_CHYMO.has(prev) && aa !== "P" && BASIC_RESIDUES.has(next)) {
+    return false;
+  }
+  if (AROMATIC_CHYMO.has(prevprev) && prev !== "" && prev !== "P" && BASIC_RESIDUES.has(aa)) {
+    return false;
+  }
   return true;
 }
 
 function pickFiller(
   rand: () => number,
   prev: string,
-  loopId: number
+  prevprev: string
 ): string {
-  const alphabet = loopId === 4 ? L4_FILLER : NEUTRAL_FILLER;
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    const aa = alphabet[Math.floor(rand() * alphabet.length)] ?? "A";
-    if ((prev === "F" || prev === "Y" || prev === "W") && aa === "L") continue;
-    if (prev === "N" && (aa === "G" || aa === "S")) continue;
+    const aa = NEUTRAL_FILLER[Math.floor(rand() * NEUTRAL_FILLER.length)] ?? "A";
+    if (prevprev === "N" && prev !== "P" && (aa === "S" || aa === "T")) continue;
     return aa;
   }
   return "A";
+}
+
+/** Start index of the first 4+ hydrophobic run, or null. */
+function findHydrophobicRun(seq: string[], minLength: number): number | null {
+  let run = 0;
+  for (let i = 0; i < seq.length; i += 1) {
+    if (HYDROPHOBIC_RUN_SET.has(seq[i] ?? "")) {
+      run += 1;
+      if (run >= minLength) return i - minLength + 1;
+    } else {
+      run = 0;
+    }
+  }
+  return null;
+}
+
+/** Start index of the first N-X-[ST] sequon, or null. */
+function findSequon(seq: string[]): number | null {
+  const joined = seq.join("");
+  const match = /N[^P][ST]/.exec(joined);
+  return match === null ? null : match.index;
+}
+
+/** Start index of the first exposed chymotrypsin site, or null. */
+function findExposedChymotrypsin(seq: string[]): number | null {
+  const joined = seq.join("");
+  const match = /[FYW][^P][KR]/.exec(joined);
+  return match === null ? null : match.index;
+}
+
+/** Start index of the first PR Kex2 liability, or null. */
+function findPrLiability(seq: string[]): number | null {
+  const joined = seq.join("");
+  const match = /PR/.exec(joined);
+  return match === null ? null : match.index;
 }
 
 interface LoopPlan {
@@ -708,10 +970,10 @@ function sampleLoopPlan(rand: () => number): LoopPlan | null {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const lengths: [number, number, number, number, number] = [
       randInt(rand, 3, 7),
-      randInt(rand, 4, 6),
-      randInt(rand, 4, 7),
-      randInt(rand, 1, 3),
-      randInt(rand, 4, 8),
+      randInt(rand, 3, 6),
+      randInt(rand, 1, 4),
+      randInt(rand, 2, 6),
+      randInt(rand, 4, 10),
     ];
     const total = 6 + lengths[0] + lengths[1] + lengths[2] + lengths[3] + lengths[4];
     if (total >= 28 && total <= 36) return { lengths, total };
@@ -742,20 +1004,11 @@ function sampleTopologySequence(
   cysPositions.push(plan.total - 1);
   const cys = new Set(cysPositions);
 
-  // Loop id (1-5) for each inter-cysteine position.
-  const loopOf = (index: number): number => {
-    let count = 0;
-    for (const cp of cysPositions) {
-      if (cp < index) count += 1;
-    }
-    return count;
-  };
-
-  // Choose chargeTarget positive (K/R) positions outside L4, never
-  // adjacent to each other (L4 forbids the helix former K).
+  // Choose chargeTarget positive (K/R) positions, never adjacent to
+  // each other (no dibasic Kex2 pairs).
   const slots: number[] = [];
   for (let i = 0; i < plan.total; i += 1) {
-    if (!cys.has(i) && loopOf(i) !== 4) slots.push(i);
+    if (!cys.has(i)) slots.push(i);
   }
   for (let i = slots.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rand() * (i + 1));
@@ -778,52 +1031,91 @@ function sampleTopologySequence(
       continue;
     }
     if (positives.has(i)) {
-      out.push(rand() < 0.5 ? "K" : "R");
+      // K after proline avoids the PR Kex2 liability.
+      out.push(out[i - 1] === "P" || rand() < 0.5 ? "K" : "R");
       continue;
     }
-    out.push(pickFiller(rand, out[i - 1] ?? "", loopOf(i)));
+    out.push(pickFiller(rand, out[i - 1] ?? "", out[i - 2] ?? ""));
   }
 
-  // Enforce the L1 turn-inducer rule on a filler slot.
-  const l1Slots: number[] = [];
-  for (let i = 0; i < plan.total; i += 1) {
-    if (!cys.has(i) && !positives.has(i) && loopOf(i) === 1) l1Slots.push(i);
-  }
-  const l1HasTurn = l1Slots.some(
-    (i) => out[i] === "P" || out[i] === "G"
-  );
-  if (!l1HasTurn && l1Slots.length > 0) {
-    const slot = l1Slots[Math.floor(rand() * l1Slots.length)] ?? l1Slots[0] ?? 0;
-    out[slot] = (out[slot - 1] ?? "") === "N" ? "P" : rand() < 0.5 ? "P" : "G";
-  }
-
-  // Enforce the L2 bulky-aromatic cap via neighbor-safe swaps.
+  // Break N-X-[ST] sequons (middle -> P when filler, else third -> polar).
   for (let repair = 0; repair < 20; repair += 1) {
-    const l2Slots: number[] = [];
-    for (let i = 0; i < plan.total; i += 1) {
-      if (!cys.has(i) && loopOf(i) === 2) l2Slots.push(i);
+    const start = findSequon(out);
+    if (start === null) break;
+    const middle = start + 1;
+    const third = start + 2;
+    const middleIsFiller = !cys.has(middle) && !positives.has(middle);
+    const thirdIsFiller = !cys.has(third) && !positives.has(third);
+    if (middleIsFiller && fitsNeighbors(out, middle, "P")) {
+      out[middle] = "P";
+      continue;
     }
-    const aromaticSlots = l2Slots.filter(
-      (i) => out[i] === "W" || out[i] === "F"
-    );
-    if (aromaticSlots.length / l2Slots.length <= 0.4) break;
-    const slot =
-      aromaticSlots[Math.floor(rand() * aromaticSlots.length)] ??
-      aromaticSlots[0] ??
-      0;
     let swapped = false;
-    for (let attempt = 0; attempt < 50; attempt += 1) {
-      const aa =
-        L2_REPAIR_ALPHABET[
-          Math.floor(rand() * L2_REPAIR_ALPHABET.length)
-        ] ?? "A";
+    if (thirdIsFiller) {
+      for (const aa of ["N", "Q", "H", "A"]) {
+        if (fitsNeighbors(out, third, aa)) {
+          out[third] = aa;
+          swapped = true;
+          break;
+        }
+      }
+    }
+    if (!swapped) return null;
+  }
+
+  // Break PR Kex2 liabilities (P is always a filler slot here).
+  for (let repair = 0; repair < 20; repair += 1) {
+    const start = findPrLiability(out);
+    if (start === null) break;
+    let swapped = false;
+    for (const aa of ["G", "A", "S", "Q", "T"]) {
+      if (fitsNeighbors(out, start, aa)) {
+        out[start] = aa;
+        swapped = true;
+        break;
+      }
+    }
+    if (!swapped) return null;
+  }
+
+  // Break exposed chymotrypsin sites: middle -> P when the basic is K,
+  // otherwise the leading aromatic -> small polar (always a filler).
+  for (let repair = 0; repair < 20; repair += 1) {
+    const start = findExposedChymotrypsin(out);
+    if (start === null) break;
+    const middle = start + 1;
+    const third = start + 2;
+    const middleIsFiller = !cys.has(middle) && !positives.has(middle);
+    if ((out[third] ?? "") === "K" && middleIsFiller && fitsNeighbors(out, middle, "P")) {
+      out[middle] = "P";
+      continue;
+    }
+    let swapped = false;
+    for (const aa of ["S", "G", "A", "T", "Q"]) {
+      if (fitsNeighbors(out, start, aa)) {
+        out[start] = aa;
+        swapped = true;
+        break;
+      }
+    }
+    if (!swapped) return null;
+  }
+
+  // Break secretion-blocking hydrophobic runs via polar swaps. Run
+  // positions are always neutral filler (K/R/C are outside the run set).
+  for (let repair = 0; repair < 20; repair += 1) {
+    const start = findHydrophobicRun(out, 4);
+    if (start === null) break;
+    const slot = start + 2;
+    let swapped = false;
+    for (const aa of ["S", "G", "T", "N", "Q", "H"]) {
       if (fitsNeighbors(out, slot, aa)) {
         out[slot] = aa;
         swapped = true;
         break;
       }
     }
-    if (!swapped) break;
+    if (!swapped) return null;
   }
 
   return out.join("");
@@ -841,7 +1133,7 @@ export function sampleFallbackCandidates(
 ): string[] {
   const kept: string[] = [];
   const seen = new Set<string>();
-  const rand = mulberry32(hashSeed(`${target}|${chargeTarget}|knottin-v1`));
+  const rand = mulberry32(hashSeed(`${target}|${chargeTarget}|knottin-v2`));
 
   for (let attempt = 0; attempt < 5000 && kept.length < count; attempt += 1) {
     const seq = sampleTopologySequence(rand, chargeTarget);

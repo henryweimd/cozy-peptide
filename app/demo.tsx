@@ -39,6 +39,37 @@ interface DemoPayload {
     refinement_trace: TraceTurn[];
   };
   candidate?: {
+    id: string;
+    sequence: string;
+    length: number;
+    cysteine_indices: number[];
+    loop_segments: string[];
+    biophysical_profile: {
+      net_charge_ph74: number;
+      isoelectric_point: number;
+      gravy_score: number;
+      boman_index: number;
+    };
+    cloning_payload: {
+      dna_sequence: string;
+      cassette_format: string;
+      full_cassette_dna: string;
+      gc_percent_cds: number;
+      gc_ok: boolean;
+      payload_cai: number;
+      restriction_scrub: { status: string };
+    };
+    verification_report: {
+      kex2_clean: boolean;
+      glycosylation_clean: boolean;
+      charge_window_ok: boolean;
+      protease_clean: boolean;
+      n_terminus_ok: boolean;
+      hydrophobic_runs_ok: boolean;
+      gravy_ok: boolean;
+      ick_topology_ok: boolean;
+      passed: boolean;
+    };
     mature_sequence: string;
     topology: string;
     grammar_breakdown: Record<string, string>;
@@ -46,6 +77,7 @@ interface DemoPayload {
   symbolic_audit?: {
     passed: boolean;
     charge: number;
+    net_charge_ph74: number;
     gravy: number;
     boman_index: number;
     aliphatic_index: number;
@@ -59,6 +91,14 @@ interface DemoPayload {
       dna_length: number;
       gc_percent: number;
     };
+  };
+  specificity?: {
+    checked: boolean;
+    pass: boolean;
+    predicted_targets: string[];
+    off_targets: string[];
+    warnings: string[];
+    reason: string;
   };
 }
 
@@ -103,16 +143,23 @@ function stageElapsed(events: StageEvent[], stage: StageName): string | null {
   return `+${Math.floor(last.elapsedMs / 1000)}s`;
 }
 
+function mark(value: boolean | undefined): string {
+  if (value === undefined) return "·";
+  return value ? "✓" : "✗";
+}
+
 function logLine(event: StageEvent): string {
   const stamp = `+${Math.floor((event.elapsedMs ?? 0) / 1000)}s`;
-  if (event.stage === "verify" && event.candidate !== undefined) {
-    const grammar = event.grammarValid === true ? "✓" : "✗";
-    const audit = event.auditPassed === true ? "✓" : "✗";
-    const faults =
-      (event.issues ?? 0) > 0 ? ` · ${event.issues} fault(s)` : "";
-    return `[${stamp}] turn ${event.turn} · ${event.candidate} · grammar ${grammar} audit ${audit}${faults}`;
+  const bits = [`turn ${event.turn}`];
+  if (event.candidate !== undefined) bits.push(event.candidate);
+  bits.push(event.message);
+  if (event.stage === "verify" && event.issues !== undefined) {
+    bits.push(
+      `grammar ${mark(event.grammarValid)} audit ${mark(event.auditPassed)}`
+    );
+    if (event.issues > 0) bits.push(`${event.issues} fault(s)`);
   }
-  return `[${stamp}] turn ${event.turn} · ${event.message}`;
+  return `[${stamp}] ${bits.join(" · ")}`;
 }
 
 function formatCountdown(totalSeconds: number): string {
@@ -266,6 +313,8 @@ export default function Demo() {
   const provenance =
     result?.success === true ? result.neurosymbolic_provenance : undefined;
   const handoff = result?.success === true ? result.lab_handoff : undefined;
+  const specificity =
+    result?.success === true ? result.specificity : undefined;
   const showFeed = loading || events.length > 0;
   const finished = !loading && (result !== null || error !== null);
   const showSynthesis = events.some(
@@ -377,15 +426,22 @@ export default function Demo() {
           <div className={styles.result}>
             <h3>Designed sequence</h3>
             <p className={styles.sequence}>{candidate.mature_sequence}</p>
-            <p className={styles.topologyLine}>{candidate.topology}</p>
+            <p className={styles.topologyLine}>
+              {candidate.id} · {candidate.length} aa · {candidate.topology}
+            </p>
+            <p className={styles.topologyLine}>
+              Cys at [{candidate.cysteine_indices.join(", ")}]
+            </p>
 
             <h3>Loop grammar</h3>
             <ul className={styles.loopChips}>
-              {LOOP_ORDER.map((loop) => (
+              {LOOP_ORDER.map((loop, index) => (
                 <li key={loop}>
                   <span>{loop}</span>
                   <code>
-                    {candidate.grammar_breakdown[loop] ?? "—"}
+                    {candidate.loop_segments[index] ??
+                      candidate.grammar_breakdown[loop] ??
+                      "—"}
                   </code>
                 </li>
               ))}
@@ -396,6 +452,14 @@ export default function Demo() {
               <div>
                 <dt>Charge</dt>
                 <dd>+{audit.charge}</dd>
+              </div>
+              <div>
+                <dt>pH 7.4</dt>
+                <dd>+{candidate.biophysical_profile.net_charge_ph74}</dd>
+              </div>
+              <div>
+                <dt>pI</dt>
+                <dd>{candidate.biophysical_profile.isoelectric_point}</dd>
               </div>
               <div>
                 <dt>GRAVY</dt>
@@ -416,6 +480,35 @@ export default function Demo() {
               ))}
             </p>
 
+            <h3>Verification report</h3>
+            <p className={styles.cleared}>
+              {(
+                [
+                  ["Kex2", candidate.verification_report.kex2_clean],
+                  ["Glycosylation", candidate.verification_report.glycosylation_clean],
+                  ["Charge +1…+4", candidate.verification_report.charge_window_ok],
+                  ["Protease", candidate.verification_report.protease_clean],
+                  ["N-terminus", candidate.verification_report.n_terminus_ok],
+                  ["Runs ≤3", candidate.verification_report.hydrophobic_runs_ok],
+                  ["GRAVY", candidate.verification_report.gravy_ok],
+                  ["ICK", candidate.verification_report.ick_topology_ok],
+                ] as const
+              ).map(([label, ok]) => (
+                <span key={label}>
+                  {ok ? "✓" : "✗"} {label}
+                </span>
+              ))}
+            </p>
+
+            <h3>Cloning payload</h3>
+            <p className={styles.handoffLine}>
+              {candidate.cloning_payload.cassette_format} ·{" "}
+              {candidate.cloning_payload.full_cassette_dna.length} bp · GC{" "}
+              {candidate.cloning_payload.gc_percent_cds}% · CAI{" "}
+              {candidate.cloning_payload.payload_cai} · scrub{" "}
+              {candidate.cloning_payload.restriction_scrub.status}
+            </p>
+
             {provenance !== undefined && (
               <>
                 <h3>Provenance</h3>
@@ -427,6 +520,33 @@ export default function Demo() {
                     </li>
                   ))}
                 </ul>
+              </>
+            )}
+
+            {specificity !== undefined && (
+              <>
+                <h3>Specificity review</h3>
+                <p className={styles.handoffLine}>
+                  {specificity.checked
+                    ? specificity.pass
+                      ? "✓ blinded review confirms the intended target"
+                      : `✗ ${specificity.reason}`
+                    : `○ not checked — ${specificity.reason}`}
+                </p>
+                {specificity.predicted_targets.length > 0 && (
+                  <ul className={styles.trace}>
+                    {specificity.predicted_targets.map((target) => (
+                      <li key={target}>predicted: {target}</li>
+                    ))}
+                  </ul>
+                )}
+                {specificity.off_targets.length > 0 && (
+                  <ul className={styles.trace}>
+                    {specificity.off_targets.map((flag) => (
+                      <li key={flag}>off-target flag: {flag}</li>
+                    ))}
+                  </ul>
+                )}
               </>
             )}
 

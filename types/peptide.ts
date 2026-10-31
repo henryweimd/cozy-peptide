@@ -6,7 +6,9 @@ import { z } from "zod";
 export const PeptideRequestSchema = z.object({
   target: z.string().min(1).max(500),
   mechanism: z.string().max(2000).optional(),
-  charge_target: z.union([z.literal(3), z.literal(4), z.literal(5)]).optional(),
+  charge_target: z
+    .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+    .optional(),
 });
 export type PeptideRequest = z.infer<typeof PeptideRequestSchema>;
 
@@ -72,6 +74,22 @@ export type MetaSparkPayload = z.infer<typeof MetaSparkPayloadSchema>;
  * One turn of the neurosymbolic propose-verify-repair loop, kept as
  * conversational provenance for the API response.
  */
+/**
+ * Blinded round-trip specificity review: the proposer model judges a
+ * candidate without knowing the intended target.
+ */
+export const SpecificityReportSchema = z.object({
+  checked: z.boolean(),
+  pass: z.boolean(),
+  intended_target: z.string(),
+  predicted_targets: z.array(z.string()),
+  off_targets: z.array(z.string()),
+  high_risk_flags: z.array(z.string()),
+  warnings: z.array(z.string()),
+  reason: z.string(),
+});
+export type SpecificityReport = z.infer<typeof SpecificityReportSchema>;
+
 export const RefinementTurnSchema = z.object({
   turn: z.number().int(),
   candidate: z.string(),
@@ -80,8 +98,11 @@ export const RefinementTurnSchema = z.object({
   audit_passed: z.boolean(),
   violations: z.array(z.string()),
   compiler_diagnostic: z.string(),
-  disposition: z.enum(["accepted", "repaired", "exhausted"]),
+  disposition: z.enum(["accepted", "repaired", "exhausted", "superseded"]),
   source: z.enum(["meta-spark-1.3", "deterministic-synthesis"]),
+  specificity: SpecificityReportSchema.optional(),
+  failure_modes: z.array(z.string()).optional(),
+  temperature: z.number().optional(),
 });
 export type RefinementTurn = z.infer<typeof RefinementTurnSchema>;
 
@@ -105,6 +126,7 @@ export const SymbolicAuditResultSchema = z.object({
   length: z.number().int(),
   cys_count: z.number().int(),
   formal_charge: z.number().int(),
+  net_charge_ph74: z.number(),
   gravy_score: z.number(),
   violations: z.array(z.string()),
   boman_index: z.number(),
@@ -112,6 +134,8 @@ export const SymbolicAuditResultSchema = z.object({
   isoelectric_point: z.number(),
   mucosal_adhesion_ratio: z.number(),
   cleavage_susceptibility_index: z.number(),
+  hydrophobic_run_max: z.number().int(),
+  max_residue_fraction: z.number(),
 });
 export type SymbolicAuditResult = z.infer<typeof SymbolicAuditResultSchema>;
 
@@ -123,6 +147,78 @@ export const RestrictionScrubSchema = z.object({
   sites_verified: z.array(z.string()),
 });
 export type RestrictionScrub = z.infer<typeof RestrictionScrubSchema>;
+
+/**
+ * Computed biophysical profile attached to an accepted candidate.
+ */
+export const BiophysicalProfileSchema = z.object({
+  net_charge_ph74: z.number(),
+  isoelectric_point: z.number(),
+  gravy_score: z.number(),
+  boman_index: z.number(),
+});
+export type BiophysicalProfile = z.infer<typeof BiophysicalProfileSchema>;
+
+/**
+ * Deterministic verification report: one boolean per bioprocess gate,
+ * plus machine-readable failure modes (empty when everything passes).
+ */
+export const VerificationReportSchema = z.object({
+  kex2_clean: z.boolean(),
+  glycosylation_clean: z.boolean(),
+  charge_window_ok: z.boolean(),
+  protease_clean: z.boolean(),
+  n_terminus_ok: z.boolean(),
+  hydrophobic_runs_ok: z.boolean(),
+  gravy_ok: z.boolean(),
+  ick_topology_ok: z.boolean(),
+  passed: z.boolean(),
+  failure_modes: z.array(z.string()),
+});
+export type VerificationReport = z.infer<typeof VerificationReportSchema>;
+
+/**
+ * Ready-to-clone yeast expression cassette for one knottin payload:
+ * MFalpha1 5' flank with the Kex2 junction, codon-optimized payload CDS,
+ * dual stop codon, and the CYC1 terminator.
+ */
+export const CloningPayloadSchema = z.object({
+  dna_sequence: z.string(),
+  cassette_format: z.string(),
+  leader_dna_5flank: z.string(),
+  payload_cds: z.string(),
+  stop_codon: z.string(),
+  terminator_3flank: z.string(),
+  full_cassette_dna: z.string(),
+  gc_percent_cds: z.number(),
+  gc_ok: z.boolean(),
+  payload_cai: z.number(),
+  restriction_scrub: RestrictionScrubSchema,
+  rare_codons_avoided: z.array(z.string()),
+});
+export type CloningPayload = z.infer<typeof CloningPayloadSchema>;
+
+/**
+ * Expanded accepted-candidate metadata. New consumers should use `id`,
+ * `sequence`, `cysteine_indices`, `loop_segments`, `biophysical_profile`,
+ * `cloning_payload`, and `verification_report`; the legacy
+ * `mature_sequence` / `topology` / `grammar_breakdown` keys are kept for
+ * backward compatibility.
+ */
+export const CandidatePayloadSchema = z.object({
+  id: z.string(),
+  sequence: z.string(),
+  length: z.number().int(),
+  cysteine_indices: z.array(z.number().int()).length(6),
+  loop_segments: z.array(z.string()).length(5),
+  biophysical_profile: BiophysicalProfileSchema,
+  cloning_payload: CloningPayloadSchema,
+  verification_report: VerificationReportSchema,
+  mature_sequence: z.string().optional(),
+  topology: z.string().optional(),
+  grammar_breakdown: z.record(z.string(), z.string()).optional(),
+});
+export type CandidatePayload = z.infer<typeof CandidatePayloadSchema>;
 
 /**
  * Ready-to-copy synthesis order payload for Twist / IDT gBlock forms.

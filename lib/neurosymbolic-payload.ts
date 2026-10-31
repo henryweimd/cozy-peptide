@@ -2,9 +2,12 @@ import type {
   ApiResponse,
   LabHandoffManifest,
   RefinementTurn,
+  SpecificityReport,
   SymbolicAuditResult,
 } from "../types/peptide";
-import { parseKnottinGrammar } from "./protein-grammar";
+import { cysteineIndices, parseKnottinGrammar } from "./protein-grammar";
+import { buildVerificationReport } from "./symbolic-auditor";
+import { buildCloningPayload, constructTag } from "./lab-handoff";
 
 const MODALITY = "engineered_knottin_microprotein";
 const LINGUISTIC_PARADIGM = "context_sensitive_loop_grammar";
@@ -14,13 +17,15 @@ const PROPOSER_MODEL = "Meta-Spark-1.3-Contributor";
 /** Human-readable liability names cleared by the strict audit motifs. */
 function liabilitiesCleared(sequence: string): string[] {
   const cleared: string[] = [];
-  if (!/[KR]{2}/.test(sequence)) cleared.push("Trypsin");
-  if (!/[FYW]L/.test(sequence)) {
+  if (!/(KR|RR|KK|RK)/.test(sequence)) cleared.push("Trypsin");
+  if (!/(KR|RR|KK|RK|PR)/.test(sequence)) cleared.push("Kex2-site");
+  if (!/[FYW][^P][KR]/.test(sequence)) {
     cleared.push("Pepsin");
     cleared.push("Chymotrypsin");
   }
   if (!/D[GS]/.test(sequence)) cleared.push("Asp-Gly");
   if (!/N[GS]/.test(sequence)) cleared.push("Asn-Gly");
+  if (!/N[^P][ST]/.test(sequence)) cleared.push("N-glycosylation");
   if (!sequence.includes("M")) cleared.push("Met-oxidation");
   return cleared;
 }
@@ -46,10 +51,22 @@ export function buildNeurosymbolicPayload(
   manifest: LabHandoffManifest
 ): ApiResponse {
   const grammar = parseKnottinGrammar(candidate);
+  const accepted = history.find((entry) => entry.disposition === "accepted");
+  const specificity: SpecificityReport = accepted?.specificity ?? {
+    checked: false,
+    pass: true,
+    intended_target: target,
+    predicted_targets: [],
+    off_targets: [],
+    high_risk_flags: [],
+    warnings: [],
+    reason: "Specificity review not run for this candidate",
+  };
   return {
     success: true,
     target,
     modality: MODALITY,
+    specificity,
     neurosymbolic_provenance: {
       proposer_model: PROPOSER_MODEL,
       linguistic_paradigm: LINGUISTIC_PARADIGM,
@@ -57,6 +74,25 @@ export function buildNeurosymbolicPayload(
       refinement_trace: history,
     },
     candidate: {
+      id: `SB-KNOT-${constructTag(candidate)}`,
+      sequence: candidate,
+      length: candidate.length,
+      cysteine_indices: cysteineIndices(candidate),
+      loop_segments: [
+        grammar.loops["L1"] ?? "",
+        grammar.loops["L2"] ?? "",
+        grammar.loops["L3"] ?? "",
+        grammar.loops["L4"] ?? "",
+        grammar.loops["L5"] ?? "",
+      ],
+      biophysical_profile: {
+        net_charge_ph74: audit.net_charge_ph74,
+        isoelectric_point: audit.isoelectric_point,
+        gravy_score: audit.gravy_score,
+        boman_index: audit.boman_index,
+      },
+      cloning_payload: buildCloningPayload(candidate),
+      verification_report: buildVerificationReport(grammar, audit),
       mature_sequence: candidate,
       topology: TOPOLOGY_LABEL,
       grammar_breakdown: grammar.loops,
@@ -67,6 +103,7 @@ export function buildNeurosymbolicPayload(
       cys_count: audit.cys_count,
       charge: audit.formal_charge,
       charge_target: chargeTarget,
+      net_charge_ph74: audit.net_charge_ph74,
       gravy: audit.gravy_score,
       boman_index: audit.boman_index,
       aliphatic_index: audit.aliphatic_index,

@@ -1,4 +1,8 @@
-import type { SymbolicAuditResult } from "../types/peptide";
+import type {
+  KnottinGrammarParse,
+  SymbolicAuditResult,
+  VerificationReport,
+} from "../types/peptide";
 import { parseKnottinGrammar } from "./protein-grammar";
 
 export const KNOTTIN_MIN_LENGTH = 28;
@@ -6,6 +10,20 @@ export const KNOTTIN_MAX_LENGTH = 36;
 export const KNOTTIN_CYS_COUNT = 6;
 export const GRAVY_MIN = -0.4;
 export const GRAVY_MAX = 0.1;
+/** Net-charge window at pH 7.4 for gentle mucosal retention. */
+export const CHARGE_MIN = 1;
+export const CHARGE_MAX = 4;
+
+/** Kex2 / trypsin dibasic liabilities (Golgi fragmentation risk). */
+export const KEX2_DIBASIC_PATTERN = /(KR|RR|KK|RK)/;
+/** Kex2 proline-adjacent liability. */
+export const KEX2_PR_PATTERN = /PR/;
+/** Exposed chymotrypsin consensus sites. */
+export const CHYMOTRYPSIN_EXPOSED_PATTERN = /[FYW][^P][KR]/;
+/** N-linked glycosylation sequon (yeast hyper-mannosylation risk). */
+export const GLYCOSYLATION_SEQUON_PATTERN = /N[^P][ST]/;
+/** Residues forbidden at position 1 (Kex2 N-terminal processing). */
+export const BLOCKED_N_TERMINI = new Set(["P", "F", "Y", "W"]);
 
 /** Full Kyte-Doolittle hydropathy scale. */
 export const KYTE_DOOLITTLE: Record<string, number> = {
@@ -57,7 +75,7 @@ export const BOMAN_SOLUBILITY: Record<string, number> = {
 
 /**
  * Bjellqvist side-chain pKa scale with standard termini, used for the
- * theoretical isoelectric point.
+ * theoretical isoelectric point and the pH 7.4 net charge.
  */
 export const BJELLQVIST_PKA = {
   nTerm: 8.0,
@@ -129,11 +147,16 @@ export function computeAliphaticIndex(sequence: string): number {
   return Math.round(index * 100) / 100;
 }
 
-function netChargeAtPh(sequence: string, ph: number): number {
+/**
+ * Net charge at a given pH via Henderson-Hasselbalch over the termini
+ * and ionizable side chains (Bjellqvist pKa scale).
+ */
+export function computeNetChargeAtPh(sequence: string, ph: number): number {
+  const seq = sequence.trim().toUpperCase();
   let charge =
     1 / (1 + Math.pow(10, ph - BJELLQVIST_PKA.nTerm)) -
     1 / (1 + Math.pow(10, BJELLQVIST_PKA.cTerm - ph));
-  for (const aa of sequence) {
+  for (const aa of seq) {
     if (aa === "K") charge += 1 / (1 + Math.pow(10, ph - BJELLQVIST_PKA.K));
     else if (aa === "R") charge += 1 / (1 + Math.pow(10, ph - BJELLQVIST_PKA.R));
     else if (aa === "H") charge += 1 / (1 + Math.pow(10, ph - BJELLQVIST_PKA.H));
@@ -142,7 +165,7 @@ function netChargeAtPh(sequence: string, ph: number): number {
     else if (aa === "C") charge -= 1 / (1 + Math.pow(10, BJELLQVIST_PKA.C - ph));
     else if (aa === "Y") charge -= 1 / (1 + Math.pow(10, BJELLQVIST_PKA.Y - ph));
   }
-  return charge;
+  return Math.round(charge * 1000) / 1000;
 }
 
 /**
@@ -155,7 +178,7 @@ export function computeIsoelectricPoint(sequence: string): number {
   let high = 14;
   for (let i = 0; i < 100; i += 1) {
     const mid = (low + high) / 2;
-    if (netChargeAtPh(seq, mid) > 0) low = mid;
+    if (computeNetChargeAtPh(seq, mid) > 0) low = mid;
     else high = mid;
   }
   return Math.round(((low + high) / 2) * 100) / 100;
@@ -243,15 +266,58 @@ export function computeCleavageSusceptibilityIndex(sequence: string): number {
 }
 
 /**
- * Deterministic symbolic verification of one knottin candidate, plus the
- * developability ledger (Boman, aliphatic, pI, mucosal adhesion, cleavage).
+ * Hydrophobic residues tracked for secretion runs: at most 3 consecutive
+ * ([VILMFW]{1,3}); runs of 4+ risk ER aggregation.
+ */
+export const HYDROPHOBIC_RUN_SET = new Set(["V", "I", "L", "M", "F", "W"]);
+export const MAX_HYDROPHOBIC_RUN = 3;
+export const MAX_RESIDUE_FRACTION = 0.3;
+
+/** Longest contiguous run of hydrophobic residues. */
+export function computeHydrophobicRunMax(sequence: string): number {
+  const seq = sequence.trim().toUpperCase();
+  let longest = 0;
+  let run = 0;
+  for (const aa of seq) {
+    if (HYDROPHOBIC_RUN_SET.has(aa)) {
+      run += 1;
+      if (run > longest) longest = run;
+    } else {
+      run = 0;
+    }
+  }
+  return longest;
+}
+
+/** Highest single-residue fraction (low-complexity readout). */
+export function computeMaxResidueFraction(sequence: string): number {
+  const seq = sequence.trim().toUpperCase();
+  if (seq.length === 0) return 0;
+  const counts = new Map<string, number>();
+  for (const aa of seq) {
+    counts.set(aa, (counts.get(aa) ?? 0) + 1);
+  }
+  let max = 0;
+  for (const count of counts.values()) {
+    if (count > max) max = count;
+  }
+  return Math.round((max / seq.length) * 1000) / 1000;
+}
+
+/**
+ * Deterministic symbolic verification of one knottin secretion payload,
+ * plus the developability ledger (Boman, aliphatic, pI, mucosal adhesion,
+ * cleavage, hydrophobic runs).
  *
  * Pass/fail invariants:
  * - Length 28-36 aa
  * - Exactly 6 cysteines (canonical C1-C4, C2-C5, C3-C6 knottin)
- * - Formal charge exactly equals the target
- * - No trypsin motif [KR]{2}, no pepsin/chymotrypsin motif [FYW]L
- * - No deamidation/isomerization liabilities (N[GS], D[GS]) and no Met
+ * - Formal charge exactly equals the target and sits in [+1, +4]
+ * - No Kex2 liabilities: (KR|RR|KK|RK) dibasics and PR
+ * - No N-glycosylation sequon N[^P][ST]
+ * - No exposed chymotrypsin sites [FYW][^P][KR]
+ * - Residue 1 (post-Kex2 N-terminus) is not P, F, Y, or W
+ * - No hydrophobic run of 4+ over [VILMFW]
  * - GRAVY strictly within [-0.40, +0.10]
  */
 export function auditPeptideCandidate(
@@ -285,38 +351,56 @@ export function auditPeptideCandidate(
   }
 
   const formalCharge = computeFormalCharge(seq);
+  if (formalCharge < CHARGE_MIN || formalCharge > CHARGE_MAX) {
+    violations.push(
+      `formal_charge_window: expected net charge within [+${CHARGE_MIN}, +${CHARGE_MAX}] at pH 7.4, got ${formalCharge}`
+    );
+  }
   if (formalCharge !== targetCharge) {
     violations.push(
       `formal_charge: expected ${targetCharge}, got ${formalCharge}`
     );
   }
 
-  if (/[KR]{2}/.test(seq)) {
+  const dibasic = KEX2_DIBASIC_PATTERN.exec(seq);
+  if (dibasic !== null) {
     violations.push(
-      "protease_trypsin: dibasic [KR]{2} motif is a trypsin cleavage site"
+      `kex2_site: dibasic '${dibasic[0]}' at index ${dibasic.index} would be cleaved by Kex2 during Golgi processing`
     );
   }
-  if (/[FYW]L/.test(seq)) {
+  const pr = KEX2_PR_PATTERN.exec(seq);
+  if (pr !== null) {
     violations.push(
-      "protease_pepsin_chymotrypsin: [FYW]L motif is a pepsin/chymotrypsin cleavage site"
+      `kex2_site: 'PR' at index ${pr.index} is a Kex2 processing liability`
+    );
+  }
+  if (GLYCOSYLATION_SEQUON_PATTERN.test(seq)) {
+    violations.push(
+      "liability_glycosylation: N-X-[ST] sequon would be N-glycosylated by yeast, likely killing activity"
+    );
+  }
+  const exposed = CHYMOTRYPSIN_EXPOSED_PATTERN.exec(seq);
+  if (exposed !== null) {
+    violations.push(
+      `chymotrypsin_exposed: '${exposed[0]}' at index ${exposed.index} is an exposed chymotrypsin consensus site`
     );
   }
 
-  if (/N[GS]/.test(seq)) {
+  const nTerm = seq[0] ?? "";
+  if (BLOCKED_N_TERMINI.has(nTerm)) {
     violations.push(
-      "liability_deamidation: N[GS] asparagine deamidation motif present"
+      `n_terminus: residue 1 is '${nTerm}' (immediately downstream of Kex2); P, F, Y, W block clean N-terminal processing`
     );
   }
-  if (/D[GS]/.test(seq)) {
+
+  const hydrophobicRunMax = computeHydrophobicRunMax(seq);
+  if (hydrophobicRunMax > MAX_HYDROPHOBIC_RUN) {
     violations.push(
-      "liability_isomerization: D[GS] aspartate isomerization motif present"
+      `liability_aggregation: hydrophobic run of ${hydrophobicRunMax} over [VILMFW] exceeds the ${MAX_HYDROPHOBIC_RUN}-residue secretion cap`
     );
   }
-  if (seq.includes("M")) {
-    violations.push(
-      "liability_oxidation: methionine (M) oxidation liability present"
-    );
-  }
+
+  const maxResidueFraction = computeMaxResidueFraction(seq);
 
   const gravyScore = computeGravy(seq);
   if (gravyScore < GRAVY_MIN || gravyScore > GRAVY_MAX) {
@@ -330,6 +414,7 @@ export function auditPeptideCandidate(
     length,
     cys_count: cysCount,
     formal_charge: formalCharge,
+    net_charge_ph74: computeNetChargeAtPh(seq, 7.4),
     gravy_score: Math.round(gravyScore * 1000) / 1000,
     violations,
     boman_index: computeBomanIndex(seq),
@@ -337,5 +422,93 @@ export function auditPeptideCandidate(
     isoelectric_point: computeIsoelectricPoint(seq),
     mucosal_adhesion_ratio: computeMucosalAdhesionRatio(seq),
     cleavage_susceptibility_index: computeCleavageSusceptibilityIndex(seq),
+    hydrophobic_run_max: hydrophobicRunMax,
+    max_residue_fraction: maxResidueFraction,
+  };
+}
+
+/**
+ * Maps audit violations to machine-readable failure modes for retry
+ * logging and the verification report.
+ */
+export function auditFailureModes(audit: SymbolicAuditResult): string[] {
+  const modes = new Set<string>();
+  for (const violation of audit.violations) {
+    if (violation.startsWith("non_canonical_residue:")) {
+      modes.add("NON_CANONICAL_RESIDUE");
+    } else if (violation.startsWith("length:")) {
+      modes.add("LENGTH_VIOLATION");
+    } else if (violation.startsWith("cysteines:")) {
+      modes.add("CYSTEINE_TOPOLOGY_VIOLATION");
+    } else if (violation.startsWith("formal_charge_window:")) {
+      modes.add("CHARGE_OUT_OF_BOUNDS");
+    } else if (violation.startsWith("formal_charge:")) {
+      modes.add("CHARGE_TARGET_MISMATCH");
+    } else if (violation.startsWith("kex2_site:")) {
+      modes.add("KEX2_SITE_DETECTED");
+    } else if (violation.startsWith("liability_glycosylation:")) {
+      modes.add("N_GLYCOSYLATION_SEQUON");
+    } else if (violation.startsWith("chymotrypsin_exposed:")) {
+      modes.add("CHYMOTRYPSIN_EXPOSED_SITE");
+    } else if (violation.startsWith("n_terminus:")) {
+      modes.add("N_TERMINUS_BLOCKED");
+    } else if (violation.startsWith("liability_aggregation:")) {
+      modes.add("HYDROPHOBIC_RUN_TOO_LONG");
+    } else if (violation.startsWith("gravy:")) {
+      modes.add("GRAVY_OUT_OF_BOUNDS");
+    } else {
+      modes.add("AUDIT_VIOLATION");
+    }
+  }
+  return [...modes];
+}
+
+/**
+ * Maps grammar syntax errors to machine-readable failure modes.
+ */
+export function grammarFailureModes(
+  grammar: KnottinGrammarParse
+): string[] {
+  const modes = new Set<string>();
+  for (const error of grammar.syntaxErrors) {
+    if (error.startsWith("alphabet:")) {
+      modes.add("NON_CANONICAL_RESIDUE");
+    } else if (error.startsWith("cysteine_topology:")) {
+      modes.add("CYSTEINE_TOPOLOGY_VIOLATION");
+    } else {
+      modes.add("LOOP_ENVELOPE_VIOLATION");
+    }
+  }
+  return [...modes];
+}
+
+/**
+ * Builds the per-candidate verification report: one boolean per
+ * bioprocess gate plus the combined failure-mode list.
+ */
+export function buildVerificationReport(
+  grammar: KnottinGrammarParse,
+  audit: SymbolicAuditResult
+): VerificationReport {
+  const has = (prefix: string): boolean =>
+    audit.violations.some((violation) => violation.startsWith(prefix));
+  const kex2Clean = !has("kex2_site:");
+  const chymoClean = !has("chymotrypsin_exposed:");
+  const failureModes = [
+    ...grammarFailureModes(grammar),
+    ...auditFailureModes(audit),
+  ];
+  return {
+    kex2_clean: kex2Clean,
+    glycosylation_clean: !has("liability_glycosylation:"),
+    charge_window_ok: !has("formal_charge_window:"),
+    protease_clean: kex2Clean && chymoClean,
+    n_terminus_ok: !has("n_terminus:"),
+    hydrophobic_runs_ok: !has("liability_aggregation:"),
+    gravy_ok: !has("gravy:"),
+    ick_topology_ok:
+      grammar.valid && !has("length:") && !has("cysteines:"),
+    passed: grammar.valid && audit.passed,
+    failure_modes: failureModes,
   };
 }

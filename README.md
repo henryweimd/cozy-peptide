@@ -115,34 +115,51 @@ flowchart LR
     B --> C{"Symbolic compiler audit"}
     C -->|"fail: diagnostics"| D["Repair loop"]
     D --> B
-    C -->|"pass"| E["Lab handoff: yeast cassette + DNA order"]
+    C -->|"pass"| S["Blinded specificity review"]
+    S --> E["Lab handoff: yeast cassette + DNA order"]
 ```
 
 1. **Ingestion** — `POST /api/generate-peptide` accepts a therapeutic `target`,
-   optional `mechanism`, and optional integer `charge_target` (3, 4, or 5).
+   optional `mechanism`, and optional integer `charge_target` (1, 2, 3, or 4).
 2. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) — the Contributor
-   API proposes knottin candidates under a context-sensitive loop-grammar
-   paradigm (`C1-C4, C2-C5, C3-C6 ICK` topology).
+   API proposes knottin *secretion payloads* for continuous *S. boulardii*
+   expression (MFalpha1 pre-pro leader) under a context-sensitive loop-grammar
+   paradigm (`C1-C4, C2-C5, C3-C6 ICK` topology, canonical loop envelopes),
+   anchored by few-shot natural knottins (EETI-II, MCoTI-II) for cysteine
+   pacing.
 3. **Deterministic Symbolic Compiler** (`lib/symbolic-auditor.ts`,
    `lib/protein-grammar.ts`) — each proposal is audited for:
-   - Length 28-36 aa with **6-Cys parity**
-   - Loop turn rules via the `L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6` grammar
-   - **Integer formal charge** matching the requested target
+   - Length 28-36 aa with **6-Cys parity** and canonical **ICK loop
+     envelopes** (L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10)
+   - **Net charge** exactly matching the requested target, inside the
+     **+1…+4 window at pH 7.4**
    - **GRAVY** hydropathy within [-0.4, 0.1], plus Boman, aliphatic index, pI,
-     mucosal adhesion, and cleavage susceptibility metrics
-   - **Protease liability filtering** (trypsin, pepsin/chymotrypsin, Asp-Gly,
-     Asn-Gly, Met-oxidation motifs)
+     mucosal adhesion, cleavage susceptibility, and hydrophobic-run metrics
+   - **Bioprocess liability filtering** — zero Kex2 sites (`KR|RR|KK|RK`,
+     `PR`), zero N-glycosylation sequons (`N[^P][ST]`), zero exposed
+     chymotrypsin sites (`[FYW][^P][KR]`), a clean post-Kex2 N-terminus
+     (never P/F/Y/W), and hydrophobic runs capped at 3 over `[VILMFW]`
 4. **Closed-loop compiler diagnostic feedback** — failures return structured
-   diagnostics (`refinement_trace`) to the proposer for repair; the loop runs
-   until a candidate passes or turns are exhausted.
-5. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
-   candidates are compiled into an *S. boulardii* (ATCC MYA-796) cassette with:
-   - 85-aa **MFalpha-1 pre-pro secretion leader** ending in the native
-     **Kex2 junction** (`SLDKR`)
-   - *S. boulardii* **yeast codon bias** optimization with CAI/GC reporting
-   - 40-bp **Gibson homology arms** for pESC/pPic9 assembly
-   - Restriction-site scrub, mature/precursor FASTA, and a DNA synthesis order
-     manifest
+   diagnostics with machine-readable failure modes (`KEX2_SITE_DETECTED`,
+   `CHARGE_OUT_OF_BOUNDS`, …) to the proposer for repair at a penalized
+   temperature; the loop runs until a candidate passes or turns are
+   exhausted. Passing pools keep their best candidate by GRAVY centrality
+   and cleavage index, not first-pass order.
+5. **Round-trip specificity review** (`lib/specificity.ts`) — before
+   acceptance, the top candidate goes back to Muse Spark 1.3 *blinded*,
+   which must independently rank the intended target first and flag no
+   high-risk off-targets (hERG, human ion channels, hemolysis, clotting).
+   Mismatches trigger revision; the verdict ships in the response.
+6. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
+   candidates are compiled for *S. boulardii* (ATCC MYA-796) with:
+   - A ready-to-clone **`cloning_payload`** cassette:
+     `MFalpha1-Kex2-Knottin-CYC1term` — 255-nt MFalpha1 5′ flank with the
+     Kex2 junction, GC-tuned payload CDS (38-45% GC, rare codons avoided),
+     dual stop codons, and the 250-bp CYC1 terminator, verified free of
+     BsaI/BsmBI/EcoRI/NotI/XhoI for direct plasmid assembly
+   - A Gibson-flanked **gBlock manifest** (85-aa MFalpha-1 pre-pro leader,
+     40-bp pESC/pPic9 homology arms) with CAI/GC reporting, mature/precursor
+     FASTA, and a DNA synthesis order form
 
 ## 🛡️ Block toxins and enzymes before generation
 
@@ -200,19 +217,48 @@ Sample JSON response (truncated):
     "refinement_trace": []
   },
   "candidate": {
-    "mature_sequence": "GCPKILKKCRRDSDCPGACICRGNGYCG",
-    "topology": "C1-C4, C2-C5, C3-C6 ICK",
-    "grammar_breakdown": { "L0": "G", "L1": "PKILKK", "...": "..." }
+    "id": "SB-KNOT-1G97R3",
+    "sequence": "CNRPNAGQCSLLKNNCIVPCKTCRIHPHWIYYTC",
+    "length": 34,
+    "cysteine_indices": [0, 8, 15, 19, 22, 33],
+    "loop_segments": ["NRPNAGQ", "SLLKNN", "IVP", "KT", "RIHPHWIYYT"],
+    "biophysical_profile": {
+      "net_charge_ph74": 3.715,
+      "isoelectric_point": 8.94,
+      "gravy_score": -0.279,
+      "boman_index": 1.16
+    },
+    "cloning_payload": {
+      "cassette_format": "MFalpha1-Kex2-Knottin-CYC1term",
+      "dna_sequence": "...",
+      "gc_percent_cds": 38.2,
+      "...": "..."
+    },
+    "verification_report": {
+      "kex2_clean": true,
+      "glycosylation_clean": true,
+      "charge_window_ok": true,
+      "protease_clean": true,
+      "passed": true,
+      "...": "..."
+    },
+    "topology": "C1-C4, C2-C5, C3-C6 ICK"
   },
   "symbolic_audit": {
     "passed": true,
-    "length": 28,
+    "length": 34,
     "cys_count": 6,
     "charge": 4,
     "charge_target": 4,
-    "gravy": -0.21,
-    "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin"],
+    "gravy": -0.279,
+    "liabilities_cleared": ["Trypsin", "Kex2-site", "Chymotrypsin", "..."],
     "violations": []
+  },
+  "specificity": {
+    "checked": true,
+    "pass": true,
+    "predicted_targets": ["C. difficile TcdA receptor", "..."],
+    "off_targets": []
   },
   "lab_handoff": {
     "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",

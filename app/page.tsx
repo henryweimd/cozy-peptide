@@ -30,17 +30,40 @@ const RESPONSE_EXAMPLE = `{
     ]
   },
   "candidate": {
-    "mature_sequence": "CPRVTCSNDTVCKVRTSKCSVCRISVNTC",
-    "topology": "C1-C4, C2-C5, C3-C6 ICK",
-    "grammar_breakdown": { "L1": "PRVT", "...": "..." }
+    "id": "SB-KNOT-1G97R3",
+    "sequence": "CNRPNAGQCSLLKNNCIVPCKTCRIHPHWIYYTC",
+    "length": 34,
+    "cysteine_indices": [0, 8, 15, 19, 22, 33],
+    "loop_segments": ["NRPNAGQ", "SLLKNN", "IVP", "KT", "RIHPHWIYYT"],
+    "biophysical_profile": {
+      "net_charge_ph74": 3.715,
+      "isoelectric_point": 8.94,
+      "gravy_score": -0.279,
+      "boman_index": 1.16
+    },
+    "cloning_payload": {
+      "cassette_format": "MFalpha1-Kex2-Knottin-CYC1term",
+      "dna_sequence": "...",
+      "gc_percent_cds": 38.2,
+      "...": "..."
+    },
+    "verification_report": {
+      "kex2_clean": true,
+      "glycosylation_clean": true,
+      "charge_window_ok": true,
+      "protease_clean": true,
+      "passed": true,
+      "...": "..."
+    },
+    "topology": "C1-C4, C2-C5, C3-C6 ICK"
   },
   "symbolic_audit": {
     "passed": true,
     "charge": 4,
-    "gravy": 0.04,
-    "boman_index": 1.06,
-    "aliphatic_index": 63.45,
-    "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin", "..."]
+    "gravy": -0.279,
+    "boman_index": 1.16,
+    "aliphatic_index": 68.82,
+    "liabilities_cleared": ["Trypsin", "Kex2-site", "Chymotrypsin", "..."]
   },
   "lab_handoff": {
     "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",
@@ -93,7 +116,7 @@ export default function Home() {
             <ul className={styles.stats} aria-label="Design constraints">
               <li>28–36 aa</li>
               <li>6-Cys ICK knot</li>
-              <li>charge +3…+5</li>
+              <li>charge +1…+4</li>
               <li>CAI &gt; 0.85</li>
             </ul>
           </div>
@@ -180,30 +203,36 @@ export default function Home() {
             <li>
               <strong>Ingest.</strong> <code>POST /api/generate-peptide</code>{" "}
               takes a therapeutic target, an optional mechanism, and an
-              optional charge target (3, 4, or 5).
+              optional charge target (1, 2, 3, or 4).
             </li>
             <li>
               <strong>Propose.</strong> Meta Spark 1.3 drafts knottin
-              candidates in the loop grammar{" "}
-              <code>L0–C1…C6–L6</code> with{" "}
-              <code>C1–C4, C2–C5, C3–C6</code> ICK pairing.
+              secretion payloads for <em>S. boulardii</em> (MFα1 pre-pro
+              leader) in the loop grammar <code>L0–C1…C6–L6</code> with{" "}
+              <code>C1–C4, C2–C5, C3–C6</code> ICK pairing and canonical
+              loop envelopes.
             </li>
             <li>
               <strong>Verify.</strong> Every candidate must pass the symbolic
-              audit: 28–36 aa, 6-Cys parity, exact formal charge, GRAVY in
-              [−0.40, +0.10], and zero protease or chemical liabilities.
+              audit: 28–36 aa, 6-Cys parity, exact formal charge inside the
+              +1…+4 window, GRAVY in [−0.40, +0.10], and zero Kex2,
+              glycosylation, chymotrypsin, N-terminal, or hydrophobic-run
+              liabilities.
             </li>
             <li>
               <strong>Repair.</strong> Failures return structured compiler
-              diagnostics for model-guided repair instead of being
-              discarded; the full trace ships in the response.
+              diagnostics with machine-readable failure modes for
+              model-guided repair at penalized temperatures instead of
+              being discarded; survivors face a blinded specificity review
+              that must independently confirm the target. The full trace
+              ships in the response.
             </li>
             <li>
-              <strong>Hand off.</strong> Verified knottins compile to a yeast
-              cassette: 85-aa MFα1 leader with the SLDKR Kex2 junction,
-              yeast codon optimization, 40-bp Gibson arms, and a synthesis
-              order manifest — everything needed to install the miniature
-              gut factory.
+              <strong>Hand off.</strong> Verified knottins compile to a
+              ready-to-clone yeast cassette — MFα1 5′ flank with the Kex2
+              junction, GC-tuned payload CDS, dual stop codons, and the
+              CYC1 terminator — plus a Gibson-flanked gBlock manifest:
+              everything needed to install the miniature gut factory.
             </li>
           </ol>
         </section>
@@ -255,10 +284,11 @@ export default function Home() {
                 <td>
                   <code>charge_target</code>
                 </td>
-                <td>3 | 4 | 5</td>
+                <td>1 | 2 | 3 | 4</td>
                 <td>no</td>
                 <td>
-                  Exact formal charge required at neutral pH. Default 4.
+                  Exact net charge required (inside the +1…+4 window at pH
+                  7.4). Default 4.
                 </td>
               </tr>
             </tbody>

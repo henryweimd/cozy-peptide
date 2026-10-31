@@ -25,14 +25,28 @@ export const CODON_TABLE: Record<string, string[]> = {
   G: ["GGT", "GGC", "GGA", "GGG"],
 };
 
-/** Restriction sites silenced via synonymous codon substitution. */
+/**
+ * Cloning sites silenced via synonymous codon substitution so cassettes
+ * drop directly into yeast integration plasmids (incl. Golden Gate).
+ */
 export const RESTRICTION_SITES: string[] = [
   "GAATTC", // EcoRI
-  "GGATCC", // BamHI
   "GCGGCCGC", // NotI
   "CTCGAG", // XhoI
   "GGTCTC", // BsaI
+  "CGTCTC", // BsmBI
 ];
+
+/** Rare S. cerevisiae codons excluded from optimized coding sequences. */
+export const RARE_CODONS: ReadonlySet<string> = new Set([
+  "CGG",
+  "CGA",
+  "CUG",
+]);
+
+/** GC window enforced across the optimized knottin coding sequence. */
+export const GC_CDS_MIN = 0.38;
+export const GC_CDS_MAX = 0.45;
 
 /**
  * S. cerevisiae codon usage frequencies per thousand (Kazusa), used to
@@ -77,7 +91,8 @@ export function findRestrictionSite(dna: string): string | null {
   return null;
 }
 
-function countSiteOccurrences(dna: string): number {
+/** Total cloning-site occurrences in the DNA (overlapping counted). */
+export function countRestrictionSites(dna: string): number {
   const upper = dna.toUpperCase();
   let total = 0;
   for (const site of RESTRICTION_SITES) {
@@ -90,7 +105,13 @@ function countSiteOccurrences(dna: string): number {
   return total;
 }
 
-function findFirstSiteIndex(dna: string): { site: string; index: number } | null {
+export interface RestrictionSiteHit {
+  site: string;
+  index: number;
+}
+
+/** First cloning site in the DNA with its 0-based index, or null. */
+export function findFirstSiteHit(dna: string): RestrictionSiteHit | null {
   const upper = dna.toUpperCase();
   let best: { site: string; index: number } | null = null;
   for (const site of RESTRICTION_SITES) {
@@ -115,23 +136,29 @@ function silenceRestrictionSites(dna: string, proteinSeq: string): string {
 
   for (let iter = 0; iter < MAX_SILENCING_ITERATIONS; iter += 1) {
     const current = codons.join("");
-    const hit = findFirstSiteIndex(current);
+    const hit = findFirstSiteHit(current);
     if (hit === null) return current;
 
     const firstCodon = Math.floor(hit.index / 3);
     const lastCodon = Math.floor((hit.index + hit.site.length - 1) / 3);
-    const before = countSiteOccurrences(current);
+    const before = countRestrictionSites(current);
     let fixed = false;
 
     for (let ci = firstCodon; ci <= lastCodon && !fixed; ci += 1) {
       const aa = proteinSeq[ci];
       if (aa === undefined) continue;
       const synonyms = CODON_TABLE[aa] ?? [];
-      for (const candidate of synonyms) {
+      // Prefer non-rare synonyms so silencing never introduces CGG/CGA/CUG.
+      const ordered = [...synonyms].sort((x, y) => {
+        const xr = RARE_CODONS.has(x) ? 1 : 0;
+        const yr = RARE_CODONS.has(y) ? 1 : 0;
+        return xr - yr;
+      });
+      for (const candidate of ordered) {
         if (candidate === codons[ci]) continue;
         const trial = [...codons];
         trial[ci] = candidate;
-        if (countSiteOccurrences(trial.join("")) < before) {
+        if (countRestrictionSites(trial.join("")) < before) {
           codons = trial;
           fixed = true;
           break;
@@ -216,4 +243,200 @@ export function optimizeForSboulardii(
 
   const silenced = silenceRestrictionSites(dna, seq);
   return { dna: silenced, gcContent: computeGcContent(silenced) };
+}
+
+function gcCount(codon: string): number {
+  let count = 0;
+  for (const base of codon) {
+    if (base === "G" || base === "C") count += 1;
+  }
+  return count;
+}
+
+/**
+ * Relative adaptiveness of a codon: its usage frequency over the
+ * synonymous maximum (Sharp & Li 1987 weight).
+ */
+function codonAdaptiveness(aa: string, codon: string): number {
+  const synonyms = CODON_TABLE[aa] ?? [];
+  let maxFreq = 0;
+  for (const syn of synonyms) {
+    const freq = S_CEREVISIAE_CODON_FREQUENCIES[syn] ?? 0;
+    if (freq > maxFreq) maxFreq = freq;
+  }
+  const freq = S_CEREVISIAE_CODON_FREQUENCIES[codon] ?? 0;
+  if (maxFreq <= 0 || freq <= 0) return 0;
+  return freq / maxFreq;
+}
+
+function splitCodons(dna: string): string[] {
+  const codons: string[] = [];
+  for (let i = 0; i + 3 <= dna.length; i += 3) {
+    codons.push(dna.slice(i, i + 3));
+  }
+  return codons;
+}
+
+/**
+ * Replaces rare codons (CGG, CGA, CUG) with the preferred non-rare
+ * synonym that keeps the sequence free of cloning sites.
+ */
+function removeRareCodons(codons: string[], proteinSeq: string): string[] {
+  const out = [...codons];
+  for (let i = 0; i < out.length; i += 1) {
+    const current = out[i] ?? "";
+    if (!RARE_CODONS.has(current)) continue;
+    const aa = proteinSeq[i] ?? "";
+    const synonyms = (CODON_TABLE[aa] ?? []).filter(
+      (syn) => syn !== current && !RARE_CODONS.has(syn)
+    );
+    let placed = false;
+    for (const candidate of synonyms) {
+      const trial = [...out];
+      trial[i] = candidate;
+      if (findRestrictionSite(trial.join("")) === null) {
+        out[i] = candidate;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed && synonyms.length > 0) {
+      // Rare-codon avoidance wins over site placement; a later
+      // silencing round repairs any reintroduced site.
+      out[i] = synonyms[0] ?? current;
+    }
+  }
+  return out;
+}
+
+/**
+ * Greedy GC tuning toward [GC_CDS_MIN, GC_CDS_MAX]. Each step applies
+ * the single synonymous swap (never a rare codon, never introducing a
+ * cloning site) with the highest adaptiveness, so CAI degrades as
+ * little as possible. Deterministic: ties break by codon index, then
+ * table order.
+ */
+function tuneGcContent(codons: string[], proteinSeq: string): string[] {
+  const out = [...codons];
+  for (let iter = 0; iter < 500; iter += 1) {
+    const gc = computeGcContent(out.join(""));
+    const raising = gc < GC_CDS_MIN;
+    const lowering = gc > GC_CDS_MAX;
+    if (!raising && !lowering) return out;
+
+    let bestIndex = -1;
+    let bestCodon = "";
+    let bestScore = -1;
+    for (let i = 0; i < out.length; i += 1) {
+      const current = out[i] ?? "";
+      const currentGc = gcCount(current);
+      const aa = proteinSeq[i] ?? "";
+      for (const candidate of CODON_TABLE[aa] ?? []) {
+        if (candidate === current || RARE_CODONS.has(candidate)) continue;
+        const candidateGc = gcCount(candidate);
+        if (raising && candidateGc <= currentGc) continue;
+        if (lowering && candidateGc >= currentGc) continue;
+        const trial = [...out];
+        trial[i] = candidate;
+        if (findRestrictionSite(trial.join("")) !== null) continue;
+        const score = codonAdaptiveness(aa, candidate);
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = i;
+          bestCodon = candidate;
+        }
+      }
+    }
+    if (bestIndex === -1) return out;
+    out[bestIndex] = bestCodon;
+  }
+  return out;
+}
+
+/**
+ * Translates an in-frame coding sequence back to protein using the
+ * codon table. Used to verify DNA/protein consistency of cassettes.
+ */
+export function translateCds(dna: string): string {
+  const coding = dna.trim().toUpperCase();
+  if (coding.length === 0 || coding.length % 3 !== 0) {
+    throw new Error("translateCds: DNA must be non-empty in-frame triplets.");
+  }
+  const codonToAa = new Map<string, string>();
+  for (const [aa, synonyms] of Object.entries(CODON_TABLE)) {
+    for (const codon of synonyms) {
+      if (!codonToAa.has(codon)) codonToAa.set(codon, aa);
+    }
+  }
+  let protein = "";
+  for (let i = 0; i < coding.length; i += 3) {
+    const codon = coding.slice(i, i + 3);
+    const aa = codonToAa.get(codon);
+    if (aa === undefined) {
+      throw new Error(`translateCds: unknown codon '${codon}'.`);
+    }
+    protein += aa;
+  }
+  return protein;
+}
+
+export interface PayloadCdsResult {
+  dna: string;
+  gcContent: number;
+  gcPercent: number;
+  gcOk: boolean;
+  cai: number;
+}
+
+/**
+ * Codon-optimizes one knottin payload CDS for S. cerevisiae /
+ * S. boulardii: preferred codons, cloning-site silencing, rare-codon
+ * (CGG/CGA/CUG) avoidance, and GC tuned into [38%, 45%].
+ */
+export function optimizePayloadCds(proteinSeq: string): PayloadCdsResult {
+  const seq = proteinSeq.trim().toUpperCase();
+  if (seq.length === 0) {
+    throw new Error("optimizePayloadCds: empty protein sequence.");
+  }
+
+  let dna = "";
+  for (const aa of seq) {
+    const synonyms = CODON_TABLE[aa];
+    if (synonyms === undefined || synonyms.length === 0) {
+      throw new Error(
+        `optimizePayloadCds: unsupported residue '${aa}'. Only the 20 canonical amino acids are allowed.`
+      );
+    }
+    const preferred = synonyms[0];
+    if (preferred === undefined) {
+      throw new Error(
+        `optimizePayloadCds: no codon available for residue '${aa}'.`
+      );
+    }
+    dna += preferred;
+  }
+
+  // Alternate silencing and rare-codon removal until both hold.
+  let codons = splitCodons(dna);
+  for (let round = 0; round < 10; round += 1) {
+    const silenced = silenceRestrictionSites(codons.join(""), seq);
+    codons = removeRareCodons(splitCodons(silenced), seq);
+    if (
+      findRestrictionSite(codons.join("")) === null &&
+      codons.every((codon) => !RARE_CODONS.has(codon))
+    ) {
+      break;
+    }
+  }
+  codons = tuneGcContent(codons, seq);
+
+  const finalDna = codons.join("");
+  const gcContent = computeGcContent(finalDna);
+  return {
+    dna: finalDna,
+    gcContent,
+    gcPercent: Math.round(gcContent * 1000) / 10,
+    gcOk: gcContent >= GC_CDS_MIN && gcContent <= GC_CDS_MAX,
+    cai: computeCAI(finalDna, seq),
+  };
 }

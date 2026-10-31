@@ -1,43 +1,28 @@
 import type { KnottinGrammarParse } from "../types/peptide";
 
 /**
- * Knottin architecture as a rigid linguistic grammar.
+ * Knottin architecture as a rigid topological grammar.
  *
  * Skeleton: L0 - C1 - L1 - C2 - L2 - C3 - L3 - C4 - L4 - C5 - L5 - C6 - L6
  * Disulfide pairing invariant (ICK motif): C1-C4, C2-C5, C3-C6.
  *
- * Semantic syntax rules per loop:
- * - L1 (3-7 aa): structural turn anchor; requires a turn-inducer (P or G).
- * - L2 (4-6 aa): beta-hairpin initiator; bulky aromatics (W, F) capped at
- *   40% of loop length.
- * - L3 (4-7 aa): functional variable cassette; charge-tolerant, no hard rule.
- * - L4 (1-3 aa): ultra-short linker; no helix-forming residues.
- * - L5 (4-8 aa): terminal amphipathic presentation; charge-tolerant.
+ * Canonical ICK loop envelopes (lengths only):
+ * - L1 (3-7 aa): C1-C2 spacing
+ * - L2 (3-6 aa): C2-C3 spacing
+ * - L3 (1-4 aa): C3-C4 spacing
+ * - L4 (2-6 aa): C4-C5 spacing
+ * - L5 (4-10 aa): C5-C6 spacing
  * - L0 / L6: terminal spacers; parsed and reported without constraints.
  */
 
 /** Loop length rules: [min, max] inclusive. */
 export const LOOP_LENGTH_RULES: Record<string, [number, number]> = {
   L1: [3, 7],
-  L2: [4, 6],
-  L3: [4, 7],
-  L4: [1, 3],
-  L5: [4, 8],
+  L2: [3, 6],
+  L3: [1, 4],
+  L4: [2, 6],
+  L5: [4, 10],
 };
-
-/** Turn-inducing residues required in L1 for loop closure. */
-export const TURN_INDUCERS = new Set(["P", "G"]);
-
-/** Bulky aromatics capped in L2. */
-export const L2_BULKY_AROMATICS = new Set(["W", "F"]);
-export const L2_AROMATIC_FRACTION_LIMIT = 0.4;
-
-/**
- * Strong helix-forming residues (Chou-Fasman P-alpha > ~1.10) prohibited
- * in the ultra-short L4 linker, where helix nucleation would disrupt the
- * cystine-knot packing.
- */
-export const L4_HELIX_FORMERS = new Set(["A", "E", "K", "L", "M", "Q"]);
 
 const LOOP_NAMES = ["L0", "L1", "L2", "L3", "L4", "L5", "L6"] as const;
 
@@ -45,12 +30,16 @@ const CANONICAL_AA = new Set(
   "ACDEFGHIKLMNPQRSTVWY".split("")
 );
 
-function countWhere(loop: string, residues: Set<string>): number {
-  let count = 0;
-  for (const aa of loop) {
-    if (residues.has(aa)) count += 1;
+/**
+ * Returns the 0-based indices of every cysteine in the sequence.
+ */
+export function cysteineIndices(seq: string): number[] {
+  const sequence = seq.trim().toUpperCase();
+  const positions: number[] = [];
+  for (let i = 0; i < sequence.length; i += 1) {
+    if (sequence[i] === "C") positions.push(i);
   }
-  return count;
+  return positions;
 }
 
 /**
@@ -72,10 +61,7 @@ export function parseKnottinGrammar(seq: string): KnottinGrammarParse {
     }
   }
 
-  const cysPositions: number[] = [];
-  for (let i = 0; i < sequence.length; i += 1) {
-    if (sequence[i] === "C") cysPositions.push(i);
-  }
+  const cysPositions = cysteineIndices(sequence);
 
   if (cysPositions.length !== 6) {
     syntaxErrors.push(
@@ -101,32 +87,6 @@ export function parseKnottinGrammar(seq: string): KnottinGrammarParse {
         `${name}_length: expected ${rule[0]}-${rule[1]} aa, got ${loop.length} ('${loop}')`
       );
     }
-  }
-
-  const l1 = loops["L1"] ?? "";
-  if (countWhere(l1, TURN_INDUCERS) === 0) {
-    syntaxErrors.push(
-      `L1_turn_anchor: loop lacks turn-inducers [P, G] required for C1-C2 closure ('${l1}')`
-    );
-  }
-
-  const l2 = loops["L2"] ?? "";
-  if (l2.length > 0) {
-    const aromaticCount = countWhere(l2, L2_BULKY_AROMATICS);
-    const fraction = aromaticCount / l2.length;
-    if (fraction > L2_AROMATIC_FRACTION_LIMIT) {
-      syntaxErrors.push(
-        `L2_hairpin: bulky aromatics [W, F] exceed 40% of loop (${aromaticCount}/${l2.length} in '${l2}')`
-      );
-    }
-  }
-
-  const l4 = loops["L4"] ?? "";
-  const helixOffenders = l4.split("").filter((aa) => L4_HELIX_FORMERS.has(aa));
-  if (helixOffenders.length > 0) {
-    syntaxErrors.push(
-      `L4_linker: helix-forming residues [${helixOffenders.join(",")}] prohibited in the ultra-short linker ('${l4}')`
-    );
   }
 
   return { valid: syntaxErrors.length === 0, loops, syntaxErrors };
