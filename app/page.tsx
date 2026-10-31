@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Demo from "./demo";
+import Field from "./field";
 import styles from "./page.module.css";
 
 const CURL_EXAMPLE = `curl -X POST https://cozy-peptide.vercel.app/api/generate-peptide \\
@@ -30,40 +31,17 @@ const RESPONSE_EXAMPLE = `{
     ]
   },
   "candidate": {
-    "id": "SB-KNOT-1G97R3",
-    "sequence": "CNRPNAGQCSLLKNNCIVPCKTCRIHPHWIYYTC",
-    "length": 34,
-    "cysteine_indices": [0, 8, 15, 19, 22, 33],
-    "loop_segments": ["NRPNAGQ", "SLLKNN", "IVP", "KT", "RIHPHWIYYT"],
-    "biophysical_profile": {
-      "net_charge_ph74": 3.715,
-      "isoelectric_point": 8.94,
-      "gravy_score": -0.279,
-      "boman_index": 1.16
-    },
-    "cloning_payload": {
-      "cassette_format": "MFalpha1-Kex2-Knottin-CYC1term",
-      "dna_sequence": "...",
-      "gc_percent_cds": 38.2,
-      "...": "..."
-    },
-    "verification_report": {
-      "kex2_clean": true,
-      "glycosylation_clean": true,
-      "charge_window_ok": true,
-      "protease_clean": true,
-      "passed": true,
-      "...": "..."
-    },
-    "topology": "C1-C4, C2-C5, C3-C6 ICK"
+    "mature_sequence": "CPRVTCSNDTVCKVRTSKCSVCRISVNTC",
+    "topology": "C1-C4, C2-C5, C3-C6 ICK",
+    "grammar_breakdown": { "L1": "PRVT", "...": "..." }
   },
   "symbolic_audit": {
     "passed": true,
     "charge": 4,
-    "gravy": -0.279,
-    "boman_index": 1.16,
-    "aliphatic_index": 68.82,
-    "liabilities_cleared": ["Trypsin", "Kex2-site", "Chymotrypsin", "..."]
+    "gravy": 0.04,
+    "boman_index": 1.06,
+    "aliphatic_index": 63.45,
+    "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin", "..."]
   },
   "lab_handoff": {
     "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",
@@ -86,304 +64,472 @@ npm run build  # production build`;
 
 export default function Home() {
   return (
-    <div className={styles.page}>
+    <div className={styles.page} id="top">
+      <a className={styles.skip} href="#main">
+        Skip to content
+      </a>
       <header className={styles.topbar}>
-        <span className={styles.wordmark}>cozy-peptide</span>
-        <span className={styles.tagline}>
-          Built for the Meta Global AI Hackathon
-        </span>
+        <div className={`container ${styles.masthead}`}>
+          <a className={styles.wordmark} href="#top" aria-label="cozy-peptide home">
+            cozy-peptide
+          </a>
+          <nav className={styles.navrow} aria-label="Sections">
+            <a className={styles.navlink} href="#demo">
+              the demo
+            </a>
+            <a className={styles.navlink} href="#api">
+              the API call
+            </a>
+            <a className={styles.navlink} href="#pipeline">
+              the pipeline
+            </a>
+            <a className={`${styles.btn} ${styles.navbtn}`} href="#demo">
+              Design a peptide
+            </a>
+          </nav>
+        </div>
       </header>
 
-      <main className={styles.main}>
-        <div className={styles.hero}>
-          <div>
-            <p className={styles.live}>
-              <span className={styles.dot} aria-hidden="true" />
-              Live API — POST /api/generate-peptide
-            </p>
-            <h1>Describe the disease. Muse Spark designs the probiotic. Your medicine, brewed around the clock.</h1>
-            <p className={styles.lede}>
-              Name a gut disease target — say, <em>C. difficile</em> — and
-              Muse Spark 1.3 dreams up brand-new knottins: tiny knotted
-              proteins, tough enough to survive digestion, that have never
-              existed in nature. A symbolic compiler proves each design
-              sound, and the API returns the verified protein sequence —
-              readily compiled to DNA your lab can order — encoding a
-              probiotic yeast that turns your gut into a miniature
-              factory, manufacturing the drug on site where the disease
-              lives.
-            </p>
-            <ul className={styles.stats} aria-label="Design constraints">
-              <li>28–36 aa</li>
-              <li>6-Cys ICK knot</li>
-              <li>charge +1…+4</li>
-              <li>CAI &gt; 0.85</li>
-            </ul>
+      <main className={styles.main} id="main">
+        <section className={styles.hero} aria-labelledby="page-title">
+          <Field />
+          <div className={`container ${styles.herogrid}`}>
+            <div className={styles.herotext}>
+              <h1 id="page-title">Name the disease. Get the probiotic.</h1>
+              <p className="lead">
+                Muse Spark invents knottins. The compiler proves them. Yeast
+                brews them.
+              </p>
+              <div className={styles.heroactions}>
+                <a className={styles.btn} href="#api">
+                  Read the API call
+                </a>
+              </div>
+              <figure className={styles.herophoto}>
+                <Image
+                  src="/knottin-exhibit.png"
+                  alt="Structural cartoon of a Muse Spark 1.3-designed knottin for C. difficile"
+                  width={433}
+                  height={453}
+                  sizes="(max-width: 60rem) 96px, 192px"
+                  fetchPriority="high"
+                />
+                <figcaption>
+                  A knottin invented by Muse Spark 1.3 for{" "}
+                  <em>C. difficile</em>, never existed in nature.
+                </figcaption>
+              </figure>
+              <ul className={styles.chips} aria-label="Design constraints">
+                <li>28 to 36 aa</li>
+                <li>6-Cys ICK knot</li>
+                <li>charge +3…+5</li>
+                <li>CAI &gt; 0.85</li>
+              </ul>
+            </div>
+            <Demo />
           </div>
-          <figure className={styles.figure}>
-            <Image
-              src="/knottin-exhibit.png"
-              alt="Structural cartoon of a Muse Spark 1.3-designed knottin for C. difficile"
-              width={433}
-              height={453}
-              priority
-            />
-            <figcaption>
-              A knottin invented by Muse Spark 1.3 for{" "}
-              <em>C. difficile</em> — never existed in nature.
-            </figcaption>
-          </figure>
-        </div>
-
-        <section aria-labelledby="demo">
-          <h2 id="demo">Design a peptide in your browser</h2>
-          <p>
-            Pick a gut condition and run the real pipeline — proposal,
-            grammar check, audit, and lab handoff — right here. Limited to
-            one design per minute per visitor so the shared demo stays
-            responsive.
-          </p>
-          <Demo />
         </section>
 
-        <section aria-labelledby="why">
-          <h2 id="why">Change how medicines get made</h2>
-          <ul className={styles.checklist}>
-            <li>
-              <strong>🛡️ Medicines that survive digestion.</strong> Most protein
-              drugs are destroyed in the stomach before they can work.
-              Knottins are tied in a cysteine knot that shrugs off acid and
-              enzymes, so they can act right inside the gut.
-            </li>
-            <li>
-              <strong>💡 Invented, not found.</strong> Rather than screening
-              nature&apos;s libraries, Muse Spark 1.3 reasons over the
-              grammar of proteins to propose truly novel sequences — then a
-              compiler, not vibes, verifies knot topology, charge,
-              stability, and safety.
-            </li>
-            <li>
-              <strong>🧬 Protein out, DNA follows.</strong> The passing
-              design is a verified amino-acid sequence — the invention
-              itself — which compiles straight to a vendor-ready synthesis
-              order: codon-optimized DNA, secretion signal, and assembly
-              parts that install a miniature drug factory in the gut.
-            </li>
-          </ul>
+        <section
+          className={`${styles.band} ${styles.bandGraphite}`}
+          aria-labelledby="api"
+        >
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="api">Peptides from one API call</h2>
+              <p className="lead">
+                One endpoint, one bearer token, one verified sequence.
+              </p>
+            </div>
+            <p className={styles.endpoint}>
+              <span className={styles.method}>POST</span>
+              <code>/api/generate-peptide</code>
+            </p>
+            <p className={styles.authline}>
+              Authenticate with a Bearer [REDACTED]: the{" "}
+              <code>Authorization</code> header must match the server&apos;s{" "}
+              <code>API_BEARER_TOKEN</code>. Tokens live in environment
+              variables only, this page shows placeholders, never real
+              values.
+            </p>
+            <h3>Request</h3>
+            <pre className={styles.well}>
+              <code>{CURL_EXAMPLE}</code>
+            </pre>
+            <table className={styles.apitable}>
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Type</th>
+                  <th>Required</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Field">
+                    <code>target</code>
+                  </td>
+                  <td data-label="Type">string</td>
+                  <td data-label="Required">yes</td>
+                  <td data-label="Description">
+                    Therapeutic gut target, e.g. a pathogen or pathway.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Field">
+                    <code>mechanism</code>
+                  </td>
+                  <td data-label="Type">string</td>
+                  <td data-label="Required">no</td>
+                  <td data-label="Description">
+                    Intended mode of action, passed to the proposer.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Field">
+                    <code>charge_target</code>
+                  </td>
+                  <td data-label="Type">3 | 4 | 5</td>
+                  <td data-label="Required">no</td>
+                  <td data-label="Description">
+                    Exact formal charge required at neutral pH. Default 4.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>Response (200, truncated)</h3>
+            <pre className={styles.well}>
+              <code>{RESPONSE_EXAMPLE}</code>
+            </pre>
+
+            <h3>Status codes</h3>
+            <table className={styles.apitable}>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Meaning</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Code">
+                    <code className={styles.statuscode}>200</code>
+                  </td>
+                  <td data-label="Meaning">
+                    Verified candidate with audit ledger and lab handoff.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Code">
+                    <code className={styles.statuscode}>400</code>
+                  </td>
+                  <td data-label="Meaning">
+                    Invalid JSON body or schema validation failure.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Code">
+                    <code className={styles.statuscode}>401</code>
+                  </td>
+                  <td data-label="Meaning">
+                    Missing or invalid Bearer [REDACTED]
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Code">
+                    <code className={styles.statuscode}>403</code>
+                  </td>
+                  <td data-label="Meaning">
+                    Biosecurity block (toxin-signature screening).
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Code">
+                    <code className={styles.statuscode}>422</code>
+                  </td>
+                  <td data-label="Meaning">
+                    Catalytic-enzyme refusal, outside the knottin modality.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Code">
+                    <code className={styles.statuscode}>502</code>
+                  </td>
+                  <td data-label="Meaning">
+                    Generation failure; no verifiable candidate produced.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
-        <section aria-labelledby="language">
-          <h2 id="language">Teach AI to write the sentences of life</h2>
-          <p>
-            We think of language models as predictors of words. But the
-            most important language isn&apos;t made of words — it&apos;s
-            written in DNA, translated into amino acids, and strung into
-            proteins. If amino acids are words, proteins are the sentences
-            of life.
-          </p>
-          <p>
-            Science gave every amino acid a single-letter abbreviation, so
-            a protein is literally text — and cozy-peptide lets Muse Spark
-            1.3 write in that language. Every AI-written sentence is then
-            compiled: knot grammar, charge, stability, safety. Drafts that
-            don&apos;t make sense get edited until they do.
-          </p>
-          <p>
-            <strong>
+        <section className={styles.section} aria-labelledby="safety-local">
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="safety-local">Safety rules and a local run</h2>
+            </div>
+            <div className={styles.rows}>
+              <div className={styles.row} id="safety">
+                <h3 className={styles.rowtitle}>Toxin screening</h3>
+                <div className={styles.rowbody}>
+                  <p>
+                    Requests matching ricin, abrin, botulinum/BoNT
+                    translocation constructs, and other high-risk toxin
+                    patterns are refused with <code>403</code> before
+                    generation.
+                  </p>
+                </div>
+              </div>
+              <div className={styles.row}>
+                <h3 className={styles.rowtitle}>Enzyme refusal</h3>
+                <div className={styles.rowbody}>
+                  <p>
+                    Catalytic-enzyme targets and folds over 45 aa get{" "}
+                    <code>422</code> with guidance to source a natural homolog
+                    instead. Catalysis needs globular folds, not short
+                    knottins.
+                  </p>
+                </div>
+              </div>
+              <div className={styles.row} id="local">
+                <h3 className={styles.rowtitle}>
+                  Run the compiler on your machine
+                </h3>
+                <div className={styles.rowbody}>
+                  <pre className={styles.well}>
+                    <code>{LOCAL_DEV}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className={`${styles.section} ${styles.sectionWide}`}
+          aria-labelledby="why"
+        >
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="why">Change how medicines get made</h2>
+              <p className="lead">
+                Why knottins survive the gut, and the design that proves it.
+              </p>
+            </div>
+            <div className={styles.bento}>
+              <div className={`${styles.tile} ${styles.tileSeq}`}>
+                <span className={styles.tileLabel}>
+                  The C. difficile design, 29 amino acids
+                </span>
+                <code className={styles.tileSeqCode}>
+                  CPRVTCSNDTVCKVRTSKCSVCRISVNTC
+                </code>
+              </div>
+              <div className={`${styles.tile} ${styles.tileAudit}`}>
+                <span className={styles.tileLabel}>
+                  Cleared for synthesis
+                </span>
+                <dl className={styles.tileAuditGrid}>
+                  <div>
+                    <dt>Charge</dt>
+                    <dd>+4</dd>
+                  </div>
+                  <div>
+                    <dt>GRAVY</dt>
+                    <dd>+0.04</dd>
+                  </div>
+                  <div>
+                    <dt>Boman</dt>
+                    <dd>1.06</dd>
+                  </div>
+                  <div>
+                    <dt>Aliphatic</dt>
+                    <dd>63.45</dd>
+                  </div>
+                </dl>
+                <p>
+                  Trypsin, pepsin, and chymotrypsin cleared, CAI over 0.85.
+                </p>
+              </div>
+              <div className={`${styles.tile} ${styles.tileWhy}`}>
+                <strong>Medicines that survive digestion</strong>
+                <p>
+                  Knottins are tied in a cysteine knot that shrugs off
+                  stomach acid and enzymes, so they act right inside the gut.
+                </p>
+              </div>
+              <div className={`${styles.tile} ${styles.tileWhy}`}>
+                <strong>Invented, not found</strong>
+                <p>
+                  Muse Spark 1.3 reasons over the grammar of proteins to
+                  propose truly novel sequences. A compiler, not vibes,
+                  verifies topology, charge, stability, and safety.
+                </p>
+              </div>
+              <div className={`${styles.tile} ${styles.tileWhy}`}>
+                <strong>Protein out, DNA follows</strong>
+                <p>
+                  The passing design compiles straight to a vendor-ready
+                  synthesis order: codon-optimized DNA, secretion signal,
+                  and assembly parts.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section} aria-labelledby="pipeline">
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="pipeline">A request, from prompt to DNA</h2>
+              <p className="lead">Five stages, one verified sequence.</p>
+            </div>
+            <div className={styles.pinned}>
+              <div className={styles.pinboard} aria-hidden="true">
+                <span className={styles.pinplate}>Ingest</span>
+                <span className={styles.pinplate}>Propose</span>
+                <span className={styles.pinplate}>Verify</span>
+                <span className={styles.pinplate}>Repair</span>
+                <span className={styles.pinplate}>Hand off</span>
+              </div>
+              <ol className={styles.panels}>
+                <li>
+                  <h3>Ingest</h3>
+                  <p>
+                    <code>POST /api/generate-peptide</code> takes a
+                    therapeutic target, an optional mechanism, and an
+                    optional charge target (3, 4, or 5).
+                  </p>
+                </li>
+                <li>
+                  <h3>Propose</h3>
+                  <p>
+                    Meta Spark 1.3 drafts knottin candidates in the loop
+                    grammar <code>L0–C1…C6–L6</code> with{" "}
+                    <code>C1–C4, C2–C5, C3–C6</code> ICK pairing.
+                  </p>
+                </li>
+                <li>
+                  <h3>Verify</h3>
+                  <p>
+                    Every candidate must pass the symbolic audit: 28 to 36
+                    aa, 6-Cys parity, exact formal charge, GRAVY in{" "}
+                    <code>[−0.40, +0.10]</code>, and zero protease,
+                    glycosylation, aggregation, or chemical liabilities.
+                  </p>
+                </li>
+                <li>
+                  <h3>Repair</h3>
+                  <p>
+                    Failures return structured compiler diagnostics for
+                    model-guided repair instead of being discarded;
+                    survivors face a blinded specificity review that must
+                    independently confirm the target. The full trace ships
+                    in the response.
+                  </p>
+                </li>
+                <li>
+                  <h3>Hand off</h3>
+                  <p>
+                    Verified knottins compile to a yeast cassette: 85-aa
+                    MFα1 leader with the SLDKR Kex2 junction, yeast codon
+                    optimization, 40-bp Gibson arms, and a synthesis order
+                    manifest, everything needed to install the miniature
+                    gut factory.
+                  </p>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section} aria-labelledby="language">
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="language">Teach AI the sentences of life</h2>
+              <p className="lead">
+                If amino acids are words, proteins are sentences, and a
+                protein is literally text, so Muse Spark 1.3 writes in that
+                language. Drafts that don&apos;t make sense get edited until
+                they do.
+              </p>
+            </div>
+            <p className={styles.statement}>
               A model that writes fluent sentences in the language of life
-              isn&apos;t a chatbot trick — it&apos;s a drug-discovery
-              engine.
-            </strong>
+              is no chatbot trick. It is a drug-discovery engine.
+            </p>
+          </div>
+        </section>
+
+        <section
+          className={`${styles.band} ${styles.bandWash}`}
+          aria-label="Design another peptide"
+        >
+          <div className={`container ${styles.closerow}`}>
+            <p className={styles.closeline}>
+              The board is live. Pick a condition.
+            </p>
+            <a className={`${styles.btn} ${styles.btnPrimary}`} href="#demo">
+              Design a peptide
+            </a>
+          </div>
+        </section>
+      </main>
+
+      <footer className={styles.footer}>
+        <div className={`container ${styles.footgrid}`}>
+          <div className={styles.footbrand}>
+            <a className={styles.wordmark} href="#top" aria-label="cozy-peptide home">
+              cozy-peptide
+            </a>
+            <p className={styles.footmade}>
+              Built for the Meta Global AI Hackathon.
+            </p>
+          </div>
+          <nav className={styles.footcol} aria-label="Page">
+            <a className={styles.footlink} href="#demo">
+              the demo
+            </a>
+            <a className={styles.footlink} href="#api">
+              the API call
+            </a>
+            <a className={styles.footlink} href="#pipeline">
+              the pipeline
+            </a>
+          </nav>
+          <nav className={styles.footcol} aria-label="More">
+            <a className={styles.footlink} href="#safety">
+              safety rules
+            </a>
+            <a className={styles.footlink} href="#local">
+              local run
+            </a>
+            <a className={styles.footlink} href="#top">
+              back to top
+            </a>
+          </nav>
+          <p className={styles.foothack}>
+            Built during the{" "}
+            <a
+              href="https://cerebralvalley.ai/e/meta-ai-developer-hackathon"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Meta Global AI Developer Hackathon
+            </a>
+            , Oct 26 to Nov 4, a remote event hosted by Meta and Cerebral
+            Valley. Designed with Muse Spark 1.3 and verified by the
+            symbolic compiler in this repo.
           </p>
-        </section>
-
-        <section aria-labelledby="pipeline">
-          <h2 id="pipeline">Trace a request from prompt to DNA</h2>
-          <ol className={styles.pipeline}>
-            <li>
-              <strong>Ingest.</strong> <code>POST /api/generate-peptide</code>{" "}
-              takes a therapeutic target, an optional mechanism, and an
-              optional charge target (1, 2, 3, or 4).
-            </li>
-            <li>
-              <strong>Propose.</strong> Meta Spark 1.3 drafts knottin
-              secretion payloads for <em>S. boulardii</em> (MFα1 pre-pro
-              leader) in the loop grammar <code>L0–C1…C6–L6</code> with{" "}
-              <code>C1–C4, C2–C5, C3–C6</code> ICK pairing and canonical
-              loop envelopes.
-            </li>
-            <li>
-              <strong>Verify.</strong> Every candidate must pass the symbolic
-              audit: 28–36 aa, 6-Cys parity, exact formal charge inside the
-              +1…+4 window, GRAVY in [−0.40, +0.10], and zero Kex2,
-              glycosylation, chymotrypsin, N-terminal, or hydrophobic-run
-              liabilities.
-            </li>
-            <li>
-              <strong>Repair.</strong> Failures return structured compiler
-              diagnostics with machine-readable failure modes for
-              model-guided repair at penalized temperatures instead of
-              being discarded; survivors face a blinded specificity review
-              that must independently confirm the target. The full trace
-              ships in the response.
-            </li>
-            <li>
-              <strong>Hand off.</strong> Verified knottins compile to a
-              ready-to-clone yeast cassette — MFα1 5′ flank with the Kex2
-              junction, GC-tuned payload CDS, dual stop codons, and the
-              CYC1 terminator — plus a Gibson-flanked gBlock manifest:
-              everything needed to install the miniature gut factory.
-            </li>
-          </ol>
-        </section>
-
-        <section aria-labelledby="api">
-          <h2 id="api">Generate a peptide in one API call</h2>
-          <p className={styles.endpoint}>
-            <span className={styles.method}>POST</span>
-            <code>/api/generate-peptide</code>
-          </p>
-          <p>
-            Authenticate with a bearer token: the{" "}
-            <code>Authorization</code> header must match the server&apos;s{" "}
-            <code>API_BEARER_TOKEN</code>. Tokens live in environment
-            variables only — this page shows placeholders, never real
-            values.
-          </p>
-          <h3>Request</h3>
-          <pre className={styles.codeblock}>
-            <code>{CURL_EXAMPLE}</code>
-          </pre>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Type</th>
-                <th>Required</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <code>target</code>
-                </td>
-                <td>string</td>
-                <td>yes</td>
-                <td>Therapeutic gut target, e.g. a pathogen or pathway.</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>mechanism</code>
-                </td>
-                <td>string</td>
-                <td>no</td>
-                <td>Intended mode of action, passed to the proposer.</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>charge_target</code>
-                </td>
-                <td>1 | 2 | 3 | 4</td>
-                <td>no</td>
-                <td>
-                  Exact net charge required (inside the +1…+4 window at pH
-                  7.4). Default 4.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <h3>Response (200, truncated)</h3>
-          <pre className={styles.codeblock}>
-            <code>{RESPONSE_EXAMPLE}</code>
-          </pre>
-
-          <h3>Status codes</h3>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Meaning</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <code>200</code>
-                </td>
-                <td>Verified candidate with audit ledger and lab handoff.</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>400</code>
-                </td>
-                <td>Invalid JSON body or schema validation failure.</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>401</code>
-                </td>
-                <td>Missing or invalid bearer token.</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>403</code>
-                </td>
-                <td>Biosecurity block (toxin-signature screening).</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>422</code>
-                </td>
-                <td>
-                  Catalytic-enzyme refusal — outside the knottin modality.
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <code>502</code>
-                </td>
-                <td>
-                  Generation failure; no verifiable candidate produced.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section aria-labelledby="safety">
-          <h2 id="safety">Block toxins and enzymes before generation</h2>
-          <ul className={styles.checklist}>
-            <li>
-              <strong>Toxin screening.</strong> Requests matching ricin,
-              abrin, botulinum/BoNT translocation constructs, and other
-              high-risk toxin patterns are refused with{" "}
-              <code>403</code> before generation.
-            </li>
-            <li>
-              <strong>Enzyme refusal.</strong> Catalytic-enzyme targets and
-              folds over 45 aa get <code>422</code> with guidance to source
-              a natural homolog instead — catalysis needs globular folds,
-              not short knottins.
-            </li>
-          </ul>
-        </section>
-
-        <section aria-labelledby="local">
-          <h2 id="local">Run the compiler on your machine</h2>
-          <pre className={styles.codeblock}>
-            <code>{LOCAL_DEV}</code>
-          </pre>
-        </section>
-
-        <footer className={styles.footer}>
-          <p>
-            MIT · Hackathon software — verify all generated sequences
+          <p className={styles.footlegal}>
+            MIT · Hackathon software, verify all generated sequences
             experimentally before any therapeutic or clinical use.
           </p>
-        </footer>
-      </main>
+        </div>
+      </footer>
     </div>
   );
 }

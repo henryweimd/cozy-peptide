@@ -1,0 +1,33 @@
+[
+ {
+  "shape": "Bento Grid",
+  "theme": "cobalt",
+  "axes": "light/grotesk-sans/cool",
+  "hero": "Counter",
+  "nav": "masthead",
+  "footer": "index columns",
+  "imagery": "user knottin PNG plus working demo console plus generated ASCII traffic field",
+  "photos": [],
+  "entry": "/",
+  "fingerprint": "counter-console-ascii-field-cut-panels-graphite-api",
+  "sections": [
+   "Hero",
+   "API graphite band",
+   "Rows",
+   "Bento",
+   "Pinned",
+   "Statement",
+   "Close wash band",
+   "Footer"
+  ],
+  "signature": "live traffic field resolving in the demo console",
+  "waived": [
+   "44c"
+  ],
+  "prompt": "API reference and live demo for an AI protein design pipeline",
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "page",
+  "date": "2026-10-31"
+ }
+]

@@ -39,37 +39,6 @@ interface DemoPayload {
     refinement_trace: TraceTurn[];
   };
   candidate?: {
-    id: string;
-    sequence: string;
-    length: number;
-    cysteine_indices: number[];
-    loop_segments: string[];
-    biophysical_profile: {
-      net_charge_ph74: number;
-      isoelectric_point: number;
-      gravy_score: number;
-      boman_index: number;
-    };
-    cloning_payload: {
-      dna_sequence: string;
-      cassette_format: string;
-      full_cassette_dna: string;
-      gc_percent_cds: number;
-      gc_ok: boolean;
-      payload_cai: number;
-      restriction_scrub: { status: string };
-    };
-    verification_report: {
-      kex2_clean: boolean;
-      glycosylation_clean: boolean;
-      charge_window_ok: boolean;
-      protease_clean: boolean;
-      n_terminus_ok: boolean;
-      hydrophobic_runs_ok: boolean;
-      gravy_ok: boolean;
-      ick_topology_ok: boolean;
-      passed: boolean;
-    };
     mature_sequence: string;
     topology: string;
     grammar_breakdown: Record<string, string>;
@@ -77,7 +46,6 @@ interface DemoPayload {
   symbolic_audit?: {
     passed: boolean;
     charge: number;
-    net_charge_ph74: number;
     gravy: number;
     boman_index: number;
     aliphatic_index: number;
@@ -113,10 +81,10 @@ interface StageDef {
 
 const STAGES: StageDef[] = [
   { name: "propose", title: "Semantic proposal", sub: "Muse Spark 1.3 drafts candidates" },
-  { name: "verify", title: "Grammar + audit", sub: "Loop topology · charge · liabilities" },
+  { name: "verify", title: "Grammar + audit", sub: "Loop topology, charge, liabilities" },
   { name: "repair", title: "Compiler repair", sub: "Diagnostics-guided revision" },
   { name: "synthesize", title: "Synthesis backstop", sub: "Deterministic grammar sampler" },
-  { name: "handoff", title: "Lab handoff", sub: "Yeast cassette + DNA order" },
+  { name: "handoff", title: "Lab handoff", sub: "Yeast cassette and DNA order" },
 ];
 
 type StageState = "idle" | "active" | "done" | "bypassed";
@@ -144,7 +112,7 @@ function stageElapsed(events: StageEvent[], stage: StageName): string | null {
 }
 
 function mark(value: boolean | undefined): string {
-  if (value === undefined) return "·";
+  if (value === undefined) return "–";
   return value ? "✓" : "✗";
 }
 
@@ -154,12 +122,10 @@ function logLine(event: StageEvent): string {
   if (event.candidate !== undefined) bits.push(event.candidate);
   bits.push(event.message);
   if (event.stage === "verify" && event.issues !== undefined) {
-    bits.push(
-      `grammar ${mark(event.grammarValid)} audit ${mark(event.auditPassed)}`
-    );
-    if (event.issues > 0) bits.push(`${event.issues} fault(s)`);
+    const checks = `grammar ${mark(event.grammarValid)}, audit ${mark(event.auditPassed)}`;
+    bits.push(event.issues > 0 ? `${checks}, ${event.issues} faults` : checks);
   }
-  return `[${stamp}] ${bits.join(" · ")}`;
+  return `[${stamp}] ${bits.join(", ")}`;
 }
 
 function formatCountdown(totalSeconds: number): string {
@@ -322,9 +288,16 @@ export default function Demo() {
   );
 
   return (
-    <div>
+    <section className={styles.board} id="demo" aria-labelledby="demo-title">
+      <h2 className={styles.boardtitle} id="demo-title">
+        Design a peptide in your browser
+      </h2>
+      <p className={styles.boardsub}>
+        Pick a gut condition and run the real pipeline, proposal to lab
+        handoff.
+      </p>
       <div
-        className={styles.presets}
+        className={styles.cells}
         role="group"
         aria-label="Condition to design for"
       >
@@ -335,8 +308,8 @@ export default function Demo() {
             aria-pressed={preset.id === presetId}
             className={
               preset.id === presetId
-                ? `${styles.pill} ${styles.pillActive}`
-                : styles.pill
+                ? `${styles.cell} ${styles.cellActive}`
+                : styles.cell
             }
             onClick={() => setPresetId(preset.id)}
           >
@@ -345,37 +318,61 @@ export default function Demo() {
         ))}
       </div>
 
-      <div className={styles.generateRow}>
-        <button
-          type="button"
-          className={styles.generateButton}
-          disabled={busy}
-          onClick={() => void generate()}
-        >
-          {loading
-            ? `Designing… ${elapsed}s`
-            : cooling
-              ? `Next design in ${formatCountdown(remaining)}`
-              : "Design my peptide"}
-        </button>
-      </div>
-      <p className={styles.demoNote}>
-        Runs the live pipeline in your browser · one design per minute per
-        visitor · preset conditions only · no token needed.
+      <button
+        type="button"
+        className={`${styles.btn} ${styles.btnPrimary} ${styles.designbtn}`}
+        disabled={busy}
+        aria-busy={loading}
+        onClick={() => void generate()}
+      >
+        {loading
+          ? `Designing… ${elapsed}s`
+          : cooling
+            ? `Next design in ${formatCountdown(remaining)}`
+            : "Design my peptide"}
+      </button>
+      <p className={styles.note}>
+        Runs the live pipeline in your browser. One design per minute per
+        visitor. Preset conditions only, no token needed.
       </p>
 
-      {showFeed && (
-        <div className={styles.feed} aria-live="polite">
-          <div className={styles.feedHead}>
-            <span className={styles.feedTitle}>Pipeline telemetry</span>
-            <span className={styles.feedLive}>
-              <span
-                className={loading ? styles.dot : styles.dotIdle}
-                aria-hidden="true"
-              />
-              {loading ? `live · ${elapsed}s` : `done · ${elapsed}s`}
-            </span>
-          </div>
+      <div className={styles.feed} aria-live="polite">
+        <div className={styles.feedhead}>
+          <span className={styles.feedlabel}>Pipeline telemetry</span>
+          <span className={styles.feedlive} role="status">
+            {loading
+              ? `live ${elapsed}s`
+              : events.length > 0
+                ? `done ${elapsed}s`
+                : "standby"}
+          </span>
+        </div>
+        <ol className={styles.strip} aria-label="Pipeline stages">
+          {STAGES.filter(
+            (stage) => stage.name !== "synthesize" || showSynthesis
+          ).map((stage) => (
+            <li
+              key={stage.name}
+              data-state={stageState(events, finished, stage.name)}
+            >
+              <span aria-hidden="true">
+                {(() => {
+                  const state = stageState(events, finished, stage.name);
+                  return state === "done"
+                    ? "✓"
+                    : state === "active"
+                      ? "●"
+                      : state === "bypassed"
+                        ? "–"
+                        : "○";
+                })()}
+              </span>{" "}
+              {stage.title}
+            </li>
+          ))}
+        </ol>
+        {showFeed && (
+          <>
           <ol className={styles.stages}>
             {STAGES.filter(
               (stage) => stage.name !== "synthesize" || showSynthesis
@@ -384,7 +381,7 @@ export default function Demo() {
               const stamp = stageElapsed(events, stage.name);
               return (
                 <li key={stage.name} data-state={state}>
-                  <span className={styles.stageMark} aria-hidden="true">
+                  <span className={styles.stagemark} aria-hidden="true">
                     {state === "done"
                       ? "✓"
                       : state === "active"
@@ -393,12 +390,11 @@ export default function Demo() {
                           ? "–"
                           : "○"}
                   </span>
-                  <span className={styles.stageText}>
-                    <strong>{stage.title}</strong>
-                    <span>{stage.sub}</span>
+                  <span className={styles.stageline}>
+                    <strong>{stage.title}</strong> <span>{stage.sub}</span>
                   </span>
                   {stamp !== null && (
-                    <span className={styles.stageStamp}>{stamp}</span>
+                    <span className={styles.stagestamp}>{stamp}</span>
                   )}
                 </li>
               );
@@ -411,11 +407,12 @@ export default function Demo() {
               </p>
             ))}
           </div>
-        </div>
-      )}
+          </>
+          )}
+      </div>
 
       {error !== null && !loading && (
-        <p className={styles.errorBox} role="alert">
+        <p className={styles.errorbox} role="alert">
           {error}
         </p>
       )}
@@ -424,114 +421,75 @@ export default function Demo() {
         candidate !== undefined &&
         audit !== undefined && (
           <div className={styles.result}>
-            <h3>Designed sequence</h3>
-            <p className={styles.sequence}>{candidate.mature_sequence}</p>
-            <p className={styles.topologyLine}>
-              {candidate.id} · {candidate.length} aa · {candidate.topology}
-            </p>
-            <p className={styles.topologyLine}>
-              Cys at [{candidate.cysteine_indices.join(", ")}]
-            </p>
+            <section aria-label="Designed sequence">
+              <h3>Designed sequence</h3>
+              <p className={styles.sequence}>{candidate.mature_sequence}</p>
+              <p className={styles.topology}>{candidate.topology}</p>
+            </section>
 
-            <h3>Loop grammar</h3>
-            <ul className={styles.loopChips}>
-              {LOOP_ORDER.map((loop, index) => (
-                <li key={loop}>
-                  <span>{loop}</span>
-                  <code>
-                    {candidate.loop_segments[index] ??
-                      candidate.grammar_breakdown[loop] ??
-                      "—"}
-                  </code>
-                </li>
-              ))}
-            </ul>
+            <section aria-label="Loop grammar">
+              <h3>Loop grammar</h3>
+              <ul className={styles.loopchips}>
+                {LOOP_ORDER.map((loop) => (
+                  <li key={loop}>
+                    <span>{loop}</span>
+                    <code>
+                      {candidate.grammar_breakdown[loop] ?? "—"}
+                    </code>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            <h3>Audit ledger</h3>
-            <dl className={styles.metrics}>
-              <div>
-                <dt>Charge</dt>
-                <dd>+{audit.charge}</dd>
-              </div>
-              <div>
-                <dt>pH 7.4</dt>
-                <dd>+{candidate.biophysical_profile.net_charge_ph74}</dd>
-              </div>
-              <div>
-                <dt>pI</dt>
-                <dd>{candidate.biophysical_profile.isoelectric_point}</dd>
-              </div>
-              <div>
-                <dt>GRAVY</dt>
-                <dd>{audit.gravy}</dd>
-              </div>
-              <div>
-                <dt>Boman</dt>
-                <dd>{audit.boman_index}</dd>
-              </div>
-              <div>
-                <dt>Aliphatic</dt>
-                <dd>{audit.aliphatic_index}</dd>
-              </div>
-            </dl>
-            <p className={styles.cleared}>
-              {audit.liabilities_cleared.map((name) => (
-                <span key={name}>✓ {name}</span>
-              ))}
-            </p>
-
-            <h3>Verification report</h3>
-            <p className={styles.cleared}>
-              {(
-                [
-                  ["Kex2", candidate.verification_report.kex2_clean],
-                  ["Glycosylation", candidate.verification_report.glycosylation_clean],
-                  ["Charge +1…+4", candidate.verification_report.charge_window_ok],
-                  ["Protease", candidate.verification_report.protease_clean],
-                  ["N-terminus", candidate.verification_report.n_terminus_ok],
-                  ["Runs ≤3", candidate.verification_report.hydrophobic_runs_ok],
-                  ["GRAVY", candidate.verification_report.gravy_ok],
-                  ["ICK", candidate.verification_report.ick_topology_ok],
-                ] as const
-              ).map(([label, ok]) => (
-                <span key={label}>
-                  {ok ? "✓" : "✗"} {label}
-                </span>
-              ))}
-            </p>
-
-            <h3>Cloning payload</h3>
-            <p className={styles.handoffLine}>
-              {candidate.cloning_payload.cassette_format} ·{" "}
-              {candidate.cloning_payload.full_cassette_dna.length} bp · GC{" "}
-              {candidate.cloning_payload.gc_percent_cds}% · CAI{" "}
-              {candidate.cloning_payload.payload_cai} · scrub{" "}
-              {candidate.cloning_payload.restriction_scrub.status}
-            </p>
+            <section aria-label="Audit ledger">
+              <h3>Audit ledger</h3>
+              <dl className={styles.metrics}>
+                <div>
+                  <dt>Charge</dt>
+                  <dd>+{audit.charge}</dd>
+                </div>
+                <div>
+                  <dt>GRAVY</dt>
+                  <dd>{audit.gravy}</dd>
+                </div>
+                <div>
+                  <dt>Boman</dt>
+                  <dd>{audit.boman_index}</dd>
+                </div>
+                <div>
+                  <dt>Aliphatic</dt>
+                  <dd>{audit.aliphatic_index}</dd>
+                </div>
+              </dl>
+              <p className={styles.cleared}>
+                {audit.liabilities_cleared.map((name) => (
+                  <span key={name}>✓ {name}</span>
+                ))}
+              </p>
+            </section>
 
             {provenance !== undefined && (
-              <>
+              <section aria-label="Provenance">
                 <h3>Provenance</h3>
                 <ul className={styles.trace}>
                   {provenance.refinement_trace.map((turn, index) => (
                     <li key={`${turn.turn}-${index}`}>
-                      turn {turn.turn} · {turn.source} ·{" "}
-                      {turn.disposition}
+                      turn {turn.turn}, {turn.source}, {turn.disposition}
                     </li>
                   ))}
                 </ul>
-              </>
+              </section>
             )}
 
             {specificity !== undefined && (
-              <>
+              <section aria-label="Specificity review">
                 <h3>Specificity review</h3>
-                <p className={styles.handoffLine}>
+                <p className={styles.handoffline}>
                   {specificity.checked
                     ? specificity.pass
                       ? "✓ blinded review confirms the intended target"
                       : `✗ ${specificity.reason}`
-                    : `○ not checked — ${specificity.reason}`}
+                    : `○ not checked, ${specificity.reason}`}
                 </p>
                 {specificity.predicted_targets.length > 0 && (
                   <ul className={styles.trace}>
@@ -547,22 +505,22 @@ export default function Demo() {
                     ))}
                   </ul>
                 )}
-              </>
+              </section>
             )}
 
             {handoff !== undefined && (
-              <>
+              <section aria-label="Lab handoff">
                 <h3>Lab handoff</h3>
-                <p className={styles.handoffLine}>
-                  {handoff.synthesis_order.sequence_name} ·{" "}
-                  {handoff.synthesis_order.dna_length} bp · CAI{" "}
-                  {handoff.cai} · scrub{" "}
+                <p className={styles.handoffline}>
+                  {handoff.synthesis_order.sequence_name},{" "}
+                  {handoff.synthesis_order.dna_length} bp, CAI{" "}
+                  {handoff.cai}, scrub{" "}
                   {handoff.restriction_scrub.status}
                 </p>
-              </>
+              </section>
             )}
 
-            <details className={styles.rawJson}>
+            <details className={styles.rawjson}>
               <summary>Full JSON response</summary>
               <pre>
                 <code>{JSON.stringify(result, null, 2)}</code>
@@ -570,6 +528,6 @@ export default function Demo() {
             </details>
           </div>
         )}
-    </div>
+    </section>
   );
 }
