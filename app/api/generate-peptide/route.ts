@@ -171,6 +171,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     model: designModel,
     research: researchEnabled,
   };
+  // Plain responses skip SSE but keep the same ledger trace.
+  const stageTrace: unknown[] = [];
   try {
     const {
       candidate,
@@ -179,11 +181,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       agentTools,
       targetClass,
       research: researchProvenance,
-    } = await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
-      modality: designModality,
-      mechanism,
-      model: designModel,
-      research: { enabled: researchEnabled },
+    } = await generateVerifiedPeptide(
+      target,
+      chargeTarget,
+      3,
+      (pipelineEvent) => {
+        stageTrace.push({
+          ...pipelineEvent,
+          elapsedMs: Date.now() - startedAt,
+        });
+      },
+      {
+        modality: designModality,
+        mechanism,
+        model: designModel,
+        research: { enabled: researchEnabled },
+      }
+    );
+    stageTrace.push({
+      stage: "handoff",
+      turn: refinementCycles(refinementHistory),
+      message: "Compiling yeast secretion cassette…",
+      elapsedMs: Date.now() - startedAt,
     });
     const manifest = buildLabHandoff(candidate, designModality);
     const payload = buildNeurosymbolicPayload(
@@ -206,6 +225,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         elapsedMs: Date.now() - startedAt,
         ok: true,
         payload,
+        stageTrace,
       })
     );
     return json(payload, 200);
@@ -232,6 +252,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ok: false,
           payload: body,
           errorMessage: error.message,
+          stageTrace,
         })
       );
       return json(body, 502);
@@ -250,6 +271,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ok: false,
         payload: body,
         errorMessage: message,
+        stageTrace,
       })
     );
     return json(body, 502);
@@ -273,6 +295,12 @@ function streamGeneration(
           encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
         );
       };
+      // The ledger keeps the same stage timeline the caller watched.
+      const stageTrace: unknown[] = [];
+      const sendStage = (data: unknown): void => {
+        stageTrace.push(data);
+        send("stage", data);
+      };
       try {
         const {
           candidate,
@@ -286,7 +314,7 @@ function streamGeneration(
           chargeTarget,
           3,
           (pipelineEvent) =>
-            send("stage", {
+            sendStage({
               ...pipelineEvent,
               elapsedMs: Date.now() - startedAt,
             }),
@@ -297,7 +325,7 @@ function streamGeneration(
             research: { enabled: researchEnabled },
           }
         );
-        send("stage", {
+        sendStage({
           stage: "handoff",
           turn: refinementCycles(refinementHistory),
           message: "Compiling yeast secretion cassette…",
@@ -332,6 +360,7 @@ function streamGeneration(
             elapsedMs: Date.now() - startedAt,
             ok: true,
             payload,
+            stageTrace,
           })
         );
       } catch (error) {
@@ -365,6 +394,7 @@ function streamGeneration(
               ok: false,
               payload: body,
               errorMessage: error.message,
+              stageTrace,
             })
           );
         } else {
@@ -391,6 +421,7 @@ function streamGeneration(
               ok: false,
               payload: body,
               errorMessage: message,
+              stageTrace,
             })
           );
         }

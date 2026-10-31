@@ -10,6 +10,7 @@ export interface RecentRun {
   id: string;
   createdAt: string;
   source: string;
+  status: string;
   target: string;
   modality: string | null;
   chargeTarget: number | null;
@@ -61,6 +62,7 @@ function parseRow(value: unknown): RecentRun | null {
     id,
     createdAt,
     source,
+    status: asString(row["status"]) ?? "success",
     target,
     modality: asString(row["modality"]),
     chargeTarget: asNumber(row["charge_target"]),
@@ -83,6 +85,8 @@ export interface RunDetail extends RecentRun {
   symbolicAudit: unknown;
   labHandoff: unknown;
   agentTools: unknown;
+  stageTrace: unknown;
+  specificity: unknown;
 }
 
 function parseDetail(value: unknown): RunDetail | null {
@@ -102,6 +106,8 @@ function parseDetail(value: unknown): RunDetail | null {
     symbolicAudit: record["symbolic_audit"] ?? null,
     labHandoff: record["lab_handoff"] ?? null,
     agentTools: record["agent_tools"] ?? null,
+    stageTrace: record["stage_trace"] ?? null,
+    specificity: record["specificity"] ?? null,
   };
 }
 
@@ -175,9 +181,22 @@ export async function fetchRunById(
   }
 }
 
+export const RECENT_RUNS_MAX_OFFSET = 200;
+
+export function clampRecentOffset(value: unknown): number {
+  const parsed =
+    typeof value === "string"
+      ? Number.parseInt(value, 10)
+      : typeof value === "number"
+        ? Math.floor(value)
+        : Number.NaN;
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(Math.max(parsed, 0), RECENT_RUNS_MAX_OFFSET);
+}
+
 export async function fetchRecentRuns(
   limit: number = RECENT_RUNS_DEFAULT_LIMIT,
-  options: { fetchImpl?: FetchImpl; timeoutMs?: number } = {}
+  options: { fetchImpl?: FetchImpl; timeoutMs?: number; offset?: number } = {}
 ): Promise<RecentRun[]> {
   const baseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -190,6 +209,7 @@ export async function fetchRecentRuns(
     return [];
   }
   const capped = clampRecentLimit(limit);
+  const offset = clampRecentOffset(options.offset ?? 0);
   const timeoutMs = options.timeoutMs ?? RECENT_RUNS_TIMEOUT_MS;
   const fetchImpl =
     options.fetchImpl ??
@@ -200,11 +220,12 @@ export async function fetchRecentRuns(
   try {
     const params = new URLSearchParams({
       select:
-        "id,created_at,source,target,modality,charge_target,research_status," +
+        "id,created_at,source,status,target,modality,charge_target,research_status," +
         "candidate_id,candidate_sequence,therapeutic_index,safety_index,elapsed_ms",
       status: "eq.success",
       order: "created_at.desc",
       limit: String(capped),
+      offset: String(offset),
     });
     const response = await fetchImpl(
       `${baseUrl.replace(/\/+$/, "")}/rest/v1/peptide_runs?${params.toString()}`,

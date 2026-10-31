@@ -87,6 +87,7 @@ export default function DesignPage() {
           <a href="#design-controls">Controls</a>
           <a href="#design-status">Design status</a>
           <a href="#design-result">Result</a>
+          <a href="#recent-runs">Recent runs</a>
           <a href="#providers">Providers</a>
         </div>
       </nav>

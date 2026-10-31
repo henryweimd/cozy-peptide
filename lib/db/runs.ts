@@ -44,6 +44,8 @@ export interface RunRecord {
   symbolic_audit?: unknown | null;
   lab_handoff?: unknown | null;
   agent_tools?: unknown | null;
+  stage_trace?: unknown | null;
+  specificity?: unknown | null;
 }
 
 export interface SaveResult {
@@ -88,6 +90,8 @@ export function buildRunRecord(input: {
   ok: boolean;
   payload: unknown;
   errorMessage?: string;
+  /** Collected SSE-equivalent stage events; null when untraced. */
+  stageTrace?: unknown[] | null;
 }): RunRecord {
   const body = isRecord(input.payload) ? input.payload : {};
   const candidate = isRecord(body["candidate"]) ? body["candidate"] : null;
@@ -124,13 +128,43 @@ export function buildRunRecord(input: {
     symbolic_audit: audit,
     lab_handoff: isRecord(body["lab_handoff"]) ? body["lab_handoff"] : null,
     agent_tools: Array.isArray(body["agent_tools"]) ? body["agent_tools"] : null,
+    stage_trace:
+      input.stageTrace !== undefined && input.stageTrace !== null
+        ? input.stageTrace.slice(0, 100)
+        : null,
+    specificity: isRecord(body["specificity"]) ? body["specificity"] : null,
   };
+}
+
+/**
+ * Whether the newest ledger columns (stage_trace, specificity) exist.
+ * Probed lazily: a 400 on the full insert retries stripped, and the
+ * outcome sticks for the process lifetime so pre-migration ledgers
+ * don't pay for a doomed first attempt on every save.
+ */
+let traceColumnsSupported: boolean | null = null;
+
+/** Resets the column probe; tests only. */
+export function resetTraceColumnProbe(): void {
+  traceColumnsSupported = null;
+}
+
+function stripTraceColumns(record: RunRecord): Record<string, unknown> {
+  const asMap = record as unknown as Record<string, unknown>;
+  const rest: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(asMap)) {
+    if (key === "stage_trace" || key === "specificity") continue;
+    rest[key] = value;
+  }
+  return rest;
 }
 
 /**
  * Inserts one run row. No-ops (unsaved, no error) when Supabase env is
  * missing; records the failure reason otherwise. Prefers the
  * service-role key and falls back to the anon key (INSERT-only policy).
+ * When the trace columns predate the migration, the insert retries
+ * without them so the ledger keeps working.
  */
 export async function saveRun(
   record: RunRecord,
@@ -156,21 +190,28 @@ export async function saveRun(
       fetch(input, init));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const post = (body: unknown): Promise<{ ok: boolean; status: number; json?(): Promise<unknown> }> =>
+    fetchImpl(`${baseUrl.replace(/\/+$/, "")}/rest/v1/peptide_runs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
   try {
-    const response = await fetchImpl(
-      `${baseUrl.replace(/\/+$/, "")}/rest/v1/peptide_runs`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(record),
-        signal: controller.signal,
-      }
+    let response = await post(
+      traceColumnsSupported === false ? stripTraceColumns(record) : record
     );
+    if (!response.ok && response.status === 400 && traceColumnsSupported !== false) {
+      response = await post(stripTraceColumns(record));
+      traceColumnsSupported = response.ok ? false : null;
+    } else if (response.ok && traceColumnsSupported === null) {
+      traceColumnsSupported = true;
+    }
     if (!response.ok) {
       return { saved: false, error: `Supabase HTTP ${response.status}` };
     }

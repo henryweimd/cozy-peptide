@@ -126,6 +126,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     modality: "knottin-6c",
     research: true,
   };
+  // Plain responses skip SSE but keep the same ledger trace.
+  const stageTrace: unknown[] = [];
   try {
     const {
       candidate,
@@ -134,8 +136,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       agentTools,
       targetClass,
       research,
-    } = await generateVerifiedPeptide(target, DEMO_CHARGE_TARGET, 3, undefined, {
-      research: { enabled: true },
+    } = await generateVerifiedPeptide(
+      target,
+      DEMO_CHARGE_TARGET,
+      3,
+      (pipelineEvent) => {
+        stageTrace.push({
+          ...pipelineEvent,
+          elapsedMs: Date.now() - startedAt,
+        });
+      },
+      {
+        research: { enabled: true },
+      }
+    );
+    stageTrace.push({
+      stage: "handoff",
+      turn: refinementCycles(refinementHistory),
+      message: "Compiling yeast secretion cassette…",
+      elapsedMs: Date.now() - startedAt,
     });
     const manifest = buildLabHandoff(candidate);
     const payload = buildNeurosymbolicPayload(
@@ -159,6 +178,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         elapsedMs: Date.now() - startedAt,
         ok: true,
         payload,
+        stageTrace,
       })
     );
     return json(payload, 200);
@@ -184,6 +204,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ok: false,
           payload: body,
           errorMessage: error.message,
+          stageTrace,
         })
       );
       return json(body, 502);
@@ -203,6 +224,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ok: false,
         payload: body,
         errorMessage: message,
+        stageTrace,
       })
     );
     return json(body, 502);

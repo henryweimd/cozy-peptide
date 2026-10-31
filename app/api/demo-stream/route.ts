@@ -145,6 +145,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
         );
       };
+      // The ledger keeps the same stage timeline the caller watched.
+      const stageTrace: unknown[] = [];
+      const sendStage = (data: unknown): void => {
+        stageTrace.push(data);
+        send("stage", data);
+      };
       try {
         const {
           candidate,
@@ -158,7 +164,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           chargeTarget,
           3,
           (pipelineEvent) =>
-            send("stage", {
+            sendStage({
               ...pipelineEvent,
               elapsedMs: Date.now() - startedAt,
             }),
@@ -167,7 +173,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             research: { enabled: researchEnabled },
           }
         );
-        send("stage", {
+        sendStage({
           stage: "handoff",
           turn: refinementCycles(refinementHistory),
           message: "Compiling yeast secretion cassette…",
@@ -196,6 +202,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             elapsedMs: Date.now() - startedAt,
             ok: true,
             payload,
+            stageTrace,
           })
         );
       } catch (error) {
@@ -218,6 +225,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               ok: false,
               payload: body,
               errorMessage: error.message,
+              stageTrace,
             })
           );
         } else {
@@ -238,6 +246,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               ok: false,
               payload: body,
               errorMessage: message,
+              stageTrace,
             })
           );
         }

@@ -23,6 +23,7 @@ import {
 import { CUSTOM_TARGET_MAX_LENGTH } from "../../lib/target-guard";
 import type { PipelinePayload, StageEvent } from "../pipeline-shared";
 import ReportDialog, { type ReportSource } from "../report-dialog";
+import RecentRunsTable from "../recent-runs-table";
 import {
   EventLog,
   HandoffDownloads,
@@ -594,6 +595,16 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           </details>
         </div>
       )}
+      <div id="recent-runs">
+        <RecentRunsTable
+          onSelect={(id) => {
+            setFocusRunId(id);
+            document
+              .getElementById("design-focus")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      </div>
     </div>
   );
 }
