@@ -17,9 +17,9 @@ import {
 import { buildVerificationReport } from "./symbolic-auditor";
 import { buildCloningPayload, constructTag } from "./lab-handoff";
 import type { TargetClass } from "./prompt-steering";
+import { META_SPARK_MODEL, displayNameForModel } from "./spark-config";
 
 const LINGUISTIC_PARADIGM = "context_sensitive_loop_grammar";
-const PROPOSER_MODEL = "Meta-Spark-1.3-Contributor";
 
 /** Human-readable liability names cleared by the strict audit motifs. */
 function liabilitiesCleared(sequence: string): string[] {
@@ -58,7 +58,8 @@ export function buildNeurosymbolicPayload(
   manifest: LabHandoffManifest,
   modality: Modality = DEFAULT_MODALITY,
   agentTools: AgentToolResult[] = [],
-  targetClass: TargetClass = "general"
+  targetClass: TargetClass = "general",
+  model: string = META_SPARK_MODEL
 ): ApiResponse {
   const grammar = parseModalityGrammar(candidate, modality);
   const spec = specForModality(modality);
@@ -80,7 +81,7 @@ export function buildNeurosymbolicPayload(
     specificity,
     agent_tools: agentTools,
     neurosymbolic_provenance: {
-      proposer_model: PROPOSER_MODEL,
+      proposer_model: displayNameForModel(model),
       linguistic_paradigm: LINGUISTIC_PARADIGM,
       compiler_refinement_cycles: refinementCycles(history),
       target_class: targetClass,

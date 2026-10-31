@@ -572,6 +572,18 @@ export default function Home() {
                     or <code>linear</code>.
                   </td>
                 </tr>
+                <tr>
+                  <td data-label="Field">
+                    <code>model</code>
+                  </td>
+                  <td data-label="Type">string</td>
+                  <td data-label="Required">no</td>
+                  <td data-label="Description">
+                    Meta model id. Default{" "}
+                    <code>muse-spark-1.3-contributor</code>;{" "}
+                    <code>muse-wonder-1.0</code> also known.
+                  </td>
+                </tr>
               </tbody>
             </table>
 

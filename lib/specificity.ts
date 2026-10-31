@@ -246,7 +246,8 @@ export async function checkSpecificity(
   intendedTarget: string,
   chargeTarget: number,
   timeoutMs = META_SPARK_TIMEOUT_MS,
-  modality: Modality = "knottin-6c"
+  modality: Modality = "knottin-6c",
+  model: string = META_SPARK_MODEL
 ): Promise<SpecificityReport> {
   const apiKey = process.env.META_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) {
@@ -254,7 +255,7 @@ export async function checkSpecificity(
   }
 
   const payload: MetaSparkRequest = {
-    model: META_SPARK_MODEL,
+    model,
     messages: [
       {
         role: "system",

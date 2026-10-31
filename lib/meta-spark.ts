@@ -36,10 +36,12 @@ import {
 import { assessCandidate } from "./therapeutic-index";
 import { runAgentTools } from "./agent-tools";
 import {
+  DEFAULT_MODEL,
   META_SPARK_MODEL,
   META_SPARK_DEFAULT_URL,
   META_SPARK_TIMEOUT_MS,
   getMetaSparkApiUrl,
+  shortLabelForModel,
 } from "./spark-config";
 
 export {
@@ -105,11 +107,13 @@ export function buildKnottinPrompt(
   target: string,
   chargeTarget: number,
   steering?: string,
-  modality: Modality = "knottin-6c"
+  modality: Modality = "knottin-6c",
+  model: string = META_SPARK_MODEL
 ): string {
   const spec = specForModality(modality);
+  const persona = shortLabelForModel(model);
   const lines = [
-    `You are Meta Spark 1.3, a protein-design contributor for therapeutic gut-delivered ${modality === "knottin-6c" ? "knottins" : `${spec.noun}s`}.`,
+    `You are ${persona}, a protein-design contributor for therapeutic gut-delivered ${modality === "knottin-6c" ? "knottins" : `${spec.noun}s`}.`,
     `Target: ${target}.`,
     modality === "knottin-6c"
       ? "Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) optimized specifically as 6-cysteine knottin payloads (ICK topology C1-C4 / C2-C5 / C3-C6) for continuous secretion by engineered yeast (Saccharomyces boulardii via the MFalpha1 pre-pro leader)."
@@ -148,13 +152,15 @@ export function buildSemanticProposePrompt(
   target: string,
   chargeTarget: number,
   steering?: string,
-  modality: Modality = "knottin-6c"
+  modality: Modality = "knottin-6c",
+  model: string = META_SPARK_MODEL
 ): string {
   const spec = specForModality(modality);
+  const persona = shortLabelForModel(model);
   const lines =
     modality === "knottin-6c"
       ? [
-          "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+          `You are ${persona}, a semantic evolutionary orator for therapeutic micro-proteins.`,
           `Clinical gut target: ${target}. Adapt knottin secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
           "Express exactly 3 candidate knottins in the loop grammar L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6 with ICK pairing C1-C4, C2-C5, C3-C6.",
           "Hard syntactic and bioprocess constraints for every candidate:",
@@ -169,7 +175,7 @@ export function buildSemanticProposePrompt(
           ...scaffoldLines(),
         ]
       : [
-          "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+          `You are ${persona}, a semantic evolutionary orator for therapeutic micro-proteins.`,
           `Clinical gut target: ${target}. Adapt ${spec.noun} secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
           `Express exactly 3 candidate ${spec.noun}s.`,
           "Hard syntactic and bioprocess constraints for every candidate:",
@@ -198,11 +204,13 @@ export function buildRepairPrompt(
   chargeTarget: number,
   preservedCassette?: string,
   steering?: string,
-  modality: Modality = "knottin-6c"
+  modality: Modality = "knottin-6c",
+  model: string = META_SPARK_MODEL
 ): string {
   const spec = specForModality(modality);
+  const persona = shortLabelForModel(model);
   const lines = [
-    `You are Meta Spark 1.3 performing deterministic compiler-guided repair of a ${modality === "knottin-6c" ? "knottin" : spec.noun} secretion payload.`,
+    `You are ${persona} performing deterministic compiler-guided repair of a ${modality === "knottin-6c" ? "knottin" : spec.noun} secretion payload.`,
     `Failed candidate: ${failedSequence}`,
     `Symbolic compiler diagnostic: ${compilerDiagnostic}`,
     `Repair the semantic tokens to eliminate every listed fault while satisfying the full ${modality === "knottin-6c" ? "knottin" : spec.noun} secretion contract:`,
@@ -330,13 +338,14 @@ export async function requestSparkCandidates(
     minLength: 28,
     maxLength: 36,
     allowBare: true,
-  }
+  },
+  model: string = META_SPARK_MODEL
 ): Promise<string[]> {
   const apiKey = process.env.META_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) return [];
 
   const payload: MetaSparkRequest = {
-    model: META_SPARK_MODEL,
+    model,
     messages,
     temperature,
     max_tokens: maxTokens,
@@ -409,9 +418,10 @@ export async function requestSparkCandidates(
 export async function callMetaSpark(
   target: string,
   chargeTarget: number,
-  options: { modality?: Modality; mechanism?: string } = {}
+  options: { modality?: Modality; mechanism?: string; model?: string } = {}
 ): Promise<string[]> {
   const modality = options.modality ?? DEFAULT_MODALITY;
+  const model = options.model ?? DEFAULT_MODEL;
   const spec = specForModality(modality);
   const { brief } = buildSteeringBrief(target, options.mechanism);
   const candidates = await requestSparkCandidates(
@@ -422,13 +432,20 @@ export async function callMetaSpark(
       },
       {
         role: "user",
-        content: buildKnottinPrompt(target, chargeTarget, brief, modality),
+        content: buildKnottinPrompt(
+          target,
+          chargeTarget,
+          brief,
+          modality,
+          model
+        ),
       },
     ],
     META_SPARK_PROPOSE_MAX_TOKENS,
     META_SPARK_TIMEOUT_MS,
     META_SPARK_BASE_TEMPERATURE,
-    extractionForModality(modality)
+    extractionForModality(modality),
+    model
   );
   if (candidates.length === 0) {
     return sampleFallbackCandidates(target, chargeTarget, 5, modality);
@@ -747,6 +764,7 @@ async function evaluatePool(
 export interface GenerationOptions {
   modality?: Modality;
   mechanism?: string;
+  model?: string;
 }
 
 /**
@@ -778,6 +796,8 @@ export async function generateVerifiedPeptide(
   const apiKey = process.env.META_API_KEY;
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
   const modality = options.modality ?? DEFAULT_MODALITY;
+  const model = options.model ?? DEFAULT_MODEL;
+  const modelLabel = shortLabelForModel(model);
   const spec = specForModality(modality);
   const { targetClass, brief: steeringBrief } = buildSteeringBrief(
     target,
@@ -871,7 +891,8 @@ export async function generateVerifiedPeptide(
       target,
       chargeTarget,
       Math.min(META_SPARK_TIMEOUT_MS, remaining),
-      modality
+      modality,
+      model
     );
   };
 
@@ -891,7 +912,8 @@ export async function generateVerifiedPeptide(
       maxTokens,
       Math.min(META_SPARK_TIMEOUT_MS, remaining),
       temperature,
-      extraction
+      extraction,
+      model
     );
   };
 
@@ -926,8 +948,7 @@ export async function generateVerifiedPeptide(
   const proposeMessages = (): MetaSparkMessage[] => [
     {
       role: "system",
-      content:
-        "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+      content: `You are ${modelLabel}, a semantic evolutionary orator for therapeutic micro-proteins.`,
     },
     {
       role: "user",
@@ -935,7 +956,8 @@ export async function generateVerifiedPeptide(
         target,
         chargeTarget,
         steeringBrief,
-        modality
+        modality,
+        model
       ),
     },
   ];
@@ -947,7 +969,7 @@ export async function generateVerifiedPeptide(
     META_SPARK_PROPOSE_MAX_TOKENS,
     0,
     "propose",
-    `Requesting ${proposalNoun} proposals from Muse Spark 1.3…`,
+    `Requesting ${proposalNoun} proposals from ${modelLabel}…`,
     repairTemperatureForCycle(0)
   );
   let cycle = 0;
@@ -993,7 +1015,7 @@ export async function generateVerifiedPeptide(
         META_SPARK_PROPOSE_MAX_TOKENS,
         cycle + 1,
         "propose",
-        `Re-requesting ${proposalNoun} proposals from Muse Spark 1.3 (temperature penalized to ${retryTemperature.toFixed(2)})…`,
+        `Re-requesting ${proposalNoun} proposals from ${modelLabel} (temperature penalized to ${retryTemperature.toFixed(2)})…`,
         retryTemperature
       );
     } else {
@@ -1018,7 +1040,7 @@ export async function generateVerifiedPeptide(
         [
           {
             role: "system",
-            content: `You are Meta Spark 1.3 performing deterministic compiler-guided repair of a ${repairNoun} secretion payload.`,
+            content: `You are ${modelLabel} performing deterministic compiler-guided repair of a ${repairNoun} secretion payload.`,
           },
           {
             role: "user",
@@ -1028,7 +1050,8 @@ export async function generateVerifiedPeptide(
               chargeTarget,
               failedGrammar.loops["L3"],
               repairSteering,
-              modality
+              modality,
+              model
             ),
           },
         ],

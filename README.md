@@ -171,8 +171,9 @@ flowchart LR
 
 1. **Ingestion** — `POST /api/generate-peptide` accepts a therapeutic `target`,
    optional `mechanism`, optional integer `charge_target` (1, 2, 3, or 4),
-   and optional `modality` (`knottin-6c` default, `disulfide-4c`,
-   `disulfide-2c`, or `linear`).
+   optional `modality` (`knottin-6c` default, `disulfide-4c`,
+   `disulfide-2c`, or `linear`), and optional `model` (a Meta model id,
+   default `muse-spark-1.3-contributor`; `muse-wonder-1.0` also known).
 2. **System prompt steering** (`lib/prompt-steering.ts`) — the system infers
    the therapeutic target class (bacterial colonization, toxin blockade,
    barrier repair, inflammation, pain/motility, metabolic, general) and
@@ -283,7 +284,8 @@ curl -X POST http://localhost:3000/api/generate-peptide \
     "target": "Clostridioides difficile colonization in the gut",
     "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
     "charge_target": 4,
-    "modality": "knottin-6c"
+    "modality": "knottin-6c",
+    "model": "muse-spark-1.3-contributor"
   }'
 ```
 
@@ -294,7 +296,8 @@ Sample payload:
   "target": "Clostridioides difficile colonization in the gut",
   "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
   "charge_target": 4,
-  "modality": "knottin-6c"
+  "modality": "knottin-6c",
+  "model": "muse-spark-1.3-contributor"
 }
 ```
 

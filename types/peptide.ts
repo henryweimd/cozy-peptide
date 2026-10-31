@@ -14,6 +14,12 @@ export const PeptideRequestSchema = z.object({
   modality: z
     .enum(["knottin-6c", "disulfide-4c", "disulfide-2c", "linear"])
     .optional(),
+  model: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/)
+    .optional(),
 });
 export type PeptideRequest = z.infer<typeof PeptideRequestSchema>;
 

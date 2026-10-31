@@ -55,6 +55,12 @@ import {
 import { POST as auditPOST } from "../app/api/audit-peptide/route";
 import { GET as modalitiesGET } from "../app/api/modalities/route";
 import {
+  META_SPARK_MODEL,
+  META_WONDER_MODEL,
+  displayNameForModel,
+  shortLabelForModel,
+} from "../lib/spark-config";
+import {
   AgentToolResultSchema,
   CandidatePayloadSchema,
 } from "../types/peptide";
@@ -580,6 +586,69 @@ test("route provenance carries the target class", async () => {
   const body = (await res.json()) as Record<string, unknown>;
   const provenance = body["neurosymbolic_provenance"] as Record<string, unknown>;
   assert.equal(provenance["target_class"], "bacterial-colonization");
+});
+
+test("route accepts a caller-selected model, defaulting to Spark", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  process.env.API_BEARER_TOKEN = "test-token";
+  const req = (body: unknown): NextRequest =>
+    ({
+      headers: new Headers({ authorization: "Bearer test-token" }),
+      json: async () => body,
+    }) as unknown as NextRequest;
+
+  assert.equal(
+    (await POST(req({ target: TARGET, model: "../../etc/x" }))).status,
+    400
+  );
+
+  const res = await POST(
+    req({ target: TARGET, charge_target: 2, model: META_WONDER_MODEL })
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as Record<string, unknown>;
+  const provenance = body["neurosymbolic_provenance"] as Record<string, unknown>;
+  assert.equal(provenance["proposer_model"], "Muse-Wonder-1.0");
+
+  const spark = await POST(req({ target: TARGET, charge_target: 2 }));
+  const sparkBody = (await spark.json()) as Record<string, unknown>;
+  const sparkProvenance = sparkBody["neurosymbolic_provenance"] as Record<
+    string,
+    unknown
+  >;
+  assert.equal(sparkProvenance["proposer_model"], "Meta-Spark-1.3-Contributor");
+});
+
+test("prompts address the selected model", () => {
+  const spark = buildSemanticProposePrompt(TARGET, 4);
+  assert.ok(spark.includes("You are Muse Spark 1.3,"));
+  const wonder = buildSemanticProposePrompt(
+    TARGET,
+    4,
+    undefined,
+    "knottin-6c",
+    META_WONDER_MODEL
+  );
+  assert.ok(wonder.includes("You are Muse Wonder 1.0,"));
+  assert.ok(!wonder.includes("Muse Spark 1.3"));
+  const repair = buildRepairPrompt(
+    "CAAA",
+    "diag",
+    4,
+    undefined,
+    undefined,
+    "knottin-6c",
+    META_WONDER_MODEL
+  );
+  assert.ok(repair.includes("Muse Wonder 1.0 performing"));
+});
+
+test("model labels pass unknown ids through", () => {
+  assert.equal(displayNameForModel(META_SPARK_MODEL), "Meta-Spark-1.3-Contributor");
+  assert.equal(shortLabelForModel(META_WONDER_MODEL), "Muse Wonder 1.0");
+  assert.equal(displayNameForModel("future-model-9"), "future-model-9");
+  assert.equal(shortLabelForModel("future-model-9"), "future-model-9");
 });
 
 test("generation threads mechanism into steering", async () => {

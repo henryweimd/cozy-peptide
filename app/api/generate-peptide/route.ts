@@ -83,9 +83,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { target, mechanism, charge_target, modality } = parsed.data;
+  const { target, mechanism, charge_target, modality, model } = parsed.data;
   const chargeTarget = charge_target ?? 4;
   const designModality = modality ?? "knottin-6c";
+  const designModel = model ?? META_SPARK_MODEL;
   const screeningText = `${target}\n${mechanism ?? ""}`.trim();
 
   const safety = validateRequestSafety(
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
         modality: designModality,
         mechanism,
+        model: designModel,
       });
     const manifest = buildLabHandoff(candidate, designModality);
     return json(
@@ -151,7 +153,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         manifest,
         designModality,
         agentTools,
-        targetClass
+        targetClass,
+        designModel
       ),
       200
     );
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             "Upstream generation failed: no candidate passed neurosymbolic verification.",
           details: {
             message: error.message,
-            proposer_model: META_SPARK_MODEL,
+            proposer_model: designModel,
             compiler_refinement_cycles: refinementCycles(
               error.refinementHistory
             ),
@@ -177,8 +180,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return json(
       {
         success: false,
-        error:
-          "Upstream generation failed: Meta Spark 1.3 Contributor API error.",
+        error: `Upstream generation failed: ${designModel} API error.`,
         details: {
           message: error instanceof Error ? error.message : String(error),
         },
