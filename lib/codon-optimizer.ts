@@ -30,8 +30,31 @@ export const RESTRICTION_SITES: string[] = [
   "GAATTC", // EcoRI
   "GGATCC", // BamHI
   "GCGGCCGC", // NotI
+  "CTCGAG", // XhoI
   "GGTCTC", // BsaI
 ];
+
+/**
+ * S. cerevisiae codon usage frequencies per thousand (Kazusa), used to
+ * derive relative adaptiveness weights for the codon adaptation index.
+ */
+export const S_CEREVISIAE_CODON_FREQUENCIES: Record<string, number> = {
+  TTT: 26.1, TTC: 16.4, TTA: 26.2, TTG: 27.2,
+  TCT: 23.5, TCC: 14.2, TCA: 18.9, TCG: 8.6,
+  TAT: 18.8, TAC: 14.8, TGT: 8.1, TGC: 4.8, TGG: 10.4,
+  CTT: 12.3, CTC: 5.4, CTA: 13.4, CTG: 10.5,
+  CCT: 13.5, CCC: 6.8, CCA: 18.3, CCG: 5.3,
+  CAT: 13.6, CAC: 7.8, CAA: 27.4, CAG: 12.0,
+  CGT: 6.4, CGC: 2.6, CGA: 3.0, CGG: 1.7,
+  ATT: 30.2, ATC: 17.2, ATA: 17.8, ATG: 20.9,
+  ACT: 20.2, ACC: 12.7, ACA: 17.8, ACG: 8.0,
+  AAT: 35.7, AAC: 19.5, AAA: 41.9, AAG: 30.8,
+  AGT: 14.2, AGC: 9.8, AGA: 21.3, AGG: 9.2,
+  GTT: 22.1, GTC: 11.8, GTA: 11.8, GTG: 10.8,
+  GCT: 21.2, GCC: 12.6, GCA: 16.2, GCG: 6.2,
+  GAT: 32.3, GAC: 20.2, GAA: 45.6, GAG: 19.2,
+  GGT: 23.9, GGC: 9.8, GGA: 10.9, GGG: 6.0,
+};
 
 const MAX_SILENCING_ITERATIONS = 500;
 
@@ -120,6 +143,41 @@ function silenceRestrictionSites(dna: string, proteinSeq: string): string {
   }
 
   return codons.join("");
+}
+
+/**
+ * Codon adaptation index (Sharp & Li 1987): geometric mean of relative
+ * adaptiveness weights (codon frequency over the synonymous maximum)
+ * across an in-frame coding sequence. Values above 0.85 indicate strong
+ * yeast expression suitability.
+ */
+export function computeCAI(dna: string, proteinSeq: string): number {
+  const coding = dna.trim().toUpperCase();
+  const protein = proteinSeq.trim().toUpperCase();
+  if (coding.length === 0 || coding.length !== protein.length * 3) {
+    throw new Error(
+      "computeCAI: DNA must be in-frame triplets matching the protein length."
+    );
+  }
+  let logSum = 0;
+  for (let i = 0; i < protein.length; i += 1) {
+    const aa = protein[i] ?? "";
+    const codon = coding.slice(i * 3, i * 3 + 3);
+    const synonyms = CODON_TABLE[aa] ?? [];
+    let maxFreq = 0;
+    for (const syn of synonyms) {
+      const freq = S_CEREVISIAE_CODON_FREQUENCIES[syn] ?? 0;
+      if (freq > maxFreq) maxFreq = freq;
+    }
+    const freq = S_CEREVISIAE_CODON_FREQUENCIES[codon] ?? 0;
+    if (maxFreq <= 0 || freq <= 0) {
+      throw new Error(
+        `computeCAI: no usage frequency for codon '${codon}' (${aa}).`
+      );
+    }
+    logSum += Math.log(freq / maxFreq);
+  }
+  return Math.round(Math.exp(logSum / protein.length) * 10000) / 10000;
 }
 
 export interface CodonOptimizationResult {

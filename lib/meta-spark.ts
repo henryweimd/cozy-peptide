@@ -1,13 +1,18 @@
 import {
   MetaSparkResponseSchema,
+  type KnottinGrammarParse,
+  type MetaSparkMessage,
   type MetaSparkRequest,
+  type RefinementTurn,
+  type SymbolicAuditResult,
 } from "../types/peptide";
 import { auditPeptideCandidate } from "./symbolic-auditor";
+import { L4_HELIX_FORMERS, parseKnottinGrammar } from "./protein-grammar";
 
 export const META_SPARK_MODEL = "meta-spark-1.3-contributor";
 export const META_SPARK_DEFAULT_URL =
   "https://api.meta.ai/v1/spark/chat/completions";
-export const META_SPARK_TIMEOUT_MS = 45000;
+export const META_SPARK_TIMEOUT_MS = 15000;
 export const KNOTTIN_TOPOLOGY = "C-X(3,7)-C-X(4,6)-C-X(4,7)-C-X(1,3)-C-X(4,8)-C";
 
 export function getMetaSparkApiUrl(): string {
@@ -40,46 +45,415 @@ export function buildKnottinPrompt(
   ].join("\n");
 }
 
+/**
+ * Turn-0 semantic prompt: frames generation as evolutionary adaptation of
+ * knottin linguistic grammar to a clinical gut target, demanding an
+ * explicit <scratchpad> reasoning trace per candidate.
+ */
+export function buildSemanticProposePrompt(
+  target: string,
+  chargeTarget: number
+): string {
+  return [
+    "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+    `Clinical gut target: ${target}. Adapt knottin linguistic grammar to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience.`,
+    "Express exactly 3 candidate knottins in the loop grammar L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6 with ICK pairing C1-C4, C2-C5, C3-C6.",
+    "Hard syntactic constraints for every candidate:",
+    `1. Loop lengths: L1 3-7, L2 4-6, L3 4-7, L4 1-3, L5 4-8; total 28-36 aa; sequence starts and ends with cysteine.`,
+    "2. L1 must contain a turn-inducer (P or G) for C1-C2 loop closure.",
+    "3. L2 bulky aromatics (W, F) at most 40% of the loop.",
+    "4. L4 must contain no helix-forming residues (A, E, K, L, M, Q).",
+    `5. Formal charge (K+R-D-E) exactly +${chargeTarget}; allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
+    "6. No [KR]{2}, no [FYW]L, no N[GS], no D[GS], no methionine.",
+    "7. GRAVY between -0.40 and +0.10; gut-stable and non-toxic.",
+    "For each candidate, first write a <scratchpad> trace explaining why its loop composition satisfies the target receptor interface without triggering host mucosal clearance, then emit the candidate on its own line as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>.",
+  ].join("\n");
+}
+
+/**
+ * Repair prompt: hands a failed candidate plus its symbolic compiler
+ * diagnostic back to the model for token-level repair.
+ */
+export function buildRepairPrompt(
+  failedSequence: string,
+  compilerDiagnostic: string,
+  chargeTarget: number,
+  preservedCassette?: string
+): string {
+  const lines = [
+    "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
+    `Failed candidate: ${failedSequence}`,
+    `Symbolic compiler diagnostic: ${compilerDiagnostic}`,
+    "Repair the semantic tokens to eliminate every listed fault while satisfying the full knottin grammar:",
+    "L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6, ICK pairing C1-C4/C2-C5/C3-C6, L1 3-7 with P/G, L2 4-6 with W/F <= 40%, L3 4-7, L4 1-3 without helix formers (A,E,K,L,M,Q), L5 4-8, total 28-36 aa,",
+    `formal charge exactly +${chargeTarget}, no [KR]{2}, no [FYW]L, no N[GS], no D[GS], no M, GRAVY in [-0.40, +0.10].`,
+  ];
+  if (preservedCassette !== undefined && preservedCassette.length > 0) {
+    lines.push(
+      `Preserve the functional L3 epitope cassette '${preservedCassette}' unless it carries a fault.`
+    );
+  }
+  lines.push(
+    "Respond with ONLY 1-3 repaired candidates, one per line, as bare uppercase sequences with no commentary."
+  );
+  return lines.join("\n");
+}
+
 const CANONICAL_AA_PATTERN = /^[ACDEFGHIKLMNPQRSTVWY]+$/;
 
 /**
- * Extracts pure candidate sequences from a model completion via regex.
- * Handles bare sequences, numbered lists, and FASTA blocks.
+ * Extracts pure candidate sequences from a model completion via regex,
+ * preserving document order across FASTA blocks, CANDIDATE labels, and
+ * bare sequences (including <scratchpad> interleavings).
  */
 export function extractCandidateSequences(completion: string): string[] {
-  const found: string[] = [];
-  const seen = new Set<string>();
+  const hits: Array<{ index: number; seq: string }> = [];
 
-  const push = (raw: string): void => {
-    const seq = raw.trim().toUpperCase();
-    if (seq.length < 28 || seq.length > 36) return;
-    if (!CANONICAL_AA_PATTERN.test(seq)) return;
-    if (seen.has(seq)) return;
-    seen.add(seq);
-    found.push(seq);
-  };
-
-  // FASTA blocks: ">header\nSEQUENCE..."
   const fastaRe = />[^\n]*\n([A-Za-z\s]+)/g;
   let fastaMatch: RegExpExecArray | null;
   while ((fastaMatch = fastaRe.exec(completion)) !== null) {
-    const body = (fastaMatch[1] ?? "").replace(/\s+/g, "");
-    push(body);
+    const body = (fastaMatch[1] ?? "").replace(/\s+/g, "").toUpperCase();
+    if (
+      body.length >= 28 &&
+      body.length <= 36 &&
+      CANONICAL_AA_PATTERN.test(body)
+    ) {
+      hits.push({ index: fastaMatch.index, seq: body });
+    }
   }
 
-  // Bare sequences: contiguous 28-36 canonical-AA runs. Strip list
-  // markers ("1.", "-", "*") so numbered outputs still parse.
-  const sanitized = completion
-    .split("\n")
-    .map((line) => line.replace(/^\s*(?:\d+[.)\-:]|[-*>])\s*/, ""))
-    .join("\n");
+  const candidateRe = /CANDIDATE\s*\d*\s*[:\-]\s*([A-Za-z]{28,36})/gi;
+  let candidateMatch: RegExpExecArray | null;
+  while ((candidateMatch = candidateRe.exec(completion)) !== null) {
+    const seq = (candidateMatch[1] ?? "").toUpperCase();
+    if (CANONICAL_AA_PATTERN.test(seq)) {
+      hits.push({ index: candidateMatch.index, seq });
+    }
+  }
+
   const bareRe = /\b[ACDEFGHIKLMNPQRSTVWYacdefghiklmnpqrstvwy]{28,36}\b/g;
   let bareMatch: RegExpExecArray | null;
-  while ((bareMatch = bareRe.exec(sanitized)) !== null) {
-    push(bareMatch[0] ?? "");
+  while ((bareMatch = bareRe.exec(completion)) !== null) {
+    const seq = (bareMatch[0] ?? "").toUpperCase();
+    if (CANONICAL_AA_PATTERN.test(seq)) {
+      hits.push({ index: bareMatch.index, seq });
+    }
   }
 
-  return found.slice(0, 8);
+  hits.sort((a, b) => a.index - b.index);
+  const seen = new Set<string>();
+  const found: string[] = [];
+  for (const hit of hits) {
+    if (seen.has(hit.seq)) continue;
+    seen.add(hit.seq);
+    found.push(hit.seq);
+    if (found.length >= 8) break;
+  }
+  return found;
+}
+
+/**
+ * Sends one chat completion to the Meta Spark 1.3 Contributor API and
+ * returns extracted candidates, or an empty array on any failure.
+ */
+export async function requestSparkCandidates(
+  messages: MetaSparkMessage[],
+  maxTokens = 1024
+): Promise<string[]> {
+  const apiKey = process.env.META_API_KEY;
+  if (apiKey === undefined || apiKey.length === 0) return [];
+
+  const payload: MetaSparkRequest = {
+    model: META_SPARK_MODEL,
+    messages,
+    temperature: 0.7,
+    max_tokens: maxTokens,
+  };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), META_SPARK_TIMEOUT_MS);
+  try {
+    const response = await fetch(getMetaSparkApiUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!response.ok) return [];
+
+    const parsed = MetaSparkResponseSchema.safeParse(
+      (await response.json()) as unknown
+    );
+    if (!parsed.success) return [];
+
+    const data = parsed.data;
+    const content =
+      data.choices
+        ?.map((choice) => choice.message?.content ?? choice.text ?? "")
+        .filter((text) => text.length > 0)
+        .join("\n") ?? "";
+    const completion = `${content}\n${data.output_text ?? ""}`.trim();
+    if (completion.length === 0) return [];
+    return extractCandidateSequences(completion);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Calls the Meta Spark 1.3 Contributor API for knottin sequence proposals.
+ * Falls back to deterministic algorithmic sampling when the API key is
+ * missing, the request fails, or the completion is unparseable.
+ */
+export async function callMetaSpark(
+  target: string,
+  chargeTarget: number
+): Promise<string[]> {
+  const candidates = await requestSparkCandidates([
+    {
+      role: "system",
+      content:
+        "You design therapeutic gut-delivered knottin peptides under strict biophysical constraints.",
+    },
+    { role: "user", content: buildKnottinPrompt(target, chargeTarget) },
+  ]);
+  if (candidates.length === 0) {
+    return sampleFallbackCandidates(target, chargeTarget);
+  }
+  return candidates;
+}
+
+function findMotif(
+  sequence: string,
+  pattern: RegExp
+): { index: number; match: string } | null {
+  const found = pattern.exec(sequence);
+  if (found === null || found.index === undefined) return null;
+  return { index: found.index, match: found[0] ?? "" };
+}
+
+/**
+ * Renders the symbolic compiler diagnostic for a failed candidate,
+ * detailing exact grammar and audit faults with motif positions.
+ */
+export function buildCompilerDiagnostic(
+  candidate: string,
+  grammar: KnottinGrammarParse,
+  audit: SymbolicAuditResult,
+  chargeTarget: number
+): string {
+  const faults: string[] = [];
+  for (const error of grammar.syntaxErrors) {
+    faults.push(`Syntax Violation: ${error}`);
+  }
+  if (audit.formal_charge !== chargeTarget) {
+    const sign = audit.formal_charge >= 0 ? "+" : "";
+    faults.push(
+      `Formal charge ${sign}${audit.formal_charge} deviates from target +${chargeTarget}`
+    );
+  }
+  const dibasic = findMotif(candidate, /[KR]{2}/);
+  if (dibasic !== null) {
+    faults.push(
+      `Trypsin cleavage liability at index ${dibasic.index} ('${dibasic.match}')`
+    );
+  }
+  const aromaticLeu = findMotif(candidate, /[FYW]L/);
+  if (aromaticLeu !== null) {
+    faults.push(
+      `Pepsin/chymotrypsin liability at index ${aromaticLeu.index} ('${aromaticLeu.match}')`
+    );
+  }
+  for (const violation of audit.violations) {
+    if (
+      violation.startsWith("formal_charge:") ||
+      violation.startsWith("protease_")
+    ) {
+      continue;
+    }
+    faults.push(`Audit Violation: ${violation}`);
+  }
+  if (faults.length === 0) {
+    return `Sequence ${candidate}: clean, satisfies grammar and audit.`;
+  }
+  return `Sequence ${candidate}: ${faults.length} fault(s). ${faults.join("; ")}.`;
+}
+
+/** Thrown when refinement turns are exhausted; carries the trace. */
+export class NeurosymbolicVerificationError extends Error {
+  readonly refinementHistory: RefinementTurn[];
+
+  constructor(message: string, refinementHistory: RefinementTurn[]) {
+    super(message);
+    this.name = "NeurosymbolicVerificationError";
+    this.refinementHistory = refinementHistory;
+  }
+}
+
+interface Verification {
+  grammar: KnottinGrammarParse;
+  audit: SymbolicAuditResult;
+  diagnostic: string;
+  pass: boolean;
+}
+
+function verifyCandidate(
+  candidate: string,
+  chargeTarget: number
+): Verification {
+  const grammar = parseKnottinGrammar(candidate);
+  const audit = auditPeptideCandidate(candidate, chargeTarget);
+  return {
+    grammar,
+    audit,
+    diagnostic: buildCompilerDiagnostic(candidate, grammar, audit, chargeTarget),
+    pass: grammar.valid && audit.passed,
+  };
+}
+
+/**
+ * Neurosymbolic closed-loop reflection engine. Proposes candidates with
+ * Meta Spark 1.3, intercepts them with the grammar parser and symbolic
+ * auditor, and feeds compiler diagnostics back for deterministic repair
+ * instead of discarding failures. Without an API key, synthesizes from
+ * the grammar-constrained deterministic sampler with honest provenance.
+ */
+export async function generateVerifiedPeptide(
+  target: string,
+  chargeTarget: number,
+  maxRefinementTurns = 3
+): Promise<{
+  candidate: string;
+  audit: SymbolicAuditResult;
+  refinementHistory: RefinementTurn[];
+}> {
+  const refinementHistory: RefinementTurn[] = [];
+  const apiKey = process.env.META_API_KEY;
+  const apiAvailable = apiKey !== undefined && apiKey.length > 0;
+
+  if (!apiAvailable) {
+    const pool = sampleFallbackCandidates(target, chargeTarget, 5);
+    for (const candidate of pool) {
+      const verification = verifyCandidate(candidate, chargeTarget);
+      refinementHistory.push({
+        turn: 0,
+        candidate,
+        grammar_valid: verification.grammar.valid,
+        syntax_errors: verification.grammar.syntaxErrors,
+        audit_passed: verification.audit.passed,
+        violations: verification.audit.violations,
+        compiler_diagnostic: verification.diagnostic,
+        disposition: verification.pass ? "accepted" : "exhausted",
+      });
+      if (verification.pass) {
+        return {
+          candidate,
+          audit: verification.audit,
+          refinementHistory,
+        };
+      }
+    }
+    throw new NeurosymbolicVerificationError(
+      `Deterministic synthesis produced no verifiable candidate for target '${target}'.`,
+      refinementHistory
+    );
+  }
+
+  let pool = await requestSparkCandidates([
+    {
+      role: "system",
+      content:
+        "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+    },
+    { role: "user", content: buildSemanticProposePrompt(target, chargeTarget) },
+  ]);
+  let cycle = 0;
+
+  for (;;) {
+    for (const candidate of pool) {
+      const verification = verifyCandidate(candidate, chargeTarget);
+      refinementHistory.push({
+        turn: cycle,
+        candidate,
+        grammar_valid: verification.grammar.valid,
+        syntax_errors: verification.grammar.syntaxErrors,
+        audit_passed: verification.audit.passed,
+        violations: verification.audit.violations,
+        compiler_diagnostic: verification.diagnostic,
+        disposition: verification.pass
+          ? "accepted"
+          : cycle < maxRefinementTurns
+            ? "repaired"
+            : "exhausted",
+      });
+      if (verification.pass) {
+        return {
+          candidate,
+          audit: verification.audit,
+          refinementHistory,
+        };
+      }
+    }
+
+    if (cycle >= maxRefinementTurns) {
+      throw new NeurosymbolicVerificationError(
+        `Exhausted ${maxRefinementTurns} refinement turns without a verifiable candidate for target '${target}'.`,
+        refinementHistory
+      );
+    }
+
+    const failures = refinementHistory.filter(
+      (entry) => entry.disposition !== "accepted"
+    );
+    if (failures.length === 0) {
+      pool = await requestSparkCandidates([
+        {
+          role: "system",
+          content:
+            "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+        },
+        {
+          role: "user",
+          content: buildSemanticProposePrompt(target, chargeTarget),
+        },
+      ]);
+    } else {
+      let best = failures[0];
+      for (const entry of failures) {
+        const bestIssues =
+          (best?.syntax_errors.length ?? 0) + (best?.violations.length ?? 0);
+        const entryIssues = entry.syntax_errors.length + entry.violations.length;
+        if (entryIssues < bestIssues) best = entry;
+      }
+      const failedCandidate = best?.candidate ?? "";
+      const failedGrammar = parseKnottinGrammar(failedCandidate);
+      pool = await requestSparkCandidates(
+        [
+          {
+            role: "system",
+            content:
+              "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
+          },
+          {
+            role: "user",
+            content: buildRepairPrompt(
+              failedCandidate,
+              best?.compiler_diagnostic ?? "",
+              chargeTarget,
+              failedGrammar.loops["L3"]
+            ),
+          },
+        ],
+        512
+      );
+    }
+    cycle += 1;
+  }
 }
 
 /** Deterministic PRNG (mulberry32) for reproducible fallback sampling. */
@@ -110,9 +484,34 @@ function randInt(rand: () => number, min: number, max: number): number {
 /** Neutral filler alphabet: no C (framework only), no M, no charged residues. */
 const NEUTRAL_FILLER = "AFGHILNPQSTVWY";
 
-function pickFiller(rand: () => number, prev: string): string {
+/** L4 filler alphabet: additionally excludes helix-forming residues. */
+const L4_FILLER = NEUTRAL_FILLER.split("")
+  .filter((aa) => !L4_HELIX_FORMERS.has(aa))
+  .join("");
+
+/** Non-aromatic neutrals for L2 aromatic-cap repair. */
+const L2_REPAIR_ALPHABET = "AGHILNPQSTV";
+
+function fitsNeighbors(seq: string[], index: number, aa: string): boolean {
+  const prev = index > 0 ? (seq[index - 1] ?? "") : "";
+  const next = index + 1 < seq.length ? (seq[index + 1] ?? "") : "";
+  if ((prev === "F" || prev === "Y" || prev === "W") && aa === "L") return false;
+  if (prev === "N" && (aa === "G" || aa === "S")) return false;
+  if ((prev === "K" || prev === "R") && (aa === "K" || aa === "R")) return false;
+  if ((aa === "F" || aa === "Y" || aa === "W") && next === "L") return false;
+  if (aa === "N" && (next === "G" || next === "S")) return false;
+  if ((aa === "K" || aa === "R") && (next === "K" || next === "R")) return false;
+  return true;
+}
+
+function pickFiller(
+  rand: () => number,
+  prev: string,
+  loopId: number
+): string {
+  const alphabet = loopId === 4 ? L4_FILLER : NEUTRAL_FILLER;
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    const aa = NEUTRAL_FILLER[Math.floor(rand() * NEUTRAL_FILLER.length)] ?? "A";
+    const aa = alphabet[Math.floor(rand() * alphabet.length)] ?? "A";
     if ((prev === "F" || prev === "Y" || prev === "W") && aa === "L") continue;
     if (prev === "N" && (aa === "G" || aa === "S")) continue;
     return aa;
@@ -149,25 +548,35 @@ function sampleTopologySequence(
 
   // Framework cysteine positions for C-X(a)-C-X(b)-C-X(c)-C-X(d)-C-X(e)-C.
   const [a, b, c, d] = plan.lengths;
-  const cys = new Set<number>();
+  const cysPositions: number[] = [];
   let pos = 0;
-  cys.add(pos);
+  cysPositions.push(pos);
   pos += 1 + (a ?? 0);
-  cys.add(pos);
+  cysPositions.push(pos);
   pos += 1 + (b ?? 0);
-  cys.add(pos);
+  cysPositions.push(pos);
   pos += 1 + (c ?? 0);
-  cys.add(pos);
+  cysPositions.push(pos);
   pos += 1 + (d ?? 0);
-  cys.add(pos);
-  cys.add(plan.total - 1);
+  cysPositions.push(pos);
+  cysPositions.push(plan.total - 1);
+  const cys = new Set(cysPositions);
 
-  // Choose chargeTarget positive (K/R) positions, never adjacent to each other.
+  // Loop id (1-5) for each inter-cysteine position.
+  const loopOf = (index: number): number => {
+    let count = 0;
+    for (const cp of cysPositions) {
+      if (cp < index) count += 1;
+    }
+    return count;
+  };
+
+  // Choose chargeTarget positive (K/R) positions outside L4, never
+  // adjacent to each other (L4 forbids the helix former K).
   const slots: number[] = [];
   for (let i = 0; i < plan.total; i += 1) {
-    if (!cys.has(i)) slots.push(i);
+    if (!cys.has(i) && loopOf(i) !== 4) slots.push(i);
   }
-  // Shuffle slots deterministically.
   for (let i = slots.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rand() * (i + 1));
     const tmp = slots[i] ?? 0;
@@ -192,14 +601,58 @@ function sampleTopologySequence(
       out.push(rand() < 0.5 ? "K" : "R");
       continue;
     }
-    out.push(pickFiller(rand, out[i - 1] ?? ""));
+    out.push(pickFiller(rand, out[i - 1] ?? "", loopOf(i)));
   }
+
+  // Enforce the L1 turn-inducer rule on a filler slot.
+  const l1Slots: number[] = [];
+  for (let i = 0; i < plan.total; i += 1) {
+    if (!cys.has(i) && !positives.has(i) && loopOf(i) === 1) l1Slots.push(i);
+  }
+  const l1HasTurn = l1Slots.some(
+    (i) => out[i] === "P" || out[i] === "G"
+  );
+  if (!l1HasTurn && l1Slots.length > 0) {
+    const slot = l1Slots[Math.floor(rand() * l1Slots.length)] ?? l1Slots[0] ?? 0;
+    out[slot] = (out[slot - 1] ?? "") === "N" ? "P" : rand() < 0.5 ? "P" : "G";
+  }
+
+  // Enforce the L2 bulky-aromatic cap via neighbor-safe swaps.
+  for (let repair = 0; repair < 20; repair += 1) {
+    const l2Slots: number[] = [];
+    for (let i = 0; i < plan.total; i += 1) {
+      if (!cys.has(i) && loopOf(i) === 2) l2Slots.push(i);
+    }
+    const aromaticSlots = l2Slots.filter(
+      (i) => out[i] === "W" || out[i] === "F"
+    );
+    if (aromaticSlots.length / l2Slots.length <= 0.4) break;
+    const slot =
+      aromaticSlots[Math.floor(rand() * aromaticSlots.length)] ??
+      aromaticSlots[0] ??
+      0;
+    let swapped = false;
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const aa =
+        L2_REPAIR_ALPHABET[
+          Math.floor(rand() * L2_REPAIR_ALPHABET.length)
+        ] ?? "A";
+      if (fitsNeighbors(out, slot, aa)) {
+        out[slot] = aa;
+        swapped = true;
+        break;
+      }
+    }
+    if (!swapped) break;
+  }
+
   return out.join("");
 }
 
 /**
  * Deterministic algorithmic fallback: samples knottin-topology sequences
- * and keeps only candidates that pass the symbolic auditor.
+ * and keeps only candidates that pass both the grammar parser and the
+ * symbolic auditor.
  */
 export function sampleFallbackCandidates(
   target: string,
@@ -214,84 +667,12 @@ export function sampleFallbackCandidates(
     const seq = sampleTopologySequence(rand, chargeTarget);
     if (seq === null || seen.has(seq)) continue;
     seen.add(seq);
-    if (auditPeptideCandidate(seq, chargeTarget).passed) {
+    if (
+      parseKnottinGrammar(seq).valid &&
+      auditPeptideCandidate(seq, chargeTarget).passed
+    ) {
       kept.push(seq);
     }
   }
   return kept;
-}
-
-/**
- * Calls the Meta Spark 1.3 Contributor API for knottin sequence proposals.
- * Falls back to deterministic algorithmic sampling when the API key is
- * missing, the request fails, or the completion is unparseable.
- */
-export async function callMetaSpark(
-  target: string,
-  chargeTarget: number
-): Promise<string[]> {
-  const apiKey = process.env.META_API_KEY;
-  if (apiKey === undefined || apiKey.length === 0) {
-    return sampleFallbackCandidates(target, chargeTarget);
-  }
-
-  const payload: MetaSparkRequest = {
-    model: META_SPARK_MODEL,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You design therapeutic gut-delivered knottin peptides under strict biophysical constraints.",
-      },
-      { role: "user", content: buildKnottinPrompt(target, chargeTarget) },
-    ],
-    temperature: 0.7,
-    max_tokens: 1024,
-  };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), META_SPARK_TIMEOUT_MS);
-  try {
-    const response = await fetch(getMetaSparkApiUrl(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      return sampleFallbackCandidates(target, chargeTarget);
-    }
-
-    const parsed = MetaSparkResponseSchema.safeParse(
-      (await response.json()) as unknown
-    );
-    if (!parsed.success) {
-      return sampleFallbackCandidates(target, chargeTarget);
-    }
-
-    const data = parsed.data;
-    const content =
-      data.choices
-        ?.map((choice) => choice.message?.content ?? choice.text ?? "")
-        .filter((text) => text.length > 0)
-        .join("\n") ?? "";
-    const completion = `${content}\n${data.output_text ?? ""}`.trim();
-    if (completion.length === 0) {
-      return sampleFallbackCandidates(target, chargeTarget);
-    }
-
-    const candidates = extractCandidateSequences(completion);
-    if (candidates.length === 0) {
-      return sampleFallbackCandidates(target, chargeTarget);
-    }
-    return candidates;
-  } catch {
-    return sampleFallbackCandidates(target, chargeTarget);
-  } finally {
-    clearTimeout(timeout);
-  }
 }

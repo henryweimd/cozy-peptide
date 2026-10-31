@@ -1,21 +1,33 @@
 import type { LabHandoffManifest } from "../types/peptide";
-import { findRestrictionSite, optimizeForSboulardii } from "./codon-optimizer";
-import { computeFormalCharge } from "./symbolic-auditor";
+import {
+  RESTRICTION_SITES,
+  computeCAI,
+  findRestrictionSite,
+  optimizeForSboulardii,
+} from "./codon-optimizer";
+import { computeFormalCharge, computeIsoelectricPoint } from "./symbolic-auditor";
 
 /**
- * 85-aa Saccharomyces alpha-mating factor pre-pro secretion leader,
- * ending in the Kex2 processing junction (KR).
+ * 85-aa Saccharomyces cerevisiae MF-alpha-1 pre-pro secretion leader,
+ * ending in the native Kex2 dibasic endoprotease junction SLDKR.
  */
 export const ALPHA_FACTOR_LEADER_85 =
-  "MRFPSIFTAVLFAASSALAAPVNTTTEDETAQIPAEAVIGYSDLEGDFDVAVLPFSNSTNNGLLFINTTIASIAAKEEGVSLEKR";
+  "MRFPSIFTAVLFAASSALAAPVNTTTEDETAQIPAEAVIGYSDLEGDFDVAVLPFSNSTNNGLLFINTTIASIAAKEEGVSLDKR";
 
 export const KEX2_JUNCTION = "KR";
+export const SLDKR_JUNCTION = "SLDKR";
 
-/** 5' 40-bp Gibson assembly homology arm (restriction-site free). */
-export const GIBSON_ARM_5 = "CAGTACAGTCAGTCTAGACCATGGCATCGATACGATCGTA";
+export const YEAST_CHASSIS = "Saccharomyces boulardii (ATCC MYA-796)";
+export const SECRETION_LEADER_LABEL = "MF-alpha-1 (85 aa) + Kex2 (KR)";
 
-/** 3' 40-bp Gibson assembly homology arm (restriction-site free). */
-export const GIBSON_ARM_3 = "GCTAGCTAGCTTAACCGGTACCGGTTAACCGGTTAACCGG";
+/** 5' 40-bp Gibson homology arm for pESC / pPic9 integration. */
+export const GIBSON_ARM_5 = "ACACAAACAAAAGATACACAAACAACGATATATACAAAAC";
+
+/** 3' 40-bp Gibson homology arm for pESC / pPic9 integration. */
+export const GIBSON_ARM_3 = "TCCTTGACGTTAAAGTATAGAGGTATATTAACAATTTTTT";
+
+export const VECTOR_INTEGRATION_STRATEGY =
+  "Gibson assembly into pESC / pPic9 episomal expression backbones via 40-bp homology arms";
 
 /** Average isotopic residue masses (Da); water is added for the free peptide. */
 const RESIDUE_MASS: Record<string, number> = {
@@ -43,19 +55,6 @@ const RESIDUE_MASS: Record<string, number> = {
 
 const WATER_MASS = 18.01528;
 
-/** Side-chain pKa values used for the theoretical pI calculation. */
-const PKA = {
-  nTerm: 8.0,
-  cTerm: 3.1,
-  K: 10.5,
-  R: 12.5,
-  H: 6.0,
-  D: 3.9,
-  E: 4.1,
-  C: 8.3,
-  Y: 10.1,
-} as const;
-
 /** Molecular weight (Da) of the free peptide, rounded to 2 decimals. */
 export function computeMolecularWeight(sequence: string): number {
   const seq = sequence.trim().toUpperCase();
@@ -70,38 +69,6 @@ export function computeMolecularWeight(sequence: string): number {
     mass += residue;
   }
   return Math.round(mass * 100) / 100;
-}
-
-function netChargeAtPh(sequence: string, ph: number): number {
-  let charge =
-    1 / (1 + Math.pow(10, ph - PKA.nTerm)) -
-    1 / (1 + Math.pow(10, PKA.cTerm - ph));
-  for (const aa of sequence) {
-    if (aa === "K") charge += 1 / (1 + Math.pow(10, ph - PKA.K));
-    else if (aa === "R") charge += 1 / (1 + Math.pow(10, ph - PKA.R));
-    else if (aa === "H") charge += 1 / (1 + Math.pow(10, ph - PKA.H));
-    else if (aa === "D") charge -= 1 / (1 + Math.pow(10, PKA.D - ph));
-    else if (aa === "E") charge -= 1 / (1 + Math.pow(10, PKA.E - ph));
-    else if (aa === "C") charge -= 1 / (1 + Math.pow(10, PKA.C - ph));
-    else if (aa === "Y") charge -= 1 / (1 + Math.pow(10, PKA.Y - ph));
-  }
-  return charge;
-}
-
-/**
- * Theoretical isoelectric point via bisection on the net-charge curve,
- * rounded to 2 decimals.
- */
-export function computeIsoelectricPoint(sequence: string): number {
-  const seq = sequence.trim().toUpperCase();
-  let low = 0;
-  let high = 14;
-  for (let i = 0; i < 100; i += 1) {
-    const mid = (low + high) / 2;
-    if (netChargeAtPh(seq, mid) > 0) low = mid;
-    else high = mid;
-  }
-  return Math.round(((low + high) / 2) * 100) / 100;
 }
 
 function toFasta(header: string, sequence: string): string {
@@ -121,10 +88,31 @@ function countResidues(sequence: string, residues: string): number {
   return count;
 }
 
+function gcFraction(dna: string): number {
+  if (dna.length === 0) return 0;
+  let gcCount = 0;
+  for (const base of dna) {
+    if (base === "G" || base === "C") gcCount += 1;
+  }
+  return gcCount / dna.length;
+}
+
+/** Short deterministic construct tag derived from the mature sequence. */
+function constructTag(mature: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < mature.length; i += 1) {
+    hash ^= mature.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36).toUpperCase().padStart(7, "0").slice(0, 6);
+}
+
 /**
- * Builds lab-handoff production artifacts for one mature knottin:
- * alpha-factor pre-pro precursor, codon-optimized gBlock flanked by
- * 40-bp Gibson homology arms, MW, pI, and order metadata.
+ * Builds the translational yeast expression cassette for one mature
+ * knottin: MF-alpha-1 pre-pro precursor with the SLDKR Kex2 junction,
+ * yeast-optimized cDNA, gBlock flanked by pESC/pPic9 Gibson homology
+ * arms, biophysics, restriction-scrub verification, and a vendor-ready
+ * synthesis order payload.
  */
 export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
   const mature = matureSeq.trim().toUpperCase();
@@ -136,14 +124,12 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
   const { dna: cdna } = optimizeForSboulardii(precursor);
   const dnaGblock = `${GIBSON_ARM_5}${cdna}${GIBSON_ARM_3}`;
 
-  let gcCount = 0;
-  for (const base of dnaGblock) {
-    if (base === "G" || base === "C") gcCount += 1;
-  }
-  const gcContent = Math.round((gcCount / dnaGblock.length) * 10000) / 10000;
-
+  const gcContent = Math.round(gcFraction(dnaGblock) * 10000) / 10000;
+  const gcPercent = Math.round(gcFraction(dnaGblock) * 1000) / 10;
   const mwDa = computeMolecularWeight(mature);
   const pi = computeIsoelectricPoint(mature);
+  const cai = computeCAI(cdna, precursor);
+  const residualSite = findRestrictionSite(dnaGblock);
 
   return {
     mature_fasta: toFasta(
@@ -151,7 +137,7 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
       mature
     ),
     precursor_fasta: toFasta(
-      `alpha_factor_prepro_85aa_KR_junction length=${precursor.length}`,
+      `MFa1_prepro_85aa_SLDKR_junction length=${precursor.length}`,
       precursor
     ),
     dna_gblock: dnaGblock,
@@ -161,9 +147,10 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
     order_metadata: {
       product: "gBlock",
       organism: "Saccharomyces boulardii",
-      leader: "Saccharomyces alpha-mating factor pre-pro (85 aa)",
+      yeast_chassis: YEAST_CHASSIS,
+      leader: "Saccharomyces cerevisiae MF-alpha-1 pre-pro (85 aa)",
       leader_length: ALPHA_FACTOR_LEADER_85.length,
-      kex2_junction: KEX2_JUNCTION,
+      kex2_junction: SLDKR_JUNCTION,
       mature_length: mature.length,
       precursor_length: precursor.length,
       cdna_length: cdna.length,
@@ -171,7 +158,8 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
       gibson_arm_5: GIBSON_ARM_5,
       gibson_arm_3: GIBSON_ARM_3,
       gibson_arm_length: GIBSON_ARM_5.length,
-      restriction_site_check: findRestrictionSite(dnaGblock) ?? "clean",
+      cai,
+      restriction_site_check: residualSite ?? "clean",
       disulfide_topology: "C1-C4,C2-C5,C3-C6",
       mature_cys_count: countResidues(mature, "C"),
       mature_formal_charge: computeFormalCharge(mature),
@@ -179,5 +167,24 @@ export function buildLabHandoff(matureSeq: string): LabHandoffManifest {
         "No in-frame stop codon appended; use the destination vector stop codon or add TAA during cloning.",
       generated_at: new Date().toISOString(),
     },
+    cdna_sequence: cdna,
+    gibson_5p_arm: GIBSON_ARM_5,
+    gibson_3p_arm: GIBSON_ARM_3,
+    cai,
+    restriction_scrub: {
+      status: residualSite === null ? "clean" : `residual site: ${residualSite}`,
+      sites_verified: [...RESTRICTION_SITES],
+    },
+    synthesis_order: {
+      sequence_name: `SB-KNOT-${constructTag(mature)}`,
+      dna_length: dnaGblock.length,
+      gc_percent: gcPercent,
+      volume: "500 ng lyophilized dsDNA fragment",
+      vector_integration_strategy: VECTOR_INTEGRATION_STRATEGY,
+      vendor_notes:
+        "Compatible with Twist Bioscience and IDT gBlock order forms.",
+    },
+    yeast_chassis: YEAST_CHASSIS,
+    secretion_leader: SECRETION_LEADER_LABEL,
   };
 }

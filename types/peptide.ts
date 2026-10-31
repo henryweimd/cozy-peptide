@@ -66,7 +66,35 @@ export const MetaSparkPayloadSchema = z.union([
 export type MetaSparkPayload = z.infer<typeof MetaSparkPayloadSchema>;
 
 /**
- * Deterministic symbolic verification result for one peptide candidate.
+ * One turn of the neurosymbolic propose-verify-repair loop, kept as
+ * conversational provenance for the API response.
+ */
+export const RefinementTurnSchema = z.object({
+  turn: z.number().int(),
+  candidate: z.string(),
+  grammar_valid: z.boolean(),
+  syntax_errors: z.array(z.string()),
+  audit_passed: z.boolean(),
+  violations: z.array(z.string()),
+  compiler_diagnostic: z.string(),
+  disposition: z.enum(["accepted", "repaired", "exhausted"]),
+});
+export type RefinementTurn = z.infer<typeof RefinementTurnSchema>;
+
+/**
+ * Linguistic parse of a knottin against the loop-grammar skeleton
+ * L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6.
+ */
+export const KnottinGrammarParseSchema = z.object({
+  valid: z.boolean(),
+  loops: z.record(z.string(), z.string()),
+  syntaxErrors: z.array(z.string()),
+});
+export type KnottinGrammarParse = z.infer<typeof KnottinGrammarParseSchema>;
+
+/**
+ * Deterministic symbolic verification result for one peptide candidate,
+ * including the developability ledger metrics.
  */
 export const SymbolicAuditResultSchema = z.object({
   passed: z.boolean(),
@@ -75,8 +103,35 @@ export const SymbolicAuditResultSchema = z.object({
   formal_charge: z.number().int(),
   gravy_score: z.number(),
   violations: z.array(z.string()),
+  boman_index: z.number(),
+  aliphatic_index: z.number(),
+  isoelectric_point: z.number(),
+  mucosal_adhesion_ratio: z.number(),
+  cleavage_susceptibility_index: z.number(),
 });
 export type SymbolicAuditResult = z.infer<typeof SymbolicAuditResultSchema>;
+
+/**
+ * Restriction-scrub verification for the expression cassette DNA.
+ */
+export const RestrictionScrubSchema = z.object({
+  status: z.string(),
+  sites_verified: z.array(z.string()),
+});
+export type RestrictionScrub = z.infer<typeof RestrictionScrubSchema>;
+
+/**
+ * Ready-to-copy synthesis order payload for Twist / IDT gBlock forms.
+ */
+export const SynthesisOrderSchema = z.object({
+  sequence_name: z.string(),
+  dna_length: z.number().int(),
+  gc_percent: z.number(),
+  volume: z.string(),
+  vector_integration_strategy: z.string(),
+  vendor_notes: z.string(),
+});
+export type SynthesisOrder = z.infer<typeof SynthesisOrderSchema>;
 
 /**
  * Lab-handoff production artifacts for engineered S. boulardii secretion.
@@ -89,6 +144,14 @@ export const LabHandoffManifestSchema = z.object({
   mw_da: z.number(),
   pi: z.number(),
   order_metadata: z.record(z.string(), z.any()),
+  cdna_sequence: z.string(),
+  gibson_5p_arm: z.string(),
+  gibson_3p_arm: z.string(),
+  cai: z.number(),
+  restriction_scrub: RestrictionScrubSchema,
+  synthesis_order: SynthesisOrderSchema,
+  yeast_chassis: z.string(),
+  secretion_leader: z.string(),
 });
 export type LabHandoffManifest = z.infer<typeof LabHandoffManifestSchema>;
 
