@@ -9,6 +9,11 @@ import {
   isDemoPresetTarget,
 } from "../../../lib/demo-config";
 import {
+  clientIpFromHeaders,
+  demoCooldownRemaining,
+  recordDemoCall,
+} from "../../../lib/demo-cooldown";
+import {
   NeurosymbolicVerificationError,
   generateVerifiedPeptide,
 } from "../../../lib/meta-spark";
@@ -33,22 +38,6 @@ export const maxDuration = 60;
 const DemoRequestSchema = z.object({
   target: z.string().min(1).max(500),
 });
-
-/**
- * Per-instance last-call timestamps by client IP. Best-effort on
- * serverless (each instance tracks its own map); sufficient to pace a
- * hackathon demo and protect the upstream API budget.
- */
-const lastCallByIp = new Map<string, number>();
-
-function clientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded !== null) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first !== undefined && first.length > 0) return first;
-  }
-  return "unknown";
-}
 
 function json(body: ApiResponse, status: number): NextResponse {
   return NextResponse.json(body, { status });
@@ -101,30 +90,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const now = Date.now();
-  const windowMs = DEMO_COOLDOWN_SECONDS * 1000;
-  for (const [ip, at] of lastCallByIp) {
-    if (now - at >= windowMs) lastCallByIp.delete(ip);
-  }
-  const ip = clientIp(request);
-  const last = lastCallByIp.get(ip);
-  if (last !== undefined) {
-    const retryAfter = Math.ceil((last + windowMs - now) / 1000);
-    if (retryAfter > 0) {
-      return json(
-        {
-          success: false,
-          error: `Demo cooldown: one design per minute per visitor. Try again in ${retryAfter}s.`,
-          details: {
-            retry_after_seconds: retryAfter,
-            cooldown_seconds: DEMO_COOLDOWN_SECONDS,
-          },
+  const ip = clientIpFromHeaders(request.headers);
+  const retryAfter = demoCooldownRemaining(ip);
+  if (retryAfter > 0) {
+    return json(
+      {
+        success: false,
+        error: `Demo cooldown: one design per minute per visitor. Try again in ${retryAfter}s.`,
+        details: {
+          retry_after_seconds: retryAfter,
+          cooldown_seconds: DEMO_COOLDOWN_SECONDS,
         },
-        429
-      );
-    }
+      },
+      429
+    );
   }
-  lastCallByIp.set(ip, now);
+  recordDemoCall(ip);
 
   try {
     const { candidate, audit, refinementHistory } =

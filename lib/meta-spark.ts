@@ -355,6 +355,26 @@ function verifyCandidate(
 /** Total upstream API time budget per generation, reserving room for synthesis and handoff inside maxDuration. */
 export const META_SPARK_API_BUDGET_MS = 50000;
 
+/** Pipeline stages emitted as live telemetry during generation. */
+export type PipelineStage =
+  | "propose"
+  | "verify"
+  | "repair"
+  | "synthesize"
+  | "handoff";
+
+export interface PipelineEvent {
+  stage: PipelineStage;
+  turn: number;
+  message: string;
+  source?: RefinementTurn["source"];
+  candidate?: string;
+  grammarValid?: boolean;
+  auditPassed?: boolean;
+  issues?: number;
+  diagnostic?: string;
+}
+
 /**
  * Evaluates one candidate pool, recording provenance; returns the first
  * accepted candidate, or null when the pool holds none.
@@ -365,10 +385,14 @@ function evaluatePool(
   turn: number,
   source: RefinementTurn["source"],
   terminal: boolean,
-  refinementHistory: RefinementTurn[]
+  refinementHistory: RefinementTurn[],
+  onEvent?: (event: PipelineEvent) => void
 ): { candidate: string; audit: SymbolicAuditResult } | null {
   for (const candidate of pool) {
     const verification = verifyCandidate(candidate, chargeTarget);
+    const issues =
+      verification.grammar.syntaxErrors.length +
+      verification.audit.violations.length;
     refinementHistory.push({
       turn,
       candidate,
@@ -384,6 +408,18 @@ function evaluatePool(
           : "repaired",
       source,
     });
+    onEvent?.({
+      stage: "verify",
+      turn,
+      source,
+      candidate,
+      grammarValid: verification.grammar.valid,
+      auditPassed: verification.audit.passed,
+      issues,
+      message: verification.pass
+        ? "Accepted — grammar and audit clean"
+        : `${issues} fault(s) found`,
+    });
     if (verification.pass) {
       return { candidate, audit: verification.audit };
     }
@@ -398,12 +434,14 @@ function evaluatePool(
  * instead of discarding failures. Repairs are never cut short for
  * fallback; only when turns or the API time budget are exhausted does
  * the grammar-constrained deterministic synthesizer serve as the final
- * backstop, with source-labeled provenance either way.
+ * backstop, with source-labeled provenance either way. An optional
+ * event callback receives live pipeline telemetry for streaming UIs.
  */
 export async function generateVerifiedPeptide(
   target: string,
   chargeTarget: number,
-  maxRefinementTurns = 3
+  maxRefinementTurns = 3,
+  onEvent?: (event: PipelineEvent) => void
 ): Promise<{
   candidate: string;
   audit: SymbolicAuditResult;
@@ -414,12 +452,19 @@ export async function generateVerifiedPeptide(
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
 
   const synthesize = (
-    turn: number
+    turn: number,
+    reason: string
   ): {
     candidate: string;
     audit: SymbolicAuditResult;
     refinementHistory: RefinementTurn[];
   } => {
+    onEvent?.({
+      stage: "synthesize",
+      turn,
+      source: "deterministic-synthesis",
+      message: reason,
+    });
     const pool = sampleFallbackCandidates(target, chargeTarget, 5);
     const accepted = evaluatePool(
       pool,
@@ -427,7 +472,8 @@ export async function generateVerifiedPeptide(
       turn,
       "deterministic-synthesis",
       true,
-      refinementHistory
+      refinementHistory,
+      onEvent
     );
     if (accepted !== null) {
       return { ...accepted, refinementHistory };
@@ -439,7 +485,10 @@ export async function generateVerifiedPeptide(
   };
 
   if (!apiAvailable) {
-    return synthesize(0);
+    return synthesize(
+      0,
+      "No API key configured — synthesizing from the deterministic grammar sampler"
+    );
   }
 
   const startedAt = Date.now();
@@ -461,22 +510,51 @@ export async function generateVerifiedPeptide(
     );
   };
 
-  let pool =
-    (await requestBudgeted(
-      [
-        {
-          role: "system",
-          content:
-            "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
-        },
-        {
-          role: "user",
-          content: buildSemanticProposePrompt(target, chargeTarget),
-        },
-      ],
-      META_SPARK_PROPOSE_MAX_TOKENS
-    )) ??
-    [];
+  /**
+   * One upstream request with telemetry: announces the dispatch, then
+   * reports how many candidates came back.
+   */
+  const fetchPool = async (
+    messages: MetaSparkMessage[],
+    maxTokens: number,
+    turn: number,
+    stage: "propose" | "repair",
+    requestMessage: string,
+    extra?: Partial<PipelineEvent>
+  ): Promise<string[]> => {
+    onEvent?.({ stage, turn, message: requestMessage, ...extra });
+    const pool = (await requestBudgeted(messages, maxTokens)) ?? [];
+    onEvent?.({
+      stage,
+      turn,
+      message:
+        pool.length > 0
+          ? `Received ${pool.length} candidate(s)`
+          : "Upstream returned no parseable candidates",
+      ...extra,
+    });
+    return pool;
+  };
+
+  const proposeMessages = (): MetaSparkMessage[] => [
+    {
+      role: "system",
+      content:
+        "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+    },
+    {
+      role: "user",
+      content: buildSemanticProposePrompt(target, chargeTarget),
+    },
+  ];
+
+  let pool = await fetchPool(
+    proposeMessages(),
+    META_SPARK_PROPOSE_MAX_TOKENS,
+    0,
+    "propose",
+    "Requesting knottin proposals from Muse Spark 1.3…"
+  );
   let cycle = 0;
 
   for (;;) {
@@ -486,7 +564,8 @@ export async function generateVerifiedPeptide(
       cycle,
       "meta-spark-1.3",
       cycle >= maxRefinementTurns,
-      refinementHistory
+      refinementHistory,
+      onEvent
     );
     if (accepted !== null) {
       return { ...accepted, refinementHistory };
@@ -496,29 +575,23 @@ export async function generateVerifiedPeptide(
     const budgetExhausted =
       Date.now() - startedAt >= META_SPARK_API_BUDGET_MS;
     if (turnsExhausted || budgetExhausted) {
-      return synthesize(cycle);
+      return synthesize(
+        cycle,
+        "Turns and API budget exhausted — deterministic synthesis backstop engaged"
+      );
     }
 
     const failures = refinementHistory.filter(
       (entry) => entry.disposition !== "accepted"
     );
     if (failures.length === 0) {
-      pool =
-        (await requestBudgeted(
-          [
-            {
-              role: "system",
-              content:
-                "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
-            },
-            {
-              role: "user",
-              content: buildSemanticProposePrompt(target, chargeTarget),
-            },
-          ],
-          META_SPARK_PROPOSE_MAX_TOKENS
-        )) ??
-        [];
+      pool = await fetchPool(
+        proposeMessages(),
+        META_SPARK_PROPOSE_MAX_TOKENS,
+        cycle + 1,
+        "propose",
+        "Re-requesting knottin proposals from Muse Spark 1.3…"
+      );
     } else {
       let best = failures[0];
       for (const entry of failures) {
@@ -529,27 +602,35 @@ export async function generateVerifiedPeptide(
       }
       const failedCandidate = best?.candidate ?? "";
       const failedGrammar = parseKnottinGrammar(failedCandidate);
-      pool =
-        (await requestBudgeted(
-          [
-            {
-              role: "system",
-              content:
-                "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
-            },
-            {
-              role: "user",
-              content: buildRepairPrompt(
-                failedCandidate,
-                best?.compiler_diagnostic ?? "",
-                chargeTarget,
-                failedGrammar.loops["L3"]
-              ),
-            },
-          ],
-          META_SPARK_REPAIR_MAX_TOKENS
-        )) ??
-        [];
+      const failedIssues =
+        (best?.syntax_errors.length ?? 0) + (best?.violations.length ?? 0);
+      pool = await fetchPool(
+        [
+          {
+            role: "system",
+            content:
+              "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
+          },
+          {
+            role: "user",
+            content: buildRepairPrompt(
+              failedCandidate,
+              best?.compiler_diagnostic ?? "",
+              chargeTarget,
+              failedGrammar.loops["L3"]
+            ),
+          },
+        ],
+        META_SPARK_REPAIR_MAX_TOKENS,
+        cycle + 1,
+        "repair",
+        `Repairing best candidate (${failedIssues} fault(s))…`,
+        {
+          candidate: failedCandidate,
+          diagnostic: best?.compiler_diagnostic ?? "",
+          issues: failedIssues,
+        }
+      );
     }
     cycle += 1;
   }

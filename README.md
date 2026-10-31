@@ -27,15 +27,16 @@ and rejects anything unsound. Failures return as compiler diagnostics that
 guide Muse Spark to repair its own designs, in a closed loop, until one
 passes every check.
 
-The output is not a picture or a score. It is a **DNA synthesis order you can
-send to a vendor**: codon-optimized cDNA encoding a probiotic yeast
-(*Saccharomyces boulardii*) — a living miniature factory you install in
-your gut — that manufactures your therapeutic on site, exactly where the
-disease lives. The medicine is not a pill you keep taking; it is a factory
-you swallow once.
+The output is not a picture or a score. It is a **verified protein
+sequence** — the invention itself — which converts straightforwardly into a
+**DNA synthesis order you can send to a vendor**: codon-optimized cDNA
+encoding a probiotic yeast (*Saccharomyces boulardii*) — a living miniature
+factory you install in your gut — that manufactures your therapeutic on
+site, exactly where the disease lives. The medicine is not a pill you keep
+taking; it is a factory you swallow once.
 
-Disease target in, lab-ready DNA out — with a full audit trail anyone can
-inspect.
+Disease target in, verified protein out — with lab-ready DNA close behind
+and a full audit trail anyone can inspect.
 
 ## 🧬 Teach AI to write the sentences of life
 
@@ -237,7 +238,10 @@ Sample JSON response (truncated):
 The landing page includes a live demo that runs the real pipeline with no
 token required. It is restricted to five preset gut conditions and one
 design per minute per visitor (server-enforced cooldown), so the shared
-demo stays responsive and the upstream budget stays intact.
+demo stays responsive and the upstream budget stays intact. While a design
+runs, the page streams live pipeline telemetry — proposal, grammar and
+audit verdicts per candidate, repair cycles, and handoff — over
+`POST /api/demo-stream`.
 
 ## Run the compiler locally
 

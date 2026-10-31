@@ -84,8 +84,9 @@ export default function Home() {
               Muse Spark 1.3 dreams up brand-new knottins: tiny knotted
               proteins, tough enough to survive digestion, that have never
               existed in nature. A symbolic compiler proves each design
-              sound, and the API returns DNA your lab can order — encoding
-              a probiotic yeast that turns your gut into a miniature
+              sound, and the API returns the verified protein sequence —
+              readily compiled to DNA your lab can order — encoding a
+              probiotic yeast that turns your gut into a miniature
               factory, manufacturing the drug on site where the disease
               lives.
             </p>
@@ -139,11 +140,11 @@ export default function Home() {
               stability, and safety.
             </li>
             <li>
-              <strong>🧬 DNA out, not just data.</strong> A passing design
-              compiles to a vendor-ready synthesis order: codon-optimized
-              DNA, secretion signal, and assembly parts that install a
-              miniature drug factory in the gut — a swallowed probiotic
-              yeast manufacturing the peptide where the disease lives.
+              <strong>🧬 Protein out, DNA follows.</strong> The passing
+              design is a verified amino-acid sequence — the invention
+              itself — which compiles straight to a vendor-ready synthesis
+              order: codon-optimized DNA, secretion signal, and assembly
+              parts that install a miniature drug factory in the gut.
             </li>
           </ul>
         </section>

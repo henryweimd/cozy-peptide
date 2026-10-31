@@ -46,7 +46,9 @@ import {
   maxDuration,
 } from "../app/api/generate-peptide/route";
 import { POST as demoPOST } from "../app/api/demo-generate/route";
+import { POST as demoStreamPOST } from "../app/api/demo-stream/route";
 import { DEMO_PRESETS } from "../lib/demo-config";
+import type { PipelineEvent } from "../lib/meta-spark";
 
 const TARGET = "TNF-alpha gut inflammation";
 
@@ -357,6 +359,62 @@ test("demo route serves presets with a per-IP cooldown", async () => {
 
   const rejected = await demoPOST(
     demoReq({ target: "anything not on the allowlist" }, "test-demo-ip-2")
+  );
+  assert.equal(rejected.status, 400);
+});
+
+test("pipeline telemetry reports synthesis and verification", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  const events: PipelineEvent[] = [];
+  const result = await generateVerifiedPeptide(TARGET, 4, 3, (event) =>
+    events.push(event)
+  );
+  assert.equal(result.audit.passed, true);
+  assert.ok(events.some((event) => event.stage === "synthesize"));
+  const verifications = events.filter(
+    (event) => event.stage === "verify"
+  );
+  assert.ok(verifications.length >= 1);
+  assert.ok(
+    verifications.every(
+      (event) =>
+        typeof event.candidate === "string" &&
+        typeof event.issues === "number"
+    )
+  );
+});
+
+test("demo stream emits stages then the full result", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  const streamReq = (body: unknown, ip: string): NextRequest =>
+    ({
+      headers: new Headers({ "x-forwarded-for": ip }),
+      json: async () => body,
+    }) as unknown as NextRequest;
+
+  const preset = DEMO_PRESETS[0];
+  assert.ok(preset !== undefined);
+  const ok = await demoStreamPOST(
+    streamReq({ target: preset.target }, "test-stream-ip-1")
+  );
+  assert.equal(ok.status, 200);
+  assert.ok(
+    (ok.headers.get("content-type") ?? "").includes("text/event-stream")
+  );
+  const body = await ok.text();
+  assert.ok(body.includes("event: stage"));
+  assert.ok(body.includes("event: result"));
+  assert.ok(body.includes('"success":true'));
+
+  const cooled = await demoStreamPOST(
+    streamReq({ target: preset.target }, "test-stream-ip-1")
+  );
+  assert.equal(cooled.status, 429);
+
+  const rejected = await demoStreamPOST(
+    streamReq({ target: "anything not on the allowlist" }, "test-stream-ip-2")
   );
   assert.equal(rejected.status, 400);
 });
