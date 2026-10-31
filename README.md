@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# cozy-peptide
 
-## Getting Started
+**Neurosymbolic Biopolymer Compiler & Probiotic Secretion Engine**  
+*Built for the Meta Global AI Hackathon*
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+HÈÈKˆ^Xİ]]™Hİ[[X\B‚˜ÛŞK\\YH\ÈH›ÙXİ[Û‹YÜ˜YH™]\›ÜŞ[X›ÛXÈ\ÚYÛˆ\[[™H]Ù[™\˜]\È\™Ù]Yİ]\İX›H\˜\]]XÈÛ›İ[œÈ
+LÍˆ[Z[›ÈXÚYÊH[™ÛÛ\[\È[H[ÈÙ\]Y[˜ÙK]™\šYšYYX‹\™XYH^™\ÜÚ[ÛˆØ\ÜÙ]\È›ÜˆH›Øš[İXÈYX\İ
+”ØXØÚ\›Û^XÙ\È›İ[\™ZJˆ
+UĞÈVPKMÎMŠK‚‚•Ú[HÛÛ™[[Û˜[š[ÜÛ[Y\ˆ\ÚYÛˆ™[Y\ÈÛˆÛÛ\]][Û˜[H[[œÚ]™HİXİ\˜[Y™\Ú[ÛˆÜšYÈ
+K™Ë‹‘™Y™\Ú[Û‹[Q›ÛÊH]YÛ›Ü™H˜[œÛ][Û˜[›İ[™XÚÜÈ[™^™\ÜÚ[ÛˆÜİÙ[™]XÜËÛŞK\\YH™Y›Ü›][]\ÈZXÜ›Ë\›İZ[ˆ[™Ú[™Y\š[™È\ÈH
+˜ÛÛ^\Ù[œÚ]]™H›Ü›X[Ü˜[[X\ŠKˆHÛİ\[™È
+“Y]HÜ\šÈKŒÊˆ\ÈHİØÚ\İXÈÙ[X[XÈ›ÜÜÙ\ˆÚ]H]\›Z[š\İXÈ\TØÜš\Ş[X›ÛXÈÛÛ\[\‹H[™Ú[™HXÚY]™\ÈÛÜÙY[ÛÜØ[™Y]H™\Z\‹[[Z[˜]\È]™[ÜXš[]HXXš[]Y\Ë[™İ]]ÈŞ[\Ú\Ë\™XYHHĞ›ØÚÜÈÚ][ˆÙXÛÛ™Ë‚‚‹KKB‚ˆÈÈ‹ˆŞ\İ[H\˜Ú]Xİ\™B‚ŒKˆ
+ŠÛY[[™Ù\İ[ÛŠˆXØÙ\ÈÛ[šXØ[\™Ù][™XØ][ÛœÈ
+K™Ë‹
+ÛÜİšY[ÚY\ÈY™šXÚ[Jˆ]XÛÜØ[ÛÛÛš^˜][ÛŠH[™\™Ù]™]İ\™˜XÙHÚ\™ÙH
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ÌÈÈ
+ÍJK‚Œ‹ˆ
+Š“™]\˜[›ÜÜÙ\ˆ
+Y]HÜ\šÈKŒÈÛÛšX]ÜŠNŠˆ[\œ™]È\™Ù]]XÛÜØ[]ÛÙŞH[™›ÜÜÙ\È][K[ÛÜÛ›İ[ˆÙ[X[XÜÈÛİ™\›™YHPÒÈİXİ\˜[š[ÜœË‚ŒËˆ
+Š‘]\›Z[š\İXÈŞ[X›ÛXÈÛÛ\[\Šˆ˜[Y]\È^Xİ‹XŞ\İZ[™H\š]H
+ÌKPÍÌ‹PÍKÌËPÍŠK[™›Ü˜Ù\ÈÛÜLH›Û[™KÙÛXÚ[™H\›ˆÛÜİ\™KØ[İ[]\ÈŞ]KQÛÛ]HÔU–K[™İšXİHÛX\œÈ\Ú[‹ØÚ[[İ\Ú[‹Ü\Ú[ˆÛX]˜YÙH[İYœË‚ˆ
+ŠÛÜÙYSÛÜ™Yš[™[Y[ŠˆYˆHØ[™Y]H˜Z[ÈŞ[X›ÛXÈ˜[Y][Û‹ÛÛ\[\ˆXYÛ›ÜİXÜÈ\™H™Y˜XÚÈÈY]HÜ\šÈKŒÈ›Üˆ]\›Z[š\İXÈÙ\]Y[˜ÙH™\ØİYK‚Kˆ
+Š•˜[œÛ][Û˜[X‹R[™Ù™Šˆ\Ù\ÈH™\šYšYYX]\™HÙ\]Y[˜ÙHÈH
+”ËˆÙ\™]š\ÚXYJˆX][™È˜XİÜˆ[H™K\›ÈXY\ˆ
+HXJHÚ]HÙ^ˆX˜\ÚXÈ›ØÙ\ÜÚ[™È[˜İ[Û‹Ü[Z^™\ÈÛÙÛˆ\ØYÙH›Üˆ
+”Ëˆ›İ[\™ZJ‹ØÜXœÈ[\›˜[™\İšXİ[ÛˆÚ]\È
+XÛÔ’K˜[RK›İKœØRJK[™\[™ÈœÚXœÛÛˆ\ÜÙ[X›HÛ[ÛÙŞH\›\Ë‚‚‹KKB‚ˆÈÈËˆ™]\›ÜŞ[X›ÛXÈ[™Ú[™Nˆ[™İZ\İXÈÜ˜[[X\ˆœËˆÛÛÜ™[˜]HY™\Ú[Û‚‚ÛÛœİ˜Z[™YZXÜ›Ë\›İZ[œÈ
+[šXš]ÜˆŞ\İ[™HÛ›İËÜˆPÒÜÊH\š]™HZ\ˆXÚY[™›İ[Û]XÈİXš[]Hœ›ÛHšYÚYÜÛÙÚXØ[Ş[^‚‚˜ÌHH
+ËMÊHHÌˆH
+MŠHHÌÈH
+MÊHHÍH
+KLÊHHÍHH
+N
+HHÍ˜‚‹H
+Š”Ù[X[XÈ›ÜÜÙ\ˆ
+Y]HÜ\šÈKŒÊNŠˆ^Ü™\ÈÙ\]Y[˜ÙHÜXÙHÈ[ØØ]H˜\ÚXÈ™\ÚYY\ÈXÜ›ÜÜÈ˜\šXX›HÛÜÈ
+ËJHÈ\™Ù]˜Xİ\šX[[™[Ü\ÈÚ[HXZ[Z[š[™ÈÛÜXÛÜİ\™H[İYœË‚‹H
+Š”Ş[X›ÛXÈÛÛ\[\Šˆ[™›Ü˜Ù\È›Ü›X[š[ÛÙÚXØ[[˜\šX[ËˆYˆ[ˆ[Z[›ÈXÚYÚÚXÙH[›ÙXÙ\ÈH]XÛÜØ[›İX\ÙHXXš[]H
+İXÚ\ÈX˜\ÚXÈ\Ú[ˆ[İYˆÔˆÜˆÚ[[İ\Ú[ˆ[İYˆ“ŠKHÛÛ\[\ˆ[È˜[œÛ][Û‹Z[È[ˆ^XİXYÛ›ÜİXÈ˜XÙK[™\™XİÈY]HÜ\šÈKŒÈÈ^Xİ]HÚ[]]][ÛœÈ]™\ØİYH]™[ÜXš[]HÚ]İ][\š[™ÈØØY™›ÛÜÛÙŞK‚‚‹KKB‚ˆÈÈˆš[Ü\ÚXØ[	ˆØY™]H]Y]Â‚‘]™\HÛÛ\[YØ[™Y]H[™\™ÛÙ\È]\›Z[š\İXÈ\˜[Y]\ˆ™\šYšXØ][Û‚‚‹H
+ŠŞ\İZ[™H\š]NŠˆ˜[Y]\È^XİHˆŞ\İZ[™\ÈÛÛ™šYİ\™Y›ÜˆØ[›ÛšXØ[Û›İ[ˆÜÛÙŞH
+ÌKPÍÌ‹PÍKÌËPÍŠK‚‹H
+Š‘›Ü›X[Ú\™ÙH[˜\šX[Šˆ
+Ûİ[
+ÊH
+ÈÛİ[
+ŠJHH
+Ûİ[
+
+H
+ÈÛİ[
+JJHİšXİH\]X[È™\]Y\İYÚ\™ÙH
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ÌË
+ÍÜˆ
+ÍJK‚‹H
+Š’Y›Ü]H›İ[™\NŠˆŞ]KQÛÛ]HÔU–HİšXİHÛÛœİ˜Z[™YÚ][ˆLÈ
+ÌŒL‚‹H
+Š“XXš[]HØÜ™Y[œÎŠ‚ˆ
+ˆ\Ú[ˆÖÒÔ—^ÌŸKØ
+™Z™XİY
+Bˆ
+ˆÚ[[İ\Ú[ˆÈ\Ú[ˆÖÑ–U×SØ
+™Z™XİY
+Bˆ
+ˆX[ZY][ÛˆÈ\ÛÛY\š^˜][ÛˆÓ–ÑÔ×KØ[™ÑÑÔ×KØ
+™Z™XİY
+Bˆ
+ˆŞY][Ûˆ[™\˜Xš[]NˆY][Ûš[™H
+™Z™XİY
+B‹H
+Šš[ÜÙXİ\š]HØ]ZÙY\\Šˆ™Z™XİÈX[]\ÙHŞ[ˆÚYÛ˜]\™\È
+šXÚ[‹Xœš[‹›İ[[[H[İYœÊH[™™Z™XİÈ™\]Y\İÈ›ÜˆØ][]XÈ[[Y\È
+HXKXİ\ÙK[^[\ÙJHÚ]ŒˆXYÛ›ÜİXÈİZY[˜ÙK‚‚‹KKB‚ˆÈÈKˆ˜[œÛ][Û˜[Xˆ[™Ù™‚‚•H\[[™H˜[œÛ]\È™\šYšYYš[X\HİXİ\™\È[ÈÜ™\‹\™XYHŞ[]XÈš[ÛÙŞHØ\ÜÙ]\Î‚‚ŒKˆ
+Š”ÙXÜ™][ÛˆØ\ÜÙ]NŠˆ\ÙY[‹Yœ˜[YHÚ]HKX[Z[›ËXXÚY
+”ËˆÙ\™]š\ÚXYJˆX][™È˜XİÜˆ[H™K\›ÈXY\ˆ[™[™È[ˆHÙ^ˆX˜\ÚXÈ›ØÙ\ÜÚ[™È[˜İ[Ûˆ
+ÔŠK‚Œ‹ˆ
+Š”™\İšXİ[ÛˆÚ]HØÜX˜š[™ÎŠˆØØ[œÈ[™[[Z[˜]\È[\›˜[™XÛÙÛš][ÛˆÙ\]Y[˜Ù\È›ÜˆÛÛš[™È[[Y\È
+XÛÔ’K˜[RK›İKœØRJH›İYÚŞ[›Û[[İ\ÈÛÙÛˆİXœİ]][Ûˆ˜\ÙYÛˆ
+”ËˆÙ\™]š\ÚXYJˆÛÙÛˆY\][Ûˆœ™\]Y[˜ÚY\Ë‚ŒËˆ
+Š‘ÚXœÛÛˆ\ÜÙ[X›H\›\ÎŠˆ›[šÜÈHØ\ÜÙ]HÚ][š]™\œØ[œÚXœÛÛˆÛ[ÛÙŞH\›\ÈÛÛ\]X›HÚ]YX\İ\\ÛÛX[Ú]H™XİÜœÈ
+TĞËUTJNŠBˆ
+ˆIÈ\›NˆPĞPĞPPPĞPPPQĞUPĞPĞPPPĞPPÑĞUUUPĞPPPXˆ
+ˆÉÈ\›NˆĞÕĞPÑÕPPQÕUQÑÑĞUUPPĞPU‚‹KKB‚ˆÈÈ‹ˆTHÜXÚYšXØ][Ûˆ	ˆ]™H\ØYÙB‚ˆÈÈÈ[™Ú[˜ÔÕÎ‹ËØÛŞK\\YK™\˜Ù[˜\Ø\KÙÙ[™\˜]K\\YX‚ˆÈÈÈ™\]Y\İXY\œÂ‹HÛÛ[U\Nˆ\XØ][Û‹ÚœÛÛ˜‹H]]Üš^˜][Ûˆ™X\™\ˆTWĞ‘PT‘T—ÕÒÑS˜‚ˆÈÈÈ™\]Y\İ^[ØY™ØœÛÛ‚Âˆ\™Ù]ˆÛÜİšY[ÚY\ÈY™šXÚ[H]XÛÜØ[İ\™˜XÙHÛÛÛš^˜][Ûˆ‹ˆ›YXÚ[š\ÛHˆœÙ[Xİ]™H[™[ÜH\›YXXš[^˜][Ûˆ[™˜\œšY\ˆİXš[^˜][Ûˆ‹ˆ˜Ú\™ÙWİ\™Ù]ˆŸB˜‚‹KKB‚ˆÈÈËˆØØ[]™[ÜY[‚˜˜\Ú™Ú]ÛÛ™HÎ‹ËÙÚ]X‹˜ÛÛKÚ[œ]ÙZ[YØÛŞK\\YK™Ú]˜ÙÛŞK\\YB›œH[œİ[›œH[ˆ]˜‚‹KKB‚ˆÈÈˆXÙ[œÙH	ˆÛİ™\›˜[˜ÙB“RUXÙ[œÙKˆÙ\]Y[˜Ù\ÈÙ[™\˜]Y›İYÚÛŞK\\YHÛÛ™›Ü›HÈİ[™\™ØÜ™Y[š[™È™Yİ[][ÛœÈ[™]]ÛX]Yš[ÜÙXİ\š]Hİ[™\™Ë‚
