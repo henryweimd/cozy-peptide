@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  /* cacheComponents intentionally disabled: the API route uses the
+     classic `runtime` / `dynamic` / `maxDuration` segment configs,
+     which are incompatible with cacheComponents. */
 };
 
 export default nextConfig;
