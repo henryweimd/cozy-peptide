@@ -1,86 +1,157 @@
-# cozy-peptide
+# cozy-peptide - Neurosymbolic Biopolymer Compiler & Probiotic Secretion Engine
 
-**Neurosymbolic Biopolymer Compiler & Probiotic Secretion Engine**  
-*Built for the Meta Global AI Hackathon*
+*Built for the Meta Global AI Hackathon.*
 
----
+## Executive Summary
 
-HÈÈKˆ^XÝ]]™HÝ[[X\žB‚˜ÛÞžK\\YH\ÈH›ÙXÝ[Û‹YÜ˜YH™]\›ÜÞ[X›ÛXÈ\ÚYÛˆ\[[™H]Ù[™\˜]\È\™Ù]YÝ]\ÝX›H\˜\]]XÈÛ›Ý[œÈ
-ŽLÍˆ[Z[›ÈXÚYÊH[™ÛÛ\[\È[H[ÈÙ\]Y[˜ÙK]™\šYšYYX‹\™XYH^™\ÜÚ[ÛˆØ\ÜÙ]\È›ÜˆH›Øš[ÝXÈYX\Ý
-”ØXØÚ\›Û^XÙ\È›Ý[\™ZJˆ
-UÐÈVPKMÎMŠK‚‚•Ú[HÛÛ™[[Û˜[š[ÜÛ[Y\ˆ\ÚYÛˆ™[Y\ÈÛˆÛÛ\]][Û˜[H[[œÚ]™HÝXÝ\˜[Y™\Ú[ÛˆÜšYÈ
-K™Ë‹‘™Y™\Ú[Û‹[Q›ÛÊH]YÛ›Ü™H˜[œÛ][Û˜[›Ý[™XÚÜÈ[™^™\ÜÚ[ÛˆÜÝÙ[™]XÜËÛÞžK\\YH™Y›Ü›][]\ÈZXÜ›Ë\›ÝZ[ˆ[™Ú[™Y\š[™È\ÈH
-˜ÛÛ^\Ù[œÚ]]™H›Ü›X[Ü˜[[X\ŠKˆžHÛÝ\[™È
-“Y]HÜ\šÈKŒÊˆ\ÈHÝØÚ\ÝXÈÙ[X[XÈ›ÜÜÙ\ˆÚ]H]\›Z[š\ÝXÈ\TØÜš\Þ[X›ÛXÈÛÛ\[\‹H[™Ú[™HXÚY]™\ÈÛÜÙY[ÛÜØ[™Y]H™\Z\‹[[Z[˜]\È]™[ÜXš[]HXXš[]Y\Ë[™Ý]]ÈÞ[\Ú\Ë\™XYHHÐ›ØÚÜÈÚ][ˆÙXÛÛ™Ë‚‚‹KKB‚ˆÈÈ‹ˆÞ\Ý[H\˜Ú]XÝ\™B‚ŒKˆ
-ŠÛY[[™Ù\Ý[ÛŽŠˆXØÙ\ÈÛ[šXØ[\™Ù][™XØ][ÛœÈ
-K™Ë‹
-ÛÜÝšY[ÚY\ÈY™šXÚ[Jˆ]XÛÜØ[ÛÛÛš^˜][ÛŠH[™\™Ù]™]Ý\™˜XÙHÚ\™ÙH
+cozy-peptide is a neurosymbolic design pipeline targeting **gut-stable therapeutic
+knottins (28-36 aa)** compiled into *Saccharomyces boulardii* secretion cassettes.
+It bridges generative LLM proposals (**Meta Spark 1.3**) with deterministic
+biological verification: every candidate sequence must pass a symbolic compiler
+audit (cysteine parity, loop grammar, charge, hydropathy, protease liabilities)
+before it is emitted as a lab-ready yeast secretion construct.
 
-ÌÈÈ
-ÍJK‚Œ‹ˆ
-Š“™]\˜[›ÜÜÙ\ˆ
-Y]HÜ\šÈKŒÈÛÛšX]ÜŠNŠˆ[\œ™]È\™Ù]]XÛÜØ[]ÛÙÞH[™›ÜÜÙ\È][K[ÛÜÛ›Ý[ˆÙ[X[XÜÈÛÝ™\›™YžHPÒÈÝXÝ\˜[š[ÜœË‚ŒËˆ
-Š‘]\›Z[š\ÝXÈÞ[X›ÛXÈÛÛ\[\ŽŠˆ˜[Y]\È^XÝ‹XÞ\ÝZ[™H\š]H
-ÌKPÍÌ‹PÍKÌËPÍŠK[™›Ü˜Ù\ÈÛÜLH›Û[™KÙÛXÚ[™H\›ˆÛÜÝ\™KØ[Ý[]\ÈÞ]KQÛÛ]HÔU–K[™ÝšXÝHÛX\œÈž\Ú[‹ØÚ[[Ýž\Ú[‹Ü\Ú[ˆÛX]˜YÙH[ÝYœË‚ˆ
-ŠÛÜÙYSÛÜ™Yš[™[Y[ŠˆYˆHØ[™Y]H˜Z[ÈÞ[X›ÛXÈ˜[Y][Û‹ÛÛ\[\ˆXYÛ›ÜÝXÜÈ\™H™Y˜XÚÈÈY]HÜ\šÈKŒÈ›Üˆ]\›Z[š\ÝXÈÙ\]Y[˜ÙH™\ØÝYK‚Kˆ
-Š•˜[œÛ][Û˜[X‹R[™Ù™ŽŠˆ\Ù\ÈH™\šYšYYX]\™HÙ\]Y[˜ÙHÈH
-”ËˆÙ\™]š\ÚXYJˆX][™È˜XÝÜˆ[H™K\›ÈXY\ˆ
-HXJHÚ]HÙ^ˆX˜\ÚXÈ›ØÙ\ÜÚ[™È[˜Ý[Û‹Ü[Z^™\ÈÛÙÛˆ\ØYÙH›Üˆ
-”Ëˆ›Ý[\™ZJ‹ØÜXœÈ[\›˜[™\ÝšXÝ[ÛˆÚ]\È
-XÛÔ’K˜[RK›ÝKœØRJK[™\[™ÈœÚXœÛÛˆ\ÜÙ[X›HÛ[ÛÙÞH\›\Ë‚‚‹KKB‚ˆÈÈËˆ™]\›ÜÞ[X›ÛXÈ[™Ú[™Nˆ[™ÝZ\ÝXÈÜ˜[[X\ˆœËˆÛÛÜ™[˜]HY™\Ú[Û‚‚ÛÛœÝ˜Z[™YZXÜ›Ë\›ÝZ[œÈ
-[šXš]ÜˆÞ\Ý[™HÛ›ÝËÜˆPÒÜÊH\š]™HZ\ˆXÚY[™›Ý[Û]XÈÝXš[]Hœ›ÛHšYÚYÜÛÙÚXØ[Þ[^‚‚˜ÌHH
-ËMÊHHÌˆH
-MŠHHÌÈH
-MÊHHÍH
-KLÊHHÍHH
-N
-HHÍ˜‚‹H
-Š”Ù[X[XÈ›ÜÜÙ\ˆ
-Y]HÜ\šÈKŒÊNŠˆ^Ü™\ÈÙ\]Y[˜ÙHÜXÙHÈ[ØØ]H˜\ÚXÈ™\ÚYY\ÈXÜ›ÜÜÈ˜\šXX›HÛÜÈ
-ËJHÈ\™Ù]˜XÝ\šX[[™[Ü\ÈÚ[HXZ[Z[š[™ÈÛÜXÛÜÝ\™H[ÝYœË‚‹H
-Š”Þ[X›ÛXÈÛÛ\[\ŽŠˆ[™›Ü˜Ù\È›Ü›X[š[ÛÙÚXØ[[˜\šX[ËˆYˆ[ˆ[Z[›ÈXÚYÚÚXÙH[›ÙXÙ\ÈH]XÛÜØ[›ÝX\ÙHXXš[]H
-ÝXÚ\ÈX˜\ÚXÈž\Ú[ˆ[ÝYˆÔˆÜˆÚ[[Ýž\Ú[ˆ[ÝYˆ“ŠKHÛÛ\[\ˆ[È˜[œÛ][Û‹Z[È[ˆ^XÝXYÛ›ÜÝXÈ˜XÙK[™\™XÝÈY]HÜ\šÈKŒÈÈ^XÝ]HÚ[]]][ÛœÈ]™\ØÝYH]™[ÜXš[]HÚ]Ý][\š[™ÈØØY™›ÛÜÛÙÞK‚‚‹KKB‚ˆÈÈˆš[Ü\ÚXØ[	ˆØY™]H]Y]Â‚‘]™\žHÛÛ\[YØ[™Y]H[™\™ÛÙ\È]\›Z[š\ÝXÈ\˜[Y]\ˆ™\šYšXØ][ÛŽ‚‚‹H
-ŠÞ\ÝZ[™H\š]NŠˆ˜[Y]\È^XÝHˆÞ\ÝZ[™\ÈÛÛ™šYÝ\™Y›ÜˆØ[›ÛšXØ[Û›Ý[ˆÜÛÙÞH
-ÌKPÍÌ‹PÍKÌËPÍŠK‚‹H
-Š‘›Ü›X[Ú\™ÙH[˜\šX[Šˆ
-ÛÝ[
-ÊH
-ÈÛÝ[
-ŠJHH
-ÛÝ[
-
-H
-ÈÛÝ[
-JJHÝšXÝH\]X[È™\]Y\ÝYÚ\™ÙH
+## Architecture
 
-ÌË
-ÍÜˆ
-ÍJK‚‹H
-Š’Y›Ü]H›Ý[™\žNŠˆÞ]KQÛÛ]HÔU–HÝšXÝHÛÛœÝ˜Z[™YÚ][ˆLÈ
-ÌŒL‚‹H
-Š“XXš[]HØÜ™Y[œÎŠ‚ˆ
-ˆž\Ú[ŽˆÖÒÔ—^ÌŸKØ
-™Z™XÝY
-Bˆ
-ˆÚ[[Ýž\Ú[ˆÈ\Ú[ŽˆÖÑ–U×SØ
-™Z™XÝY
-Bˆ
-ˆX[ZY][ÛˆÈ\ÛÛY\š^˜][ÛŽˆÓ–ÑÔ×KØ[™ÑÑÔ×KØ
-™Z™XÝY
-Bˆ
-ˆÞY][Ûˆ[™\˜Xš[]NˆY][Ûš[™H
-™Z™XÝY
-B‹H
-Šš[ÜÙXÝ\š]HØ]ZÙY\\ŽŠˆ™Z™XÝÈX[]\ÙHÞ[ˆÚYÛ˜]\™\È
-šXÚ[‹Xœš[‹›Ý[[[H[ÝYœÊH[™™Z™XÝÈ™\]Y\ÝÈ›ÜˆØ][]XÈ[žž[Y\È
-HXKXÝ\ÙK[^[\ÙJHÚ]ŒˆXYÛ›ÜÝXÈÝZY[˜ÙK‚‚‹KKB‚ˆÈÈKˆ˜[œÛ][Û˜[Xˆ[™Ù™‚‚•H\[[™H˜[œÛ]\È™\šYšYYš[X\žHÝXÝ\™\È[ÈÜ™\‹\™XYHÞ[]XÈš[ÛÙÞHØ\ÜÙ]\Î‚‚ŒKˆ
-Š”ÙXÜ™][ÛˆØ\ÜÙ]NŠˆ\ÙY[‹Yœ˜[YHÚ]HKX[Z[›ËXXÚY
-”ËˆÙ\™]š\ÚXYJˆX][™È˜XÝÜˆ[H™K\›ÈXY\ˆ[™[™È[ˆHÙ^ˆX˜\ÚXÈ›ØÙ\ÜÚ[™È[˜Ý[Ûˆ
-ÔŠK‚Œ‹ˆ
-Š”™\ÝšXÝ[ÛˆÚ]HØÜX˜š[™ÎŠˆØØ[œÈ[™[[Z[˜]\È[\›˜[™XÛÙÛš][ÛˆÙ\]Y[˜Ù\È›ÜˆÛÛš[™È[žž[Y\È
-XÛÔ’K˜[RK›ÝKœØRJH›ÝYÚÞ[›Ûž[[Ý\ÈÛÙÛˆÝXœÝ]][Ûˆ˜\ÙYÛˆ
-”ËˆÙ\™]š\ÚXYJˆÛÙÛˆY\][Ûˆœ™\]Y[˜ÚY\Ë‚ŒËˆ
-Š‘ÚXœÛÛˆ\ÜÙ[X›H\›\ÎŠˆ›[šÜÈHØ\ÜÙ]HÚ][š]™\œØ[œÚXœÛÛˆÛ[ÛÙÞH\›\ÈÛÛ\]X›HÚ]YX\Ý\\ÛÛX[Ú]H™XÝÜœÈ
-TÐËUTJNŠBˆ
-ˆIÈ\›NˆPÐPÐPPPÐPPPQÐUPÐPÐPPPÐPPÑÐUUUPÐPPPXˆ
-ˆÉÈ\›NˆÐÕÐPÑÕPPQÕUQÑÑÐUUPPÐPU‚‹KKB‚ˆÈÈ‹ˆTHÜXÚYšXØ][Ûˆ	ˆ]™H\ØYÙB‚ˆÈÈÈ[™Ú[˜ÔÕÎ‹ËØÛÞžK\\YK™\˜Ù[˜\Ø\KÙÙ[™\˜]K\\YX‚ˆÈÈÈ™\]Y\ÝXY\œÂ‹HÛÛ[U\Nˆ\XØ][Û‹ÚœÛÛ˜‹H]]Üš^˜][ÛŽˆ™X\™\ˆTWÐ‘PT‘T—ÕÒÑS˜‚ˆÈÈÈ™\]Y\Ý^[ØY™ØœÛÛ‚žÂˆ\™Ù]ŽˆÛÜÝšY[ÚY\ÈY™šXÚ[H]XÛÜØ[Ý\™˜XÙHÛÛÛš^˜][Ûˆ‹ˆ›YXÚ[š\ÛHŽˆœÙ[XÝ]™H[™[ÜH\›YXXš[^˜][Ûˆ[™˜\œšY\ˆÝXš[^˜][Ûˆ‹ˆ˜Ú\™ÙWÝ\™Ù]ŽˆŸB˜‚‹KKB‚ˆÈÈËˆØØ[]™[ÜY[‚˜˜\Ú™Ú]ÛÛ™HÎ‹ËÙÚ]X‹˜ÛÛKÚ[œž]ÙZ[YØÛÞžK\\YK™Ú]˜ÙÛÞžK\\YB›œH[œÝ[›œH[ˆ]˜‚‹KKB‚ˆÈÈˆXÙ[œÙH	ˆÛÝ™\›˜[˜ÙB“RUXÙ[œÙKˆÙ\]Y[˜Ù\ÈÙ[™\˜]Y›ÝYÚÛÞžK\\YHÛÛ™›Ü›HÈÝ[™\™ØÜ™Y[š[™È™YÝ[][ÛœÈ[™]]ÛX]Yš[ÜÙXÝ\š]HÝ[™\™Ë‚
+```text
+Ingestion
+  -> Meta Spark 1.3 sequence proposal
+  -> Deterministic Symbolic Compiler
+  -> Closed-loop compiler diagnostic feedback
+  -> Lab handoff
+```
+
+1. **Ingestion** â€” `POST /api/generate-peptide` accepts a therapeutic `target`,
+   optional `mechanism`, and optional integer `charge_target` (3, 4, or 5).
+2. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) â€” the Contributor
+   API proposes knottin candidates under a context-sensitive loop-grammar
+   paradigm (`C1-C4, C2-C5, C3-C6 ICK` topology).
+3. **Deterministic Symbolic Compiler** (`lib/symbolic-auditor.ts`,
+   `lib/protein-grammar.ts`) â€” each proposal is audited for:
+   - Length 28-36 aa with **6-Cys parity**
+   - Loop turn rules via the `L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6` grammar
+   - **Integer formal charge** matching the requested target
+   - **GRAVY** hydropathy within [-0.4, 0.1], plus Boman, aliphatic index, pI,
+     mucosal adhesion, and cleavage susceptibility metrics
+   - **Protease liability filtering** (trypsin, pepsin/chymotrypsin, Asp-Gly,
+     Asn-Gly, Met-oxidation motifs)
+4. **Closed-loop compiler diagnostic feedback** â€” failures return structured
+   diagnostics (`refinement_trace`) to the proposer for repair; the loop runs
+   until a candidate passes or turns are exhausted.
+5. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) â€” verified
+   candidates are compiled into an *S. boulardii* (ATCC MYA-796) cassette with:
+   - 85-aa **MFalpha-1 pre-pro secretion leader** ending in the native
+     **Kex2 junction** (`SLDKR`)
+   - *S. boulardii* **yeast codon bias** optimization with CAI/GC reporting
+   - 40-bp **Gibson homology arms** for pESC/pPic9 assembly
+   - Restriction-site scrub, mature/precursor FASTA, and a DNA synthesis order
+     manifest
+
+## Safety & Biosecurity
+
+`lib/biosecurity.ts` screens every request before generation:
+
+- **Strict toxin-signature screening** â€” requests matching ricin, abrin,
+  botulinum/BoNT (including translocation-domain constructs), diphtheria,
+  Shiga, anthrax, tetanus, saxitoxin, tetrodotoxin, aflatoxin, or T-2 toxin
+  patterns are refused with `403 Forbidden`.
+- **Catalytic-enzyme refusal** â€” enzyme targets (lactase, polymerase, kinase,
+  protease, catalytic triads/pockets, enzyme replacement, and related terms)
+  or requests implying folds **>45 aa** are refused with `422 Unprocessable`,
+  since catalytic pockets require large globular folds outside the 28-36 aa
+  knottin modality. The response suggests sourcing a natural homolog instead.
+
+## API Specs
+
+### `POST /api/generate-peptide`
+
+Requires **Bearer token** authentication. The server compares the
+`Authorization` header against the `API_BEARER_TOKEN` environment variable.
+
+```bash
+curl -X POST http://localhost:3000/api/generate-peptide \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_BEARER_TOKEN" \
+  -d '{
+    "target": "Clostridioides difficile colonization in the gut",
+    "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
+    "charge_target": 4
+  }'
+```
+
+Sample payload:
+
+```json
+{
+  "target": "Clostridioides difficile colonization in the gut",
+  "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
+  "charge_target": 4
+}
+```
+
+Sample JSON response (truncated):
+
+```json
+{
+  "success": true,
+  "target": "Clostridioides difficile colonization in the gut",
+  "modality": "engineered_knottin_microprotein",
+  "neurosymbolic_provenance": {
+    "proposer_model": "Meta-Spark-1.3-Contributor",
+    "linguistic_paradigm": "context_sensitive_loop_grammar",
+    "compiler_refinement_cycles": 2,
+    "refinement_trace": []
+  },
+  "candidate": {
+    "mature_sequence": "GCPKILKKCRRDSDCPGACICRGNGYCG",
+    "topology": "C1-C4, C2-C5, C3-C6 ICK",
+    "grammar_breakdown": { "L0": "G", "L1": "PKILKK", "...": "..." }
+  },
+  "symbolic_audit": {
+    "passed": true,
+    "length": 28,
+    "cys_count": 6,
+    "charge": 4,
+    "charge_target": 4,
+    "gravy": -0.21,
+    "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin"],
+    "violations": []
+  },
+  "lab_handoff": {
+    "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",
+    "secretion_leader": "MF-alpha-1 (85 aa) + Kex2 (KR)",
+    "cai": 0.87,
+    "gc_content": 0.41,
+    "restriction_scrub": { "status": "clean", "sites_verified": [] }
+  }
+}
+```
+
+Error codes: `401` invalid/missing Bearer token, `400` validation failure,
+`403` biosecurity block, `422` catalytic-enzyme refusal, `502` upstream
+generation failure.
+
+## Local Development
+
+Prerequisites: Node.js 20+ and npm.
+
+```bash
+npm install
+
+# Required env vars (see .env.local for local values)
+export API_BEARER_TOKEN="your-local-bearer-token"
+export META_API_KEY="your-meta-spark-key"
+# Optional: override the default Meta Spark Contributor endpoint
+# export META_SPARK_API_URL="https://api.example.com/v1"
+
+npm run dev      # start Next.js dev server at http://localhost:3000
+npm test         # typecheck + node --test suite
+npm run lint     # eslint
+npm run build    # production build
+```
+
+## License
+
+MIT â€” see `LICENSE` (or the SPDX `MIT` grant in package metadata) for details.
+This is hackathon software: verify all generated sequences experimentally
+before any therapeutic or clinical use.
