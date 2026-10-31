@@ -1873,7 +1873,9 @@
 .providerlist a {
   font-family: var(--font-display);
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--color-accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .providernote {

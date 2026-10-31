@@ -145,7 +145,7 @@ export default function DesignPage() {
             <h3>Custom DNA synthesis</h3>
             <p>
               Order the DNA order CSV and gBlock FASTA from any
-              synthesis house. All five build custom double-stranded
+              synthesis house. All six build custom double-stranded
               fragments and sequence-verified genes from pasted
               sequence:
             </p>
@@ -175,6 +175,13 @@ export default function DesignPage() {
                   Eurofins Genomics
                 </a>{" "}
                 — gene synthesis and oligonucleotides, EU and US labs.
+              </li>
+              <li>
+                <a href="https://www.camenabio.com">
+                  Camena Bioscience
+                </a>{" "}
+                — enzymatic gene synthesis for long, complex
+                constructs.
               </li>
             </ul>
             <h3>Engineered LBP development and manufacturing</h3>
