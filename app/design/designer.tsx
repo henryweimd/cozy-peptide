@@ -68,6 +68,11 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
     initial.runId ?? null
   );
   const customActive = presetId === "other";
+  // Deep-linked sessions chose on the overview: the top renders as a
+  // read-only summary, never as controls. Direct visits stay fully
+  // interactive.
+  const locked =
+    initial.presetId !== undefined || initial.custom !== undefined;
   const [modality, setModality] = useState<string>("knottin-6c");
   const [charge, setCharge] = useState<number>(DEMO_CHARGE_TARGET);
   const [research, setResearch] = useState(true);
@@ -225,6 +230,8 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const specificity = ok ? result?.specificity : undefined;
   const showFeed = loading || events.length > 0;
   const finished = !loading && (result !== null || error !== null);
+  const started =
+    loading || events.length > 0 || result !== null || error !== null;
   const loopEntries = LOOP_ORDER.filter(
     (loop) => candidate?.grammar_breakdown[loop] !== undefined
   );
@@ -250,6 +257,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             key={preset.id}
             type="button"
             aria-pressed={preset.id === presetId}
+            disabled={locked}
             className={
               preset.id === presetId
                 ? `${styles.cell} ${styles.cellActive}`
@@ -265,6 +273,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           type="button"
           aria-pressed={customActive}
           aria-expanded={customActive}
+          disabled={locked}
           className={
             customActive
               ? `${styles.cell} ${styles.cellActive}`
@@ -288,6 +297,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             maxLength={CUSTOM_TARGET_MAX_LENGTH}
             autoComplete="off"
             spellCheck={false}
+            disabled={locked}
             placeholder="e.g. bile acid diarrhea"
             onChange={(event) => setCustom(event.target.value)}
             onKeyDown={(event) => {
@@ -311,6 +321,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
               key={entry.value}
               type="button"
               aria-pressed={modality === entry.value}
+              disabled={locked}
               className={
                 modality === entry.value
                   ? `${styles.cell} ${styles.cellActive}`
@@ -335,6 +346,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
               key={value}
               type="button"
               aria-pressed={charge === value}
+              disabled={locked}
               className={
                 charge === value
                   ? `${styles.cell} ${styles.cellActive}`
@@ -352,6 +364,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         <input
           type="checkbox"
           checked={research}
+          disabled={locked}
           onChange={(event) => setResearch(event.target.checked)}
         />
         <span>
@@ -360,23 +373,25 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         </span>
       </label>
 
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.btnPrimary} ${styles.designbtn}`}
-        disabled={busy}
-        aria-busy={loading}
-        onClick={() => void generate()}
-      >
-        {loading
-          ? `Designing… ${elapsed}s`
-          : cooling
-            ? `Next design in ${formatCountdown(remaining)}`
-            : "Design my peptide"}
-      </button>
+      {(!locked || !started) && (
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.btnPrimary} ${styles.designbtn}`}
+          disabled={busy}
+          aria-busy={loading}
+          onClick={() => void generate()}
+        >
+          {loading
+            ? `Designing… ${elapsed}s`
+            : cooling
+              ? `Next design in ${formatCountdown(remaining)}`
+              : "Design my peptide"}
+        </button>
+      )}
       <p className={styles.note}>
-        Same demo rails as the landing page: presets or your own gut
-        condition under Other, one design per minute per visitor,
-        cooldown shared across both pages.
+        {locked
+          ? "Chosen on the overview — return there to pick a different condition. One design per minute per visitor."
+          : "Presets or your own gut condition under Other, one design per minute per visitor, cooldown shared across both pages."}
       </p>
 
       <div className={styles.feed} id="design-status" aria-live="polite">
