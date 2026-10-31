@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import type { ApiResponse } from "../../../types/peptide";
 import { validateRequestSafety } from "../../../lib/biosecurity";
@@ -22,7 +22,29 @@ import {
   buildNeurosymbolicPayload,
   refinementCycles,
 } from "../../../lib/neurosymbolic-payload";
-import { buildRunRecord, recordRun } from "../../../lib/db/runs";
+import {
+  buildRunRecord,
+  recordRun,
+  type RunRecord,
+} from "../../../lib/db/runs";
+import {
+  buildAndCacheNarrative,
+  narrativeInputFromRecord,
+} from "../../../lib/research/report-cache";
+
+/**
+ * Pre-generates the brief narrative after the response, so opening
+ * the literature brief later serves instantly. No-op when the run
+ * was not recorded or has nothing to synthesize from.
+ */
+function scheduleNarrative(runId: string | null, record: RunRecord): void {
+  if (runId === null) return;
+  const input = narrativeInputFromRecord(record);
+  if (input === null) return;
+  after(() => {
+    void buildAndCacheNarrative(runId, input);
+  });
+}
 import { guardCustomTarget } from "../../../lib/target-guard";
 
 export const runtime = "nodejs";
@@ -171,16 +193,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       research,
       requestedTarget
     );
-    const runId = await recordRun(
-      buildRunRecord({
-        source: "demo",
-        params: runParams,
-        elapsedMs: Date.now() - startedAt,
-        ok: true,
-        payload,
-        stageTrace,
-      })
-    );
+    const record = buildRunRecord({
+      source: "demo",
+      params: runParams,
+      elapsedMs: Date.now() - startedAt,
+      ok: true,
+      payload,
+      stageTrace,
+    });
+    const runId = await recordRun(record);
+    scheduleNarrative(runId, record);
     return json(runId === null ? payload : { ...payload, run_id: runId }, 200);
   } catch (error) {
     if (error instanceof NeurosymbolicVerificationError) {

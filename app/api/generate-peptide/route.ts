@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import {
   PeptideRequestSchema,
   type ApiResponse,
@@ -15,7 +15,15 @@ import {
 } from "../../../lib/meta-spark";
 import { buildLabHandoff } from "../../../lib/lab-handoff";
 import type { Modality } from "../../../lib/modality";
-import { buildRunRecord, recordRun } from "../../../lib/db/runs";
+import {
+  buildRunRecord,
+  recordRun,
+  type RunRecord,
+} from "../../../lib/db/runs";
+import {
+  buildAndCacheNarrative,
+  narrativeInputFromRecord,
+} from "../../../lib/research/report-cache";
 import {
   buildNeurosymbolicPayload,
   refinementCycles,
@@ -31,6 +39,20 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Max-Age": "86400",
 };
+
+/**
+ * Pre-generates the brief narrative after the response, so opening
+ * the literature brief later serves instantly. No-op when the run
+ * was not recorded or has nothing to synthesize from.
+ */
+function scheduleNarrative(runId: string | null, record: RunRecord): void {
+  if (runId === null) return;
+  const input = narrativeInputFromRecord(record);
+  if (input === null) return;
+  after(() => {
+    void buildAndCacheNarrative(runId, input);
+  });
+}
 
 function json(body: ApiResponse, status: number): NextResponse {
   return NextResponse.json(body, { status, headers: CORS_HEADERS });
@@ -218,16 +240,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       designModel,
       researchProvenance
     );
-    const runId = await recordRun(
-      buildRunRecord({
-        source: "api",
-        params: runParams,
-        elapsedMs: Date.now() - startedAt,
-        ok: true,
-        payload,
-        stageTrace,
-      })
-    );
+    const record = buildRunRecord({
+      source: "api",
+      params: runParams,
+      elapsedMs: Date.now() - startedAt,
+      ok: true,
+      payload,
+      stageTrace,
+    });
+    const runId = await recordRun(record);
+    scheduleNarrative(runId, record);
     return json(runId === null ? payload : { ...payload, run_id: runId }, 200);
   } catch (error) {
     if (error instanceof NeurosymbolicVerificationError) {
@@ -346,24 +368,24 @@ function streamGeneration(
           researchProvenance
         );
         send("result", payload);
-        const runId = await recordRun(
-          buildRunRecord({
-            source: "api-stream",
-            params: {
-              target,
-              mechanism,
-              charge_target: chargeTarget,
-              modality,
-              model,
-              research: researchEnabled,
-            },
-            elapsedMs: Date.now() - startedAt,
-            ok: true,
-            payload,
-            stageTrace,
-          })
-        );
+        const record = buildRunRecord({
+          source: "api-stream",
+          params: {
+            target,
+            mechanism,
+            charge_target: chargeTarget,
+            modality,
+            model,
+            research: researchEnabled,
+          },
+          elapsedMs: Date.now() - startedAt,
+          ok: true,
+          payload,
+          stageTrace,
+        });
+        const runId = await recordRun(record);
         if (runId !== null) send("run", { runId });
+        scheduleNarrative(runId, record);
       } catch (error) {
         if (error instanceof NeurosymbolicVerificationError) {
           const body = {

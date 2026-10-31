@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import type { ApiResponse } from "../../../types/peptide";
 import { validateRequestSafety } from "../../../lib/biosecurity";
@@ -22,8 +22,30 @@ import {
   buildNeurosymbolicPayload,
   refinementCycles,
 } from "../../../lib/neurosymbolic-payload";
-import { buildRunRecord, recordRun } from "../../../lib/db/runs";
+import {
+  buildRunRecord,
+  recordRun,
+  type RunRecord,
+} from "../../../lib/db/runs";
+import {
+  buildAndCacheNarrative,
+  narrativeInputFromRecord,
+} from "../../../lib/research/report-cache";
 import { guardCustomTarget } from "../../../lib/target-guard";
+
+/**
+ * Pre-generates the brief narrative after the response, so opening
+ * the literature brief later serves instantly. No-op when the run
+ * was not recorded or has nothing to synthesize from.
+ */
+function scheduleNarrative(runId: string | null, record: RunRecord): void {
+  if (runId === null) return;
+  const input = narrativeInputFromRecord(record);
+  if (input === null) return;
+  after(() => {
+    void buildAndCacheNarrative(runId, input);
+  });
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -195,17 +217,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           requestedTarget
         );
         send("result", payload);
-        const runId = await recordRun(
-          buildRunRecord({
-            source: "demo-stream",
-            params: runParams,
-            elapsedMs: Date.now() - startedAt,
-            ok: true,
-            payload,
-            stageTrace,
-          })
-        );
+        const record = buildRunRecord({
+          source: "demo-stream",
+          params: runParams,
+          elapsedMs: Date.now() - startedAt,
+          ok: true,
+          payload,
+          stageTrace,
+        });
+        const runId = await recordRun(record);
         if (runId !== null) send("run", { runId });
+        scheduleNarrative(runId, record);
       } catch (error) {
         if (error instanceof NeurosymbolicVerificationError) {
           const body = {

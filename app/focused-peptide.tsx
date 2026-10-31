@@ -380,6 +380,34 @@ export default function FocusedPeptide({
                   ))}
                 </ul>
               )}
+            </>
+          )}
+
+          {researchBlob !== null && (
+            <>
+              <h4>Literature brief</h4>
+              <p className={styles.handoffline}>
+                {researchStatus === "ok"
+                  ? `Converged from ${evidenceCount ?? 0} papers`
+                  : researchStatus === "disabled"
+                    ? "Disabled — static prompt"
+                    : `Fallback to the static prompt (${researchStatus ?? "unknown"})`}
+              </p>
+              <div className={styles.reportactions}>
+                <button
+                  type="button"
+                  className={styles.btn}
+                  onClick={() => setReportOpen(true)}
+                >
+                  Read the literature brief
+                </button>
+              </div>
+            </>
+          )}
+
+          {sequence.length > 0 && (
+            <>
+              <h4>Predicted structure</h4>
               <PeptideViewer
                 key={runId}
                 sequence={sequence}
@@ -435,6 +463,13 @@ export default function FocusedPeptide({
             </>
           )}
 
+          {downloadResult !== null && (
+            <>
+              <h4>Lab handoff</h4>
+              <HandoffDownloads result={downloadResult} />
+            </>
+          )}
+
           {refinementTurns > 0 && (
             <>
               <h4>Provenance</h4>
@@ -452,35 +487,6 @@ export default function FocusedPeptide({
             </>
           )}
 
-          {researchBlob !== null && (
-            <>
-              <h4>Literature brief</h4>
-              <p className={styles.handoffline}>
-                {researchStatus === "ok"
-                  ? `Converged from ${evidenceCount ?? 0} papers`
-                  : researchStatus === "disabled"
-                    ? "Disabled — static prompt"
-                    : `Fallback to the static prompt (${researchStatus ?? "unknown"})`}
-              </p>
-            </>
-          )}
-
-          {downloadResult !== null && (
-            <>
-              <h4>Lab handoff</h4>
-              <HandoffDownloads result={downloadResult} />
-            </>
-          )}
-
-          <div className={styles.reportactions}>
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={() => setReportOpen(true)}
-            >
-              Read the literature brief
-            </button>
-          </div>
           {reportOpen && (
             <ReportDialog
               source={{ kind: "run", runId }}

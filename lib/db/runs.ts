@@ -236,7 +236,8 @@ export async function saveRun(
   }
 }
 
-function citationsFromRecord(record: RunRecord): StoredCitation[] {
+/** Extracts storable citations from a record's research provenance. */
+export function citationsFromRecord(record: RunRecord): StoredCitation[] {
   const provenance = record.research_provenance;
   if (typeof provenance !== "object" || provenance === null) return [];
   const evidence = (provenance as Record<string, unknown>)["evidence"];

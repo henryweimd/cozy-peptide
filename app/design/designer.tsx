@@ -245,14 +245,6 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
   return (
     <div className={styles.designer}>
-      {focusRunId !== null && (
-        <div id="design-focus">
-          <FocusedPeptide
-            runId={focusRunId}
-            onClose={() => setFocusRunId(null)}
-          />
-        </div>
-      )}
       <div
         id="design-controls"
         className={styles.cells}
@@ -429,6 +421,15 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         </p>
       )}
 
+      {focusRunId !== null && (
+        <div id="design-focus">
+          <FocusedPeptide
+            runId={focusRunId}
+            onClose={() => setFocusRunId(null)}
+          />
+        </div>
+      )}
+
       {ok && candidate !== undefined && audit !== undefined && (
         <div className={styles.result} id="design-result">
           <section aria-label="Designed sequence">
@@ -444,15 +445,6 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                   Interpreted as: {result.target}
                 </p>
               )}
-          </section>
-
-          <section aria-label="Predicted structure">
-            <h3>Predicted structure</h3>
-            <PeptideViewer
-              sequence={candidate.mature_sequence}
-              runId={result?.run_id ?? streamRunId}
-            />
-            <StructureGuide />
           </section>
 
           {researchBrief !== undefined && (
@@ -513,6 +505,15 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             />
           )}
 
+          <section aria-label="Predicted structure">
+            <h3>Predicted structure</h3>
+            <PeptideViewer
+              sequence={candidate.mature_sequence}
+              runId={result?.run_id ?? streamRunId}
+            />
+            <StructureGuide />
+          </section>
+
           <section aria-label="Audit ledger">
             <h3>Audit ledger</h3>
             <dl className={styles.metrics}>
@@ -556,19 +557,6 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             </section>
           )}
 
-          {provenance !== undefined && (
-            <section aria-label="Provenance">
-              <h3>Provenance</h3>
-              <ul className={styles.trace}>
-                {provenance.refinement_trace.map((turn, index) => (
-                  <li key={`${turn.turn}-${index}`}>
-                    turn {turn.turn}, {turn.source}, {turn.disposition}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           {specificity !== undefined && (
             <section aria-label="Specificity review">
               <h3>Specificity review</h3>
@@ -591,6 +579,19 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                 scrub {handoff.restriction_scrub.status}
               </p>
               <HandoffDownloads result={result} />
+            </section>
+          )}
+
+          {provenance !== undefined && (
+            <section aria-label="Provenance">
+              <h3>Provenance</h3>
+              <ul className={styles.trace}>
+                {provenance.refinement_trace.map((turn, index) => (
+                  <li key={`${turn.turn}-${index}`}>
+                    turn {turn.turn}, {turn.source}, {turn.disposition}
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 
