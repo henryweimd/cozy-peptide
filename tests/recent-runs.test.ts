@@ -5,8 +5,10 @@ import type { NextRequest } from "next/server";
 import {
   clampRecentLimit,
   fetchRecentRuns,
+  fetchRunById,
 } from "../lib/db/recent";
 import { GET as recentGET } from "../app/api/recent-peptides/route";
+import { GET as runGET } from "../app/api/peptide-run/route";
 
 const ROW = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -117,6 +119,89 @@ test("recent runs degrade to empty without env or on faults", async () => {
     assert.equal(malformed[0]?.candidateId, "SB-KNOT-1ABC");
   } finally {
     restoreEnv(saved);
+  }
+});
+
+test("run detail fetches one row with blobs", async () => {
+  const saved = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  const restore = (): void => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+  try {
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
+    let seenUrl = "";
+    const full = {
+      ...ROW,
+      target_class: "bacterial-colonization",
+      request: { target: ROW.target },
+      research_provenance: { status: "ok" },
+      refinement_trace: [{ turn: 1 }],
+      candidate: { sequence: ROW.candidate_sequence },
+      symbolic_audit: { charge: 4 },
+      lab_handoff: { cai: 0.98 },
+      agent_tools: [],
+    };
+    const found = await fetchRunById(ROW.id, {
+      fetchImpl: async (input) => {
+        seenUrl = String(input);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [full],
+        };
+      },
+    });
+    assert.ok(seenUrl.includes(`id=eq.${ROW.id}`));
+    assert.ok(found !== null);
+    assert.equal(found.targetClass, "bacterial-colonization");
+    assert.deepEqual(found.candidate, {
+      sequence: ROW.candidate_sequence,
+    });
+
+    const missing = await fetchRunById(ROW.id, {
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => [],
+      }),
+    });
+    assert.equal(missing, null);
+    assert.equal(await fetchRunById("not-a-uuid"), null);
+  } finally {
+    restore();
+  }
+});
+
+test("run route validates ids and degrades to 404", async () => {
+  const saved = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  try {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const bad = await runGET({
+      headers: new Headers(),
+      nextUrl: { searchParams: new URLSearchParams("id=nope") },
+    } as unknown as NextRequest);
+    assert.equal(bad.status, 400);
+    const missing = await runGET({
+      headers: new Headers(),
+      nextUrl: { searchParams: new URLSearchParams(`id=${ROW.id}`) },
+    } as unknown as NextRequest);
+    assert.equal(missing.status, 404);
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   }
 });
 

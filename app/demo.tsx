@@ -14,6 +14,7 @@ import {
   DEMO_COOLDOWN_SECONDS,
   DEMO_PRESETS,
 } from "../lib/demo-config";
+import { CUSTOM_TARGET_MAX_LENGTH } from "../lib/target-guard";
 
 import type { PipelinePayload, StageEvent } from "./pipeline-shared";
 import {
@@ -24,13 +25,16 @@ import {
   formatCountdown,
   parseSseFrame,
 } from "./pipeline-shared";
-import Recent from "./recent";
+import Recent, { type RecentRun } from "./recent";
+import FocusedPeptide from "./focused-peptide";
 
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
 const LOOP_ORDER = ["L1", "L2", "L3", "L4", "L5"];
 
 export default function Demo() {
   const [presetId, setPresetId] = useState<string>(DEMO_PRESETS[0]?.id ?? "");
+  const [custom, setCustom] = useState("");
+  const customActive = presetId === "other";
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
@@ -38,7 +42,9 @@ export default function Demo() {
   const [events, setEvents] = useState<StageEvent[]>([]);
   const [result, setResult] = useState<PipelinePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [focused, setFocused] = useState<RecentRun | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
+  const focusRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(COOLDOWN_KEY);
@@ -98,7 +104,15 @@ export default function Demo() {
 
   async function generate(): Promise<void> {
     const preset = DEMO_PRESETS.find((entry) => entry.id === presetId);
-    if (preset === undefined || loading || cooling) return;
+    const target = customActive
+      ? custom.trim()
+      : (preset?.target ?? "");
+    if (target.length === 0 || loading || cooling) {
+      if (customActive && custom.trim().length === 0 && !loading && !cooling) {
+        setError("Describe a gut condition first.");
+      }
+      return;
+    }
     setLoading(true);
     setElapsed(0);
     setError(null);
@@ -108,7 +122,7 @@ export default function Demo() {
       const response = await fetch("/api/demo-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target: preset.target }),
+        body: JSON.stringify({ target }),
       });
       if (!response.ok || response.body === null) {
         const payload = (await response
@@ -117,9 +131,13 @@ export default function Demo() {
         setError(
           payload?.error ?? `Request failed (${response.status}).`
         );
-        lockCooldown(
-          payload?.details?.retry_after_seconds ?? DEMO_COOLDOWN_SECONDS
-        );
+        // Only rate limits consume the cooldown: validation and safety
+        // refusals leave the visitor free to fix their input.
+        if (response.status === 429) {
+          lockCooldown(
+            payload?.details?.retry_after_seconds ?? DEMO_COOLDOWN_SECONDS
+          );
+        }
         return;
       }
       const reader = response.body.getReader();
@@ -193,7 +211,45 @@ export default function Demo() {
             {preset.label}
           </button>
         ))}
+        <button
+          key="other"
+          type="button"
+          aria-pressed={customActive}
+          aria-expanded={customActive}
+          className={
+            customActive
+              ? `${styles.cell} ${styles.cellActive}`
+              : styles.cell
+          }
+          onClick={() => setPresetId("other")}
+        >
+          Other…
+        </button>
       </div>
+      {customActive && (
+        <div className={styles.otherwrap}>
+          <label
+            className={styles.optlabel}
+            htmlFor="demo-other-target"
+          >
+            Describe the gut condition
+          </label>
+          <input
+            id="demo-other-target"
+            type="text"
+            className={styles.otherinput}
+            value={custom}
+            maxLength={CUSTOM_TARGET_MAX_LENGTH}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="e.g. bile acid diarrhea"
+            onChange={(event) => setCustom(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void generate();
+            }}
+          />
+        </div>
+      )}
 
       <button
         type="button"
@@ -210,12 +266,31 @@ export default function Demo() {
       </button>
       <p className={styles.note}>
         Runs the live pipeline in your browser. One design per minute per
-        visitor. Preset conditions only, no token needed.{" "}
+        visitor. Pick a preset or describe your own gut condition under
+        Other — guarded input, no token needed.{" "}
         <Link className={styles.designerlink} href="/design">
           Open the full designer
         </Link>
       </p>
-      <Recent />
+      <Recent
+        onUse={(run) => {
+          setFocused(run);
+          requestAnimationFrame(() => {
+            const reduced = window.matchMedia(
+              "(prefers-reduced-motion: reduce)"
+            ).matches;
+            focusRef.current?.scrollIntoView({
+              behavior: reduced ? "auto" : "smooth",
+              block: "start",
+            });
+          });
+        }}
+      />
+      {focused !== null && (
+        <div ref={focusRef}>
+          <FocusedPeptide run={focused} onClose={() => setFocused(null)} />
+        </div>
+      )}
 
       <div className={styles.feed} aria-live="polite">
         <div className={styles.feedhead}>
@@ -251,6 +326,12 @@ export default function Demo() {
               <h3>Designed sequence</h3>
               <p className={styles.sequence}>{candidate.mature_sequence}</p>
               <p className={styles.topology}>{candidate.topology}</p>
+              {result?.requested_target !== undefined &&
+                result.target !== undefined && (
+                  <p className={styles.interpreted}>
+                    Interpreted as: {result.target}
+                  </p>
+                )}
             </section>
 
             <section aria-label="Predicted structure">

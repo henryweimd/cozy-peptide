@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { timeAgo } from "./pipeline-shared";
 
-interface RecentRun {
+export interface RecentRun {
   id: string;
   createdAt: string;
   target: string;
@@ -37,7 +37,11 @@ function metaLine(run: RecentRun): string {
  * nothing until rows arrive, and hides on any fault — the ledger is
  * ambient, never load-bearing for the page.
  */
-export default function Recent(): React.ReactElement | null {
+export default function Recent({
+  onUse,
+}: {
+  onUse?: (run: RecentRun) => void;
+}): React.ReactElement | null {
   const [runs, setRuns] = useState<RecentRun[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -79,6 +83,16 @@ export default function Recent(): React.ReactElement | null {
               {run.target} — {timeAgo(run.createdAt, now)}
               {metaLine(run).length > 0 ? `, ${metaLine(run)}` : ""}
             </span>
+            {onUse !== undefined && run.candidateSequence !== null && (
+              <button
+                type="button"
+                className={styles.usebutton}
+                onClick={() => onUse(run)}
+                aria-label={`View structure of ${run.candidateId ?? "peptide"}`}
+              >
+                View structure
+              </button>
+            )}
           </li>
         ))}
       </ol>

@@ -12,6 +12,15 @@ interface FoldResponse {
   pdb?: string;
   plddt?: number;
   error?: string;
+  details?: { kind?: string };
+}
+
+/** Cold upstream workers answer slowly, then warm: retry those kinds. */
+const RETRYABLE_KINDS = new Set(["rate-limited", "timeout"]);
+const RETRY_DELAYS_MS = [3000, 6000];
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function applyStyles(viewer: GLViewer, scheme: ColorScheme): void {
@@ -65,18 +74,54 @@ export default function PeptideViewer({
       setMessage("Folding with ESMFold…");
       setPlddt(null);
       try {
-        const response = await fetch("/api/fold-peptide", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sequence }),
-        });
-        const body = (await response.json()) as FoldResponse;
+        let body: FoldResponse | null = null;
+        let lastError = "Folding failed.";
+        for (let retry = 0; ; retry += 1) {
+          try {
+            const response = await fetch("/api/fold-peptide", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sequence }),
+            });
+            const parsed = (await response.json()) as FoldResponse;
+            if (cancelled) return;
+            if (
+              response.ok &&
+              parsed.success &&
+              parsed.pdb !== undefined
+            ) {
+              body = parsed;
+              break;
+            }
+            lastError =
+              parsed.error ?? `Folding failed (${response.status}).`;
+            const kind = parsed.details?.kind;
+            const delay = RETRY_DELAYS_MS[retry];
+            if (
+              kind === undefined ||
+              !RETRYABLE_KINDS.has(kind) ||
+              delay === undefined
+            ) {
+              break;
+            }
+            setMessage("Folding is slow — retrying…");
+            await sleep(delay);
+            if (cancelled) return;
+          } catch (error) {
+            if (cancelled) return;
+            lastError =
+              error instanceof Error ? error.message : "Folding failed.";
+            const delay = RETRY_DELAYS_MS[retry];
+            if (delay === undefined) break;
+            setMessage("Folding is slow — retrying…");
+            await sleep(delay);
+            if (cancelled) return;
+          }
+        }
         if (cancelled) return;
-        if (!response.ok || !body.success || body.pdb === undefined) {
+        if (body === null) {
           setStatus("error");
-          setMessage(
-            body.error ?? `Folding failed (${response.status}).`
-          );
+          setMessage(lastError);
           return;
         }
         const { createViewer } = await import("3dmol");

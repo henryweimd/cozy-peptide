@@ -73,6 +73,36 @@ function parseRow(value: unknown): RecentRun | null {
   };
 }
 
+export interface RunDetail extends RecentRun {
+  targetClass: string | null;
+  request: unknown;
+  researchProvenance: unknown;
+  refinementTrace: unknown;
+  candidate: unknown;
+  symbolicAudit: unknown;
+  labHandoff: unknown;
+  agentTools: unknown;
+}
+
+function parseDetail(value: unknown): RunDetail | null {
+  const row = parseRow(value);
+  if (row === null || typeof value !== "object" || value === null) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    ...row,
+    targetClass: asString(record["target_class"]),
+    request: record["request"] ?? null,
+    researchProvenance: record["research_provenance"] ?? null,
+    refinementTrace: record["refinement_trace"] ?? null,
+    candidate: record["candidate"] ?? null,
+    symbolicAudit: record["symbolic_audit"] ?? null,
+    labHandoff: record["lab_handoff"] ?? null,
+    agentTools: record["agent_tools"] ?? null,
+  };
+}
+
 export function clampRecentLimit(value: unknown): number {
   const parsed =
     typeof value === "string"
@@ -88,6 +118,61 @@ export function clampRecentLimit(value: unknown): number {
  * Returns the most recent successful generations, newest first. Success
  * rows only — failed runs have no peptide to show.
  */
+/**
+ * Fetches one successful run with its full blobs (candidate, audit,
+ * handoff) for the focused-peptide panel. Returns null for bad ids,
+ * missing rows, missing env, or any fault.
+ */
+export async function fetchRunById(
+  id: string,
+  options: { fetchImpl?: FetchImpl; timeoutMs?: number } = {}
+): Promise<RunDetail | null> {
+  if (!/^[0-9a-fA-F-]{36}$/.test(id)) return null;
+  const baseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (
+    baseUrl === undefined ||
+    baseUrl.length === 0 ||
+    serviceKey === undefined ||
+    serviceKey.length === 0
+  ) {
+    return null;
+  }
+  const timeoutMs = options.timeoutMs ?? RECENT_RUNS_TIMEOUT_MS;
+  const fetchImpl =
+    options.fetchImpl ??
+    ((input: string | URL | Request, init?: RequestInit) =>
+      fetch(input, init));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const params = new URLSearchParams({
+      select: "*",
+      id: `eq.${id}`,
+      status: "eq.success",
+    });
+    const response = await fetchImpl(
+      `${baseUrl.replace(/\/+$/, "")}/rest/v1/peptide_runs?${params.toString()}`,
+      {
+        headers: {
+          Accept: "application/json",
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        signal: controller.signal,
+      }
+    );
+    if (!response.ok) return null;
+    const data: unknown = await response.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return parseDetail(data[0]);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchRecentRuns(
   limit: number = RECENT_RUNS_DEFAULT_LIMIT,
   options: { fetchImpl?: FetchImpl; timeoutMs?: number } = {}

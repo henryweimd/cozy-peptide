@@ -8,7 +8,9 @@ import { z } from "zod";
  */
 
 export const ESMFOLD_PDB_URL = "https://api.esmatlas.com/foldSequence/v1/pdb/";
-export const ESMFOLD_TIMEOUT_MS = 15000;
+/** Per-attempt budget: under the upstream gateway's own ~29s timeout so
+ * a slow attempt aborts into a client-side retry instead of hanging. */
+export const ESMFOLD_TIMEOUT_MS = 25000;
 export const ESMFOLD_MAX_LENGTH = 59;
 
 export const FoldRequestSchema = z.object({

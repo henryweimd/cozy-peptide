@@ -61,7 +61,8 @@ export function buildNeurosymbolicPayload(
   agentTools: AgentToolResult[] = [],
   targetClass: TargetClass = "general",
   model: string = META_SPARK_MODEL,
-  research?: ResearchProvenance
+  research?: ResearchProvenance,
+  requestedTarget?: string
 ): ApiResponse {
   const grammar = parseModalityGrammar(candidate, modality);
   const spec = specForModality(modality);
@@ -79,6 +80,9 @@ export function buildNeurosymbolicPayload(
   return {
     success: true,
     target,
+    ...(requestedTarget !== undefined
+      ? { requested_target: requestedTarget }
+      : {}),
     modality: spec.responseId,
     specificity,
     agent_tools: agentTools,

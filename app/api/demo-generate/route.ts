@@ -23,6 +23,7 @@ import {
   refinementCycles,
 } from "../../../lib/neurosymbolic-payload";
 import { buildRunRecord, recordRun } from "../../../lib/db/runs";
+import { guardCustomTarget } from "../../../lib/target-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,16 +68,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const target = parsed.data.target.trim();
-  if (!isDemoPresetTarget(target)) {
-    return json(
-      {
-        success: false,
-        error: "Demo accepts preset conditions only.",
-        details: { presets: DEMO_PRESETS.map((preset) => preset.id) },
-      },
-      400
-    );
+  const rawTarget = parsed.data.target.trim();
+  let target = rawTarget;
+  let requestedTarget: string | undefined;
+  if (!isDemoPresetTarget(rawTarget)) {
+    const verdict = guardCustomTarget(rawTarget);
+    if (!verdict.ok || verdict.target === undefined) {
+      return json(
+        {
+          success: false,
+          error: verdict.error ?? "Invalid target.",
+          details: { presets: DEMO_PRESETS.map((preset) => preset.id) },
+        },
+        verdict.code ?? 400
+      );
+    }
+    target = verdict.target;
+    if (verdict.revised) requestedTarget = rawTarget;
   }
 
   const safety = validateRequestSafety(target);
@@ -111,6 +119,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const startedAt = Date.now();
   const runParams = {
     target,
+    ...(requestedTarget !== undefined
+      ? { requested_target: requestedTarget }
+      : {}),
     charge_target: DEMO_CHARGE_TARGET,
     modality: "knottin-6c",
     research: true,
@@ -138,7 +149,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       agentTools,
       targetClass,
       undefined,
-      research
+      research,
+      requestedTarget
     );
     await recordRun(
       buildRunRecord({

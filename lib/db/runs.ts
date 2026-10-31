@@ -10,6 +10,7 @@ export type RunSource = "api" | "api-stream" | "demo" | "demo-stream";
 
 export interface RunRequestParams {
   target: string;
+  requested_target?: string;
   mechanism?: string;
   charge_target?: number;
   modality?: string;

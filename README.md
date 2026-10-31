@@ -405,12 +405,18 @@ per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 ### Try it in the browser
 
 The landing page includes a live demo that runs the real pipeline with no
-token required. It is restricted to five preset gut conditions and one
-design per minute per visitor (server-enforced cooldown), so the shared
-demo stays responsive and the upstream budget stays intact. While a design
-runs, the page streams live pipeline telemetry — proposal, grammar and
-audit verdicts per candidate, repair cycles, and handoff — over
-`POST /api/demo-stream`.
+token required. Pick one of five preset gut conditions — or choose Other
+and describe your own condition in free text. Custom input passes an
+aggressive server-side guard (`lib/target-guard.ts`) that refuses prompt
+injection, markup, off-topic prompts, obscenity, gibberish, non-medical
+text, and distant-organ targets, then revises survivors (cleanup plus
+shorthand expansion like "c diff" → "Clostridioides difficile"); the
+response carries the interpreted target when revision applied. One design
+per minute per visitor (server-enforced cooldown), so the shared demo
+stays responsive and the upstream budget stays intact. While a design
+runs, the page streams live pipeline telemetry — research, proposal,
+grammar and audit verdicts per candidate, repair cycles, and handoff —
+over `POST /api/demo-stream`.
 
 ## 🔬 Live 3D structure prediction (ESMFold & 3Dmol.js)
 
@@ -431,9 +437,9 @@ Candidate Sequence → Symbolic Verification → ESMFold API (/api/fold-peptide)
 - **Confidence parsing.** The proxy extracts mean pLDDT directly
   from the PDB B-factor column (cols 61–66) across C-alpha records
   and returns `{success, pdb, plddt}`. Upstream 429s surface as 429,
-  slow folds abort past 15s as 504, and anything else degrades to a
-  clean 502 — the viewer renders each as a retryable fallback, never
-  a broken canvas.
+  slow folds abort past 25s as 504, and anything else degrades to a
+  clean 502 — the viewer auto-retries slow and rate-limited folds,
+  then renders a retryable fallback, never a broken canvas.
 - **Interactive WebGL viewport.** The 3Dmol.js viewer shows the
   backbone cartoon colored by pLDDT confidence (blue ordered →
   red disordered) or residue spectrum, with cysteine sidechains in

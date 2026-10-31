@@ -51,6 +51,7 @@ export interface PipelinePayload {
   error?: string;
   details?: { retry_after_seconds?: number };
   target?: string;
+  requested_target?: string;
   modality?: string;
   neurosymbolic_provenance?: {
     proposer_model?: string;
@@ -93,6 +94,7 @@ export interface PipelinePayload {
   lab_handoff?: {
     cai: number;
     dna_gblock?: string;
+    gblock_manifest?: string;
     order_csv?: string;
     restriction_scrub: { status: string };
     synthesis_order: {
@@ -361,8 +363,10 @@ export function HandoffDownloads({
   result: PipelinePayload;
 }): React.ReactElement | null {
   const handoff = result.lab_handoff;
-  if (handoff === undefined) return null;
-  const stem = safeStem(handoff.synthesis_order.sequence_name);
+  const orderName = handoff?.synthesis_order?.sequence_name;
+  if (handoff === undefined || typeof orderName !== "string") return null;
+  const stem = safeStem(orderName);
+  const gblock = handoff.dna_gblock ?? handoff.gblock_manifest;
   return (
     <div
       className={styles.downloadrow}
@@ -380,14 +384,14 @@ export function HandoffDownloads({
           DNA order (.csv)
         </button>
       )}
-      {handoff.dna_gblock !== undefined && (
+      {gblock !== undefined && (
         <button
           type="button"
           className={styles.btn}
           onClick={() =>
             downloadTextFile(
               `${stem}.gblock.fasta`,
-              gblockFasta(handoff.synthesis_order.sequence_name, handoff.dna_gblock ?? ""),
+              gblockFasta(orderName, gblock),
               "text/plain"
             )
           }

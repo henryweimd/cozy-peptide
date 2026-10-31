@@ -14,6 +14,7 @@ import {
   DEMO_COOLDOWN_SECONDS,
   DEMO_PRESETS,
 } from "../../lib/demo-config";
+import { CUSTOM_TARGET_MAX_LENGTH } from "../../lib/target-guard";
 import type { PipelinePayload, StageEvent } from "../pipeline-shared";
 import {
   EventLog,
@@ -43,6 +44,8 @@ const CHARGES = [1, 2, 3, 4] as const;
  */
 export default function Designer() {
   const [presetId, setPresetId] = useState<string>(DEMO_PRESETS[0]?.id ?? "");
+  const [custom, setCustom] = useState("");
+  const customActive = presetId === "other";
   const [modality, setModality] = useState<string>("knottin-6c");
   const [charge, setCharge] = useState<number>(DEMO_CHARGE_TARGET);
   const [research, setResearch] = useState(true);
@@ -96,7 +99,13 @@ export default function Designer() {
 
   async function generate(): Promise<void> {
     const preset = DEMO_PRESETS.find((entry) => entry.id === presetId);
-    if (preset === undefined || loading || cooling) return;
+    const target = customActive ? custom.trim() : (preset?.target ?? "");
+    if (target.length === 0 || loading || cooling) {
+      if (customActive && custom.trim().length === 0 && !loading && !cooling) {
+        setError("Describe a gut condition first.");
+      }
+      return;
+    }
     setLoading(true);
     setElapsed(0);
     setError(null);
@@ -107,7 +116,7 @@ export default function Designer() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          target: preset.target,
+          target,
           charge_target: charge,
           modality,
           research,
@@ -118,9 +127,13 @@ export default function Designer() {
           .json()
           .catch(() => null)) as PipelinePayload | null;
         setError(payload?.error ?? `Request failed (${response.status}).`);
-        lockCooldown(
-          payload?.details?.retry_after_seconds ?? DEMO_COOLDOWN_SECONDS
-        );
+        // Only rate limits consume the cooldown: validation and safety
+        // refusals leave the visitor free to fix their input.
+        if (response.status === 429) {
+          lockCooldown(
+            payload?.details?.retry_after_seconds ?? DEMO_COOLDOWN_SECONDS
+          );
+        }
         return;
       }
       const reader = response.body.getReader();
@@ -195,7 +208,42 @@ export default function Designer() {
             {preset.label}
           </button>
         ))}
+        <button
+          key="other"
+          type="button"
+          aria-pressed={customActive}
+          aria-expanded={customActive}
+          className={
+            customActive
+              ? `${styles.cell} ${styles.cellActive}`
+              : styles.cell
+          }
+          onClick={() => setPresetId("other")}
+        >
+          Other…
+        </button>
       </div>
+      {customActive && (
+        <div className={styles.otherwrap}>
+          <label className={styles.optlabel} htmlFor="designer-other-target">
+            Describe the gut condition
+          </label>
+          <input
+            id="designer-other-target"
+            type="text"
+            className={styles.otherinput}
+            value={custom}
+            maxLength={CUSTOM_TARGET_MAX_LENGTH}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="e.g. bile acid diarrhea"
+            onChange={(event) => setCustom(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void generate();
+            }}
+          />
+        </div>
+      )}
 
       <div className={styles.optrow}>
         <div
@@ -274,8 +322,9 @@ export default function Designer() {
             : "Design my peptide"}
       </button>
       <p className={styles.note}>
-        Same demo rails as the landing page: preset conditions, one design
-        per minute per visitor, cooldown shared across both pages.
+        Same demo rails as the landing page: presets or your own gut
+        condition under Other, one design per minute per visitor,
+        cooldown shared across both pages.
       </p>
 
       <div className={styles.feed} aria-live="polite">
@@ -313,6 +362,12 @@ export default function Designer() {
               {candidate.id !== undefined ? `${candidate.id}, ` : ""}
               {candidate.topology}
             </p>
+            {result?.requested_target !== undefined &&
+              result.target !== undefined && (
+                <p className={styles.interpreted}>
+                  Interpreted as: {result.target}
+                </p>
+              )}
           </section>
 
           <section aria-label="Predicted structure">
