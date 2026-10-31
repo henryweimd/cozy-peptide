@@ -1,4 +1,9 @@
-export type SafetyCategory = "catalytic-enzyme" | "biosecurity";
+import { assessGutSite } from "./gut-targets";
+
+export type SafetyCategory =
+  | "catalytic-enzyme"
+  | "biosecurity"
+  | "off-site";
 
 export interface SafetyVerdict {
   safe: boolean;
@@ -75,6 +80,11 @@ export function extractRequestedLength(text: string): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+export const OFF_SITE_GUIDANCE =
+  "Gut-secreted peptides act in the digestive tract: they suit gut infections, " +
+  "barrier repair, mucosal inflammation, motility, and gut-axis metabolic targets, " +
+  "not distant organs. Restate the request around a target reachable from the gut lumen.";
+
 export const CATALYTIC_ENZYME_GUIDANCE =
   "Catalytic pockets require large globular folds sourced from natural " +
   "homologs (UniProt), not short de novo peptides (8-36 aa). Gut-delivered " +
@@ -84,8 +94,9 @@ export const CATALYTIC_ENZYME_GUIDANCE =
 
 /**
  * Upfront safety screen for an incoming generation request.
- * Returns unsafe for toxic-agent motifs and for catalytic-enzyme requests
- * (explicit enzyme targets or requested lengths above 45 aa).
+ * Returns unsafe for toxic-agent motifs, for off-site (non-gut) targets,
+ * and for catalytic-enzyme requests (explicit enzyme targets or requested
+ * lengths above 45 aa).
  */
 export function validateRequestSafety(
   target: string,
@@ -106,6 +117,15 @@ export function validateRequestSafety(
           "This API only designs therapeutic gut-delivered peptides and refuses toxin, translocation-domain, and bioweapon-adjacent requests.",
       };
     }
+  }
+
+  const gutSite = assessGutSite(text);
+  if (!gutSite.plausible) {
+    return {
+      safe: false,
+      category: "off-site",
+      reason: `${gutSite.reason ?? "Off-site target."} ${OFF_SITE_GUIDANCE}`,
+    };
   }
 
   const lengthHint = requestedLength ?? extractRequestedLength(text);

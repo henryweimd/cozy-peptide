@@ -625,8 +625,8 @@ export default function Home() {
                     <code className={styles.statuscode}>422</code>
                   </td>
                   <td data-label="Meaning">
-                    Catalytic-enzyme refusal, outside the short-peptide
-                    modalities.
+                    Catalytic-enzyme or off-site (non-gut) target
+                    refusal.
                   </td>
                 </tr>
                 <tr>
@@ -667,6 +667,16 @@ export default function Home() {
                     <code>422</code> with guidance to source a natural homolog
                     instead. Catalysis needs globular folds, not short
                     peptides.
+                  </p>
+                </div>
+              </div>
+              <div className={styles.row}>
+                <h3 className={styles.rowtitle}>Gut-target filter</h3>
+                <div className={styles.rowbody}>
+                  <p>
+                    Targets naming distant organs with no gut relationship
+                    get <code>422</code>: gut-secreted peptides can only
+                    plausibly treat what the lumen reaches.
                   </p>
                 </div>
               </div>
@@ -828,7 +838,8 @@ export default function Home() {
                     topology, exact formal charge, hydropathy window, and
                     zero protease, glycosylation, aggregation, oxidation,
                     or deamidation liabilities, scored with therapeutic
-                    and safety indices.
+                    and safety indices. Off-gut targets are refused up
+                    front.
                   </p>
                 </li>
                 <li>
@@ -838,8 +849,10 @@ export default function Home() {
                     prioritized by recurring-fault steering, for
                     model-guided repair instead of being discarded;
                     survivors face a blinded specificity review that must
-                    independently confirm the target. The full trace ships
-                    in the response.
+                    independently confirm the target, and flag
+                    predictions pointing outside the gut. The full trace
+                    ships in the response, alongside agentic tool stubs
+                    for binding, structure, and off-target review.
                   </p>
                 </li>
                 <li>
@@ -1024,8 +1037,8 @@ export default function Home() {
             symbolic compiler in this repo.
           </p>
           <p className={styles.footlegal}>
-            MIT · Hackathon software, verify all generated sequences
-            experimentally before any therapeutic or clinical use.
+            All rights reserved · Hackathon software, verify all generated
+            sequences experimentally before any therapeutic or clinical use.
           </p>
         </div>
       </footer>

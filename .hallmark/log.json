@@ -84,7 +84,31 @@
    "README: steering + modality docs, renumbered pipeline"
   ],
   "notes": [
-   "tests 37/37; source lint clean; static sweep 0 FAIL; section shots verified"
+   "tests 37/37; source lint clean; static sweep 0 FAIL; section shots verified",
+   "WARN 19 (All rights reserved footer) kept per explicit owner request"
+  ],
+  "waived": [
+   "44c",
+   "19"
+  ]
+ },
+ {
+  "date": "2026-10-31",
+  "mode": "feature",
+  "scope": "api+page+docs",
+  "entry": "/",
+  "theme": "cobalt",
+  "added": [
+   "gut-target plausibility: request filter (off-site 422), steering aim-at guidance, specificity distant-site gate + plausibility score",
+   "agentic tool stub registry (binding-affinity, structure-fold, off-target-panel) wired into pipeline + payload",
+   "footer license corrected MIT -> All rights reserved; new gut-target filter row"
+  ],
+  "waived": [
+   "44c",
+   "19"
+  ],
+  "notes": [
+   "tests 43/43; source lint clean; footer + rows shots verified"
   ]
  }
 ]

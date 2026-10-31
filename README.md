@@ -13,7 +13,7 @@ Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon).*
 *Muse Spark invents new peptides. The compiler proves that they're likely to
 work. Engineered yeast brews them in your gut.*
 
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![License: All rights reserved](https://img.shields.io/badge/license-All_rights_reserved-red)
 ![Next.js](https://img.shields.io/badge/built_with-Next.js-black?logo=next.js)
 ![Model](https://img.shields.io/badge/model-Muse_Spark_1.3-blue)
 
@@ -174,8 +174,11 @@ flowchart LR
    the therapeutic target class (bacterial colonization, toxin blockade,
    barrier repair, inflammation, pain/motility, metabolic, general) and
    authors the brief: per-class design directives plus a non-negotiable
-   safety contract. The caller names the disease; the system engineers the
-   rest, threading the advisory `mechanism` note through.
+   safety contract, each class aimed at plausible gut molecular targets
+   (adhesins and colonization factors, toxin receptor-binding surfaces,
+   tight-junction biology, mucosal cytokines, enteric receptors, gut-axis
+   metabolic pathways). The caller names the disease; the system engineers
+   the rest, threading the advisory `mechanism` note through.
 3. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) — the Contributor
    API proposes peptide *secretion payloads* for continuous *S. boulardii*
    expression (MFalpha1 pre-pro leader) under the modality grammar
@@ -212,11 +215,14 @@ flowchart LR
    or turns are exhausted. Passing pools keep their best candidate by GRAVY
    centrality, cleavage index, and therapeutic/safety indices, not
    first-pass order.
-6. **Round-trip specificity review** (`lib/specificity.ts`) — before
-   acceptance, the top candidate goes back to Muse Spark 1.3 *blinded*,
-   which must independently rank the intended target first and flag no
-   high-risk off-targets (hERG, human ion channels, hemolysis, clotting).
-   Mismatches trigger revision; the verdict ships in the response.
+6. **Round-trip specificity review** (`lib/specificity.ts`,
+   `lib/gut-targets.ts`) — before acceptance, the top candidate goes back
+   to Muse Spark 1.3 *blinded*, which must independently rank the intended
+   target first and flag no high-risk off-targets (hERG, human ion
+   channels, hemolysis, clotting). Predictions pointing at distant organs
+   fail like any high-risk flag, and every verdict carries a
+   gut-plausibility score. Mismatches trigger revision; the verdict ships
+   in the response.
 7. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
    candidates are compiled for *S. boulardii* (ATCC MYA-796) with:
    - A ready-to-clone **`cloning_payload`** cassette:
@@ -227,6 +233,12 @@ flowchart LR
    - A Gibson-flanked **gBlock manifest** (85-aa MFalpha-1 pre-pro leader,
      40-bp pESC/pPic9 homology arms) with CAI/GC reporting, mature/precursor
      FASTA, and a DNA synthesis order form
+8. **Agentic tool stubs** (`lib/agent-tools.ts`) — every accepted candidate
+   runs through the tool registry (`binding-affinity`, `structure-fold`,
+   `off-target-panel`), reported as `agent_tools` in the response. All
+   three are honest `not-configured` stubs today: the seam is ready for
+   docking, folding, and panel backends, and wiring one means replacing a
+   single `invoke` implementation.
 
 ## 🛡️ Block toxins and enzymes before generation
 
@@ -236,6 +248,11 @@ flowchart LR
   botulinum/BoNT (including translocation-domain constructs), diphtheria,
   Shiga, anthrax, tetanus, saxitoxin, tetrodotoxin, aflatoxin, or T-2 toxin
   patterns are refused with `403 Forbidden`.
+- **Gut-target filter** (`lib/gut-targets.ts`) — targets naming distant
+  organs with no gut relationship (brain, lung, heart, kidney, skin, and
+  similar) are refused with `422 Unprocessable`: gut-secreted peptides can
+  only plausibly treat what the lumen reaches. Anything with a stated gut
+  or gut-axis relationship passes to steering instead.
 - **Catalytic-enzyme refusal** — enzyme targets (lactase, polymerase, kinase,
   protease, catalytic triads/pockets, enzyme replacement, and related terms)
   or requests implying folds **>45 aa** are refused with `422 Unprocessable`,
@@ -346,7 +363,7 @@ Sample JSON response (truncated):
 | `400` | Invalid JSON body or schema validation failure. |
 | `401` | Missing or invalid bearer token. |
 | `403` | Biosecurity block (toxin-signature screening). |
-| `422` | Catalytic-enzyme refusal — outside the knottin modality. |
+| `422` | Catalytic-enzyme or off-site (non-gut) target refusal. |
 | `502` | Generation failure; no verifiable candidate produced. |
 
 ### Try it in the browser
@@ -380,9 +397,8 @@ npm run build    # production build
 
 ## License
 
-MIT — see `LICENSE` (or the SPDX `MIT` grant in package metadata) for details.
-This is hackathon software: verify all generated sequences experimentally
-before any therapeutic or clinical use.
+All rights reserved. This is hackathon software: verify all generated
+sequences experimentally before any therapeutic or clinical use.
 
 ## 🧪 Why this could actually work — a note for skeptics
 

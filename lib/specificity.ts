@@ -9,6 +9,10 @@ import {
   getMetaSparkApiUrl,
 } from "./spark-config";
 import { type Modality, specForModality } from "./modality";
+import {
+  assessGutPlausibility,
+  flagsDistantSite,
+} from "./gut-targets";
 
 /**
  * Review token budget. 512 is too small: the model's reasoning trace
@@ -191,24 +195,36 @@ export function parseSpecificityResponse(
   const top = targets[0] ?? "";
   const matched = matchIntendedTarget(top, intendedTarget);
   const highRisk = flagsHighRisk(offTargets);
-  const warnings = offTargets.filter((entry) => !highRisk.includes(entry));
+  const distant = flagsDistantSite([top, ...offTargets]);
+  const allFlags = [...highRisk, ...distant];
+  const warnings = offTargets.filter((entry) => !allFlags.includes(entry));
   if (!matched) {
     warnings.unshift(`Top prediction '${top}' does not match intended target`);
   }
+  const gutPlausible = assessGutPlausibility(targets);
+  if (!gutPlausible) {
+    warnings.push(
+      "No predicted target is a recognized gut molecular target — aim is unclear"
+    );
+  }
 
+  const reason = !matched
+    ? `Top prediction '${top}' does not match intended target`
+    : distant.length > 0
+      ? `Distant-site prediction (outside the gut): ${distant.join("; ")}`
+      : highRisk.length > 0
+        ? `High-risk off-target flags: ${highRisk.join("; ")}`
+        : `Top prediction '${top}' matches intended target`;
   return {
     checked: true,
-    pass: matched && highRisk.length === 0,
+    pass: matched && allFlags.length === 0,
     intended_target: intendedTarget,
     predicted_targets: targets,
     off_targets: offTargets,
-    high_risk_flags: highRisk,
+    high_risk_flags: allFlags,
     warnings,
-    reason: !matched
-      ? `Top prediction '${top}' does not match intended target`
-      : highRisk.length > 0
-        ? `High-risk off-target flags: ${highRisk.join("; ")}`
-        : `Top prediction '${top}' matches intended target`,
+    gut_plausible: gutPlausible,
+    reason,
   };
 }
 

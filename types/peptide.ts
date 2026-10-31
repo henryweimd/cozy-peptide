@@ -91,6 +91,7 @@ export const SpecificityReportSchema = z.object({
   off_targets: z.array(z.string()),
   high_risk_flags: z.array(z.string()),
   warnings: z.array(z.string()),
+  gut_plausible: z.boolean().optional(),
   reason: z.string(),
 });
 export type SpecificityReport = z.infer<typeof SpecificityReportSchema>;
@@ -264,6 +265,18 @@ export const LabHandoffManifestSchema = z.object({
   secretion_leader: z.string(),
 });
 export type LabHandoffManifest = z.infer<typeof LabHandoffManifestSchema>;
+
+/**
+ * One agentic tool invocation against an accepted candidate. Tools are
+ * stubs until backends land; `not-configured` is the honest default.
+ */
+export const AgentToolResultSchema = z.object({
+  tool: z.string(),
+  status: z.enum(["ok", "not-configured", "skipped", "error"]),
+  detail: z.string(),
+  latency_ms: z.number(),
+});
+export type AgentToolResult = z.infer<typeof AgentToolResultSchema>;
 
 /**
  * Standard API envelope for all route responses.

@@ -93,6 +93,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     extractRequestedLength(screeningText)
   );
   if (!safety.safe) {
+    if (safety.category === "off-site") {
+      return json(
+        {
+          success: false,
+          error:
+            "Unprocessable target: gut-secreted peptides cannot plausibly treat distant organs.",
+          details: {
+            diagnostic: safety.reason,
+            modality: "gut-delivered peptides, 8-36 amino acids",
+          },
+        },
+        422
+      );
+    }
     if (safety.category === "catalytic-enzyme") {
       return json(
         {
@@ -121,7 +135,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const { candidate, audit, refinementHistory } =
+    const { candidate, audit, refinementHistory, agentTools } =
       await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
         modality: designModality,
         mechanism,
@@ -135,7 +149,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         audit,
         refinementHistory,
         manifest,
-        designModality
+        designModality,
+        agentTools
       ),
       200
     );

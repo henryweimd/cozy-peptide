@@ -108,7 +108,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   recordDemoCall(ip);
 
   try {
-    const { candidate, audit, refinementHistory } =
+    const { candidate, audit, refinementHistory, agentTools } =
       await generateVerifiedPeptide(target, DEMO_CHARGE_TARGET);
     const manifest = buildLabHandoff(candidate);
     return json(
@@ -118,7 +118,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         candidate,
         audit,
         refinementHistory,
-        manifest
+        manifest,
+        "knottin-6c",
+        agentTools
       ),
       200
     );

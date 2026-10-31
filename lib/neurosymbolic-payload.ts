@@ -1,4 +1,5 @@
 import type {
+  AgentToolResult,
   ApiResponse,
   LabHandoffManifest,
   RefinementTurn,
@@ -54,7 +55,8 @@ export function buildNeurosymbolicPayload(
   audit: SymbolicAuditResult,
   history: RefinementTurn[],
   manifest: LabHandoffManifest,
-  modality: Modality = DEFAULT_MODALITY
+  modality: Modality = DEFAULT_MODALITY,
+  agentTools: AgentToolResult[] = []
 ): ApiResponse {
   const grammar = parseModalityGrammar(candidate, modality);
   const spec = specForModality(modality);
@@ -74,6 +76,7 @@ export function buildNeurosymbolicPayload(
     target,
     modality: spec.responseId,
     specificity,
+    agent_tools: agentTools,
     neurosymbolic_provenance: {
       proposer_model: PROPOSER_MODEL,
       linguistic_paradigm: LINGUISTIC_PARADIGM,

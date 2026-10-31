@@ -1,5 +1,6 @@
 import {
   MetaSparkResponseSchema,
+  type AgentToolResult,
   type KnottinGrammarParse,
   type MetaSparkMessage,
   type MetaSparkRequest,
@@ -32,6 +33,7 @@ import {
   constraintBlockForModality,
 } from "./prompt-steering";
 import { assessCandidate } from "./therapeutic-index";
+import { runAgentTools } from "./agent-tools";
 import {
   META_SPARK_MODEL,
   META_SPARK_DEFAULT_URL,
@@ -756,6 +758,7 @@ export async function generateVerifiedPeptide(
   candidate: string;
   audit: SymbolicAuditResult;
   refinementHistory: RefinementTurn[];
+  agentTools: AgentToolResult[];
 }> {
   const refinementHistory: RefinementTurn[] = [];
   const apiKey = process.env.META_API_KEY;
@@ -768,6 +771,24 @@ export async function generateVerifiedPeptide(
   );
   const extraction = extractionForModality(modality);
 
+  const acceptWithTools = async (accepted: {
+    candidate: string;
+    audit: SymbolicAuditResult;
+  }): Promise<{
+    candidate: string;
+    audit: SymbolicAuditResult;
+    refinementHistory: RefinementTurn[];
+    agentTools: AgentToolResult[];
+  }> => {
+    const agentTools = await runAgentTools({
+      candidate: accepted.candidate,
+      target,
+      modality,
+      charge_target: chargeTarget,
+    });
+    return { ...accepted, refinementHistory, agentTools };
+  };
+
   const synthesize = async (
     turn: number,
     reason: string
@@ -775,6 +796,7 @@ export async function generateVerifiedPeptide(
     candidate: string;
     audit: SymbolicAuditResult;
     refinementHistory: RefinementTurn[];
+    agentTools: AgentToolResult[];
   }> => {
     onEvent?.({
       stage: "synthesize",
@@ -794,7 +816,7 @@ export async function generateVerifiedPeptide(
       onEvent
     );
     if (accepted !== null) {
-      return { ...accepted, refinementHistory };
+      return acceptWithTools(accepted);
     }
     throw new NeurosymbolicVerificationError(
       `No verifiable candidate for target '${target}' from proposal, repair, or deterministic synthesis.`,
@@ -928,7 +950,7 @@ export async function generateVerifiedPeptide(
       repairTemperatureForCycle(cycle)
     );
     if (accepted !== null) {
-      return { ...accepted, refinementHistory };
+      return acceptWithTools(accepted);
     }
 
     const turnsExhausted = cycle >= maxRefinementTurns;

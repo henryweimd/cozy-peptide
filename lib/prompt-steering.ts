@@ -135,19 +135,19 @@ export function inferTargetClass(
 
 const CLASS_BRIEFS: Record<TargetClass, string> = {
   "bacterial-colonization":
-    "Therapeutic brief (bacterial colonization): bias cationic residues toward the most solvent-exposed loop to engage anionic bacterial surfaces; favor amphipathic balance over raw hydrophobicity; keep the scaffold protease-tight since the gut lumen is the battlefield.",
+    "Therapeutic brief (bacterial colonization): aim at plausible gut molecular targets — adhesins, colonization factors, fimbrial tips, or surface glycans of the named pathogen. Bias cationic residues toward the most solvent-exposed loop to engage anionic bacterial surfaces; favor amphipathic balance over raw hydrophobicity; keep the scaffold protease-tight since the gut lumen is the battlefield.",
   "toxin-blockade":
-    "Therapeutic brief (toxin blockade): design a binding interface, never a toxin fragment — shape a stable loop that can occlude a toxin receptor-binding surface; prioritize loop rigidity and charge complementarity to the toxin target; no translocation-domain content of any kind.",
+    "Therapeutic brief (toxin blockade): aim at the toxin's receptor-binding surface — design a binding interface, never a toxin fragment — shape a stable loop that can occlude it; prioritize loop rigidity and charge complementarity to the toxin target; no translocation-domain content of any kind.",
   "barrier-repair":
-    "Therapeutic brief (barrier repair): favor gentle mucosal retention — moderate cationic charge spread across loops, low hydrophobicity, minimal protease footprint — so the peptide lingers at the epithelium; avoid anything membrane-lytic.",
+    "Therapeutic brief (barrier repair): aim at tight-junction biology — claudin/occludin interfaces or mucin engagement that supports epithelial integrity. Favor gentle mucosal retention — moderate cationic charge spread across loops, low hydrophobicity, minimal protease footprint — so the peptide lingers at the epithelium; avoid anything membrane-lytic.",
   inflammation:
-    "Therapeutic brief (inflammation): aim for a compact, stable binding surface that can modulate an inflammatory mediator locally; keep immunogenic risk low — no aggregation-prone runs, no deamidation hotspots; stability first, since inflamed mucosa is protease-rich.",
+    "Therapeutic brief (inflammation): aim at a plausible mucosal mediator — TNF-family cytokines, interleukins, or leukocyte integrins active in gut inflammation. Design a compact, stable binding surface for local modulation; keep immunogenic risk low — no aggregation-prone runs, no deamidation hotspots; stability first, since inflamed mucosa is protease-rich.",
   "pain-motility":
-    "Therapeutic brief (pain/motility): design for local luminal or mucosal action with minimal systemic exposure risk; stable, compact, and clean — no channel-blocking pharmacophores, no hemolytic character; the peptide must calm the gut, never excite it.",
+    "Therapeutic brief (pain/motility): aim at enteric signaling — protease-activated receptors, serotonin or motilin-pathway receptors in the gut wall — for local luminal or mucosal action with minimal systemic exposure risk. Stable, compact, and clean — no channel-blocking pharmacophores, no hemolytic character; the peptide must calm the gut, never excite it.",
   metabolic:
-    "Therapeutic brief (metabolic): favor receptor-engaging loop geometry with high stability for sustained luminal presence; keep the design soluble and non-aggregating; charge placement should aid mucosal dwell without membrane disruption.",
+    "Therapeutic brief (metabolic): aim at gut-axis receptors — GLP-1/incretin pathways or bile-acid signaling — with receptor-engaging loop geometry and high stability for sustained luminal presence; keep the design soluble and non-aggregating; charge placement should aid mucosal dwell without membrane disruption.",
   general:
-    "Therapeutic brief (general): maximize specific binding potential with a well-ordered loop display; keep charge, solubility, and protease resistance balanced for gut delivery; stability and safety dominate every trade-off.",
+    "Therapeutic brief (general): aim at a plausible gut molecular target stated in or implied by the request — a pathogen surface, a mucosal receptor, or an epithelial interface. Maximize specific binding potential with a well-ordered loop display; keep charge, solubility, and protease resistance balanced for gut delivery; stability and safety dominate every trade-off.",
 };
 
 /**

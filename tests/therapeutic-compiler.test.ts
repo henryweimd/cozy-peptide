@@ -30,8 +30,26 @@ import {
   generateVerifiedPeptide,
   sampleFallbackCandidates,
 } from "../lib/meta-spark";
-import { buildSpecificityPrompt } from "../lib/specificity";
-import { CandidatePayloadSchema } from "../types/peptide";
+import {
+  buildSpecificityPrompt,
+  parseSpecificityResponse,
+} from "../lib/specificity";
+import {
+  assessGutPlausibility,
+  assessGutSite,
+  flagsDistantSite,
+} from "../lib/gut-targets";
+import { validateRequestSafety } from "../lib/biosecurity";
+import { DEMO_PRESETS } from "../lib/demo-config";
+import {
+  AGENT_TOOLS,
+  agentToolNames,
+  runAgentTools,
+} from "../lib/agent-tools";
+import {
+  AgentToolResultSchema,
+  CandidatePayloadSchema,
+} from "../types/peptide";
 import { POST } from "../app/api/generate-peptide/route";
 
 const TARGET = "TNF-alpha gut inflammation";
@@ -296,6 +314,139 @@ test("route serves every modality with indices and handoff", async () => {
       ((cloning["cassette_format"] as string) ?? "").startsWith("MFalpha1-Kex2-")
     );
   }
+});
+
+test("gut-site filter refuses distant organs, keeps gut-anchored targets", () => {
+  for (const target of [
+    "glioblastoma brain tumor",
+    "non-small cell lung cancer",
+    "Alzheimer's disease",
+    "metastatic melanoma",
+    "rheumatoid arthritis",
+  ]) {
+    const verdict = validateRequestSafety(target);
+    assert.equal(verdict.safe, false, target);
+    assert.equal(verdict.category, "off-site", target);
+  }
+  // Gut-anchored or gut-axis requests pass, including exemptions.
+  for (const target of [
+    "colorectal cancer",
+    "diabetic kidney disease",
+    "Clostridioides difficile colonization in the gut",
+    "GLP-1 receptor agonism for obesity",
+  ]) {
+    assert.equal(validateRequestSafety(target).safe, true, target);
+  }
+  for (const preset of DEMO_PRESETS) {
+    assert.equal(assessGutSite(preset.target).plausible, true, preset.id);
+    assert.equal(validateRequestSafety(preset.target).safe, true, preset.id);
+  }
+});
+
+test("route refuses off-site targets with 422", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  process.env.API_BEARER_TOKEN = "test-token";
+  const res = await POST({
+    headers: new Headers({ authorization: "Bearer test-token" }),
+    json: async () => ({ target: "glioblastoma brain tumor" }),
+  } as unknown as NextRequest);
+  assert.equal(res.status, 422);
+  const body = (await res.json()) as Record<string, unknown>;
+  assert.equal(body["success"], false);
+});
+
+test("specificity gate fails distant-site predictions, scores gut aim", () => {
+  const distant = parseSpecificityResponse(
+    [
+      "TARGET: brain-derived neurotrophic factor receptor — loop charge match",
+      "OFFTARGET: none",
+    ].join("\n"),
+    "Irritable bowel syndrome abdominal pain"
+  );
+  assert.equal(distant.pass, false);
+  assert.ok(distant.high_risk_flags.length >= 1);
+
+  const gut = parseSpecificityResponse(
+    [
+      "TARGET: C. difficile TcdA receptor — cationic loop matches the acidic pocket",
+      "OFFTARGET: none",
+    ].join("\n"),
+    "Clostridioides difficile colonization in the gut"
+  );
+  assert.equal(gut.pass, true);
+  assert.equal(gut.gut_plausible, true);
+
+  // Intent match with unclear molecular aim warns but still passes.
+  const vague = parseSpecificityResponse(
+    ["TARGET: healing factor XR-7 — general association", "OFFTARGET: none"].join(
+      "\n"
+    ),
+    "Irritable bowel syndrome healing"
+  );
+  assert.equal(vague.pass, true);
+  assert.equal(vague.gut_plausible, false);
+  assert.ok(vague.warnings.some((entry) => entry.includes("aim is unclear")));
+
+  assert.deepEqual(flagsDistantSite(["pulmonary surfactant protein"]), [
+    "pulmonary surfactant protein",
+  ]);
+  assert.deepEqual(flagsDistantSite(["C. difficile TcdA receptor"]), []);
+  assert.equal(assessGutPlausibility(["TNF-alpha cytokine"]), true);
+  assert.equal(assessGutPlausibility(["pulmonary surfactant protein"]), false);
+  assert.equal(assessGutPlausibility([]), false);
+});
+
+test("steering briefs aim at plausible gut molecular targets", () => {
+  const { brief } = buildSteeringBrief(
+    "Clostridioides difficile colonization in the gut"
+  );
+  assert.ok(brief.includes("adhesins"));
+  const { brief: barrier } = buildSteeringBrief(
+    "Intestinal barrier dysfunction and mucosal healing"
+  );
+  assert.ok(barrier.includes("tight-junction"));
+  const { brief: metabolic } = buildSteeringBrief("GLP-1 for obesity");
+  assert.ok(metabolic.includes("GLP-1"));
+});
+
+test("agent tool stubs report honestly and never throw", async () => {
+  assert.deepEqual(agentToolNames(), [
+    "binding-affinity",
+    "structure-fold",
+    "off-target-panel",
+  ]);
+  assert.equal(AGENT_TOOLS.length, 3);
+  const results = await runAgentTools({
+    candidate: "ACDEFGHIKLMN",
+    target: TARGET,
+    modality: "linear",
+    charge_target: 2,
+  });
+  assert.equal(results.length, 3);
+  for (const result of results) {
+    assert.equal(AgentToolResultSchema.safeParse(result).success, true);
+    assert.equal(result.status, "not-configured");
+    assert.ok(typeof result.latency_ms === "number");
+  }
+});
+
+test("route payload carries agent tool results", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  process.env.API_BEARER_TOKEN = "test-token";
+  const res = await POST({
+    headers: new Headers({ authorization: "Bearer test-token" }),
+    json: async () => ({ target: TARGET, charge_target: 2, modality: "linear" }),
+  } as unknown as NextRequest);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as Record<string, unknown>;
+  const tools = body["agent_tools"] as Array<Record<string, unknown>>;
+  assert.equal(tools.length, 3);
+  assert.deepEqual(
+    tools.map((entry) => entry["tool"]),
+    ["binding-affinity", "structure-fold", "off-target-panel"]
+  );
 });
 
 test("generation threads mechanism into steering", async () => {

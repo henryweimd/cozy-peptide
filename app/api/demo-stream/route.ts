@@ -118,7 +118,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       };
       try {
-        const { candidate, audit, refinementHistory } =
+        const { candidate, audit, refinementHistory, agentTools } =
           await generateVerifiedPeptide(
             target,
             DEMO_CHARGE_TARGET,
@@ -144,7 +144,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             candidate,
             audit,
             refinementHistory,
-            manifest
+            manifest,
+            "knottin-6c",
+            agentTools
           )
         );
       } catch (error) {
