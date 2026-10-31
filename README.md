@@ -168,6 +168,7 @@ flowchart LR
     D --> B
     C -->|"pass"| S["Blinded specificity review"]
     S --> E["Lab handoff: yeast cassette + DNA order"]
+    S -.-> F["3D structure: ESMFold + 3Dmol.js viewer"]
 ```
 
 1. **Ingestion** — `POST /api/generate-peptide` accepts a therapeutic `target`,
@@ -410,6 +411,48 @@ demo stays responsive and the upstream budget stays intact. While a design
 runs, the page streams live pipeline telemetry — proposal, grammar and
 audit verdicts per candidate, repair cycles, and handoff — over
 `POST /api/demo-stream`.
+
+## 🔬 Live 3D structure prediction (ESMFold & 3Dmol.js)
+
+Every accepted design renders as an interactive 3D model next to its
+sequence, on the landing demo and the full designer alike. The data
+flow runs after symbolic verification, on demand from the browser:
+
+```text
+Candidate Sequence → Symbolic Verification → ESMFold API (/api/fold-peptide) → 3Dmol.js Client Rendering
+```
+
+- **Zero-GPU, zero-key inference.** `POST /api/fold-peptide` accepts
+  `{sequence}` (1–59 canonical amino acids) and forwards the raw
+  sequence as `text/plain` to Meta's public ESM Metagenomic Atlas
+  API (`api.esmatlas.com/foldSequence/v1/pdb/`), which infers
+  physical topology straight from single-sequence representations —
+  no multiple sequence alignments, no API key, no GPU to provision.
+- **Confidence parsing.** The proxy extracts mean pLDDT directly
+  from the PDB B-factor column (cols 61–66) across C-alpha records
+  and returns `{success, pdb, plddt}`. Upstream 429s surface as 429,
+  slow folds abort past 15s as 504, and anything else degrades to a
+  clean 502 — the viewer renders each as a retryable fallback, never
+  a broken canvas.
+- **Interactive WebGL viewport.** The 3Dmol.js viewer shows the
+  backbone cartoon colored by pLDDT confidence (blue ordered →
+  red disordered) or residue spectrum, with cysteine sidechains in
+  sticks and yellow sulfur spheres so the knottin disulfide core
+  reads at a glance. Toggles for spin and color scheme, drag to
+  rotate, scroll to zoom, and an overlay chip with sequence length
+  and mean pLDDT. A "Structural Modeling & Confidence Guide" beside
+  the viewer explains the engine, the pLDDT bands, disulfide
+  inspection, and the monomeric-model disclaimer (verify top designs
+  with Chai-1 / Boltz-1 / AF3 before synthesis).
+- **Take the design with you.** Every result offers lab handoff-ready
+  downloads generated in the browser: the Twist/IDT DNA order CSV,
+  the gBlock FASTA, and the full JSON response.
+
+Local development needs nothing extra for folding — no env vars, no
+services. Production note: `api.esmatlas.com` is a shared public
+endpoint with rate limits of its own. The viewer retries cleanly on
+429s; for batch inference over many candidates, prefer queuing folds
+with backoff (or a self-hosted ESMFold) over parallel bursts.
 
 ## Run the compiler locally
 

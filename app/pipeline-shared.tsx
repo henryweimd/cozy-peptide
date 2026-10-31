@@ -92,6 +92,8 @@ export interface PipelinePayload {
   };
   lab_handoff?: {
     cai: number;
+    dna_gblock?: string;
+    order_csv?: string;
     restriction_scrub: { status: string };
     synthesis_order: {
       sequence_name: string;
@@ -244,6 +246,38 @@ export function parseSseFrame(frame: string): SseFrame {
   return { kind: "none" };
 }
 
+/** Safe filename stem from a construct id (alphanumeric, dash, dot). */
+export function safeStem(name: string): string {
+  const cleaned = name.replace(/[^A-Za-z0-9_.-]+/g, "-");
+  return cleaned.length > 0 ? cleaned : "peptide";
+}
+
+/** Triggers a client-side text download without a server round-trip. */
+export function downloadTextFile(
+  filename: string,
+  text: string,
+  mime = "text/plain"
+): void {
+  const blob = new Blob([text], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Wraps a gBlock sequence as an 80-column FASTA document. */
+export function gblockFasta(name: string, dna: string): string {
+  const lines = [`>${name} gblock`];
+  for (let i = 0; i < dna.length; i += 80) {
+    lines.push(dna.slice(i, i + 80));
+  }
+  return `${lines.join("\n")}\n`;
+}
+
 function stageGlyph(state: StageState): string {
   return state === "done"
     ? "✓"
@@ -317,6 +351,64 @@ export function StageDetail({
         );
       })}
     </ol>
+  );
+}
+
+/** Lab handoff downloads: DNA order CSV, gBlock FASTA, full JSON. */
+export function HandoffDownloads({
+  result,
+}: {
+  result: PipelinePayload;
+}): React.ReactElement | null {
+  const handoff = result.lab_handoff;
+  if (handoff === undefined) return null;
+  const stem = safeStem(handoff.synthesis_order.sequence_name);
+  return (
+    <div
+      className={styles.downloadrow}
+      role="group"
+      aria-label="Download lab handoff files"
+    >
+      {handoff.order_csv !== undefined && (
+        <button
+          type="button"
+          className={styles.btn}
+          onClick={() =>
+            downloadTextFile(`${stem}.order.csv`, handoff.order_csv ?? "", "text/csv")
+          }
+        >
+          DNA order (.csv)
+        </button>
+      )}
+      {handoff.dna_gblock !== undefined && (
+        <button
+          type="button"
+          className={styles.btn}
+          onClick={() =>
+            downloadTextFile(
+              `${stem}.gblock.fasta`,
+              gblockFasta(handoff.synthesis_order.sequence_name, handoff.dna_gblock ?? ""),
+              "text/plain"
+            )
+          }
+        >
+          gBlock (.fasta)
+        </button>
+      )}
+      <button
+        type="button"
+        className={styles.btn}
+        onClick={() =>
+          downloadTextFile(
+            `${stem}.result.json`,
+            JSON.stringify(result, null, 2),
+            "application/json"
+          )
+        }
+      >
+        Full result (.json)
+      </button>
+    </div>
   );
 }
 

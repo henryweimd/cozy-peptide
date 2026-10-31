@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import styles from "./page.module.css";
+import { StructureGuide } from "./peptide-viewer";
+
+const PeptideViewer = dynamic(() => import("./peptide-viewer"), {
+  ssr: false,
+  loading: () => <p className={styles.note}>Loading 3D viewer…</p>,
+});
 import {
   DEMO_COOLDOWN_SECONDS,
   DEMO_PRESETS,
@@ -11,6 +18,7 @@ import {
 import type { PipelinePayload, StageEvent } from "./pipeline-shared";
 import {
   EventLog,
+  HandoffDownloads,
   StageDetail,
   StageStrip,
   formatCountdown,
@@ -245,6 +253,12 @@ export default function Demo() {
               <p className={styles.topology}>{candidate.topology}</p>
             </section>
 
+            <section aria-label="Predicted structure">
+              <h3>Predicted structure</h3>
+              <PeptideViewer sequence={candidate.mature_sequence} />
+              <StructureGuide />
+            </section>
+
             <section aria-label="Loop grammar">
               <h3>Loop grammar</h3>
               <ul className={styles.loopchips}>
@@ -326,7 +340,7 @@ export default function Demo() {
               </section>
             )}
 
-            {handoff !== undefined && (
+            {handoff !== undefined && result !== null && (
               <section aria-label="Lab handoff">
                 <h3>Lab handoff</h3>
                 <p className={styles.handoffline}>
@@ -335,6 +349,7 @@ export default function Demo() {
                   {handoff.cai}, scrub{" "}
                   {handoff.restriction_scrub.status}
                 </p>
+                <HandoffDownloads result={result} />
               </section>
             )}
 

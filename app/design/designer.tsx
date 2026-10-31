@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import styles from "../page.module.css";
+import { StructureGuide } from "../peptide-viewer";
+
+const PeptideViewer = dynamic(() => import("../peptide-viewer"), {
+  ssr: false,
+  loading: () => <p className={styles.note}>Loading 3D viewer…</p>,
+});
 import {
   DEMO_CHARGE_TARGET,
   DEMO_COOLDOWN_SECONDS,
@@ -10,6 +17,7 @@ import {
 import type { PipelinePayload, StageEvent } from "../pipeline-shared";
 import {
   EventLog,
+  HandoffDownloads,
   StageDetail,
   StageStrip,
   formatCountdown,
@@ -307,6 +315,12 @@ export default function Designer() {
             </p>
           </section>
 
+          <section aria-label="Predicted structure">
+            <h3>Predicted structure</h3>
+            <PeptideViewer sequence={candidate.mature_sequence} />
+            <StructureGuide />
+          </section>
+
           {researchBrief !== undefined && (
             <section aria-label="Literature brief">
               <h3>Literature brief</h3>
@@ -407,7 +421,7 @@ export default function Designer() {
             </section>
           )}
 
-          {handoff !== undefined && (
+          {handoff !== undefined && result !== null && (
             <section aria-label="Lab handoff">
               <h3>Lab handoff</h3>
               <p className={styles.handoffline}>
@@ -415,6 +429,7 @@ export default function Designer() {
                 {handoff.synthesis_order.dna_length} bp, CAI {handoff.cai},
                 scrub {handoff.restriction_scrub.status}
               </p>
+              <HandoffDownloads result={result} />
             </section>
           )}
 

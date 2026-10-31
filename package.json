@@ -10,6 +10,7 @@
     "test": "tsc -p tsconfig.test.json && node --test .test-out/tests/"
   },
   "dependencies": {
+    "3dmol": "^2.5.5",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
