@@ -1,6 +1,7 @@
 # cozy-peptide - Neurosymbolic Biopolymer Compiler & Probiotic Secretion Engine
 
-*Built for the Meta Global AI Hackathon.*
+*Built for the Meta Global AI Hackathon. Live API docs:
+https://cozy-peptide.vercel.app*
 
 ## Executive Summary
 
