@@ -1,9 +1,17 @@
-# cozy-peptide — AI-Invented Mini-Proteins, Verified for the Lab
+# cozy-peptide — Name the disease. Get a novel AI-designed peptide to treat it.
 
-*Built for the Meta Global AI Hackathon. Live API docs:
-https://cozy-peptide.vercel.app*
+> ## Try it live: [cozy-peptide.vercel.app](https://cozy-peptide.vercel.app/)
+>
+> Design a peptide in your browser — no token needed. Then read the
+> [biology](https://cozy-peptide.vercel.app/#biology),
+> [safety](https://cozy-peptide.vercel.app/#safety), and API tabs on the site.
+> This README is the condensed version; the site is the full story.
 
-*Describe the disease. Muse Spark designs the probiotic. Your medicine, brewed around the clock.*
+*Built for the [Meta Global AI Developer
+Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon).*
+
+*Muse Spark invents new peptides. The compiler proves that they're likely to
+work. Engineered yeast brews them in your gut.*
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Next.js](https://img.shields.io/badge/built_with-Next.js-black?logo=next.js)
@@ -30,10 +38,11 @@ passes every check.
 The output is not a picture or a score. It is a **verified protein
 sequence** — the invention itself — which converts straightforwardly into a
 **DNA synthesis order you can send to a vendor**: codon-optimized cDNA
-encoding a probiotic yeast (*Saccharomyces boulardii*) — a living miniature
-factory you install in your gut — that manufactures your therapeutic on
-site, exactly where the disease lives. The medicine is not a pill you keep
-taking; it is a factory you swallow once.
+encoding an engineered living therapeutic in *Saccharomyces boulardii* — a
+living miniature factory you install in your gut — that manufactures your
+therapeutic on site, exactly where the disease lives. Not a probiotic: a
+Live Biotherapeutic Product. The medicine is not a pill you keep taking;
+it is a factory you swallow once.
 
 Disease target in, verified protein out — with lab-ready DNA close behind
 and a full audit trail anyone can inspect.
@@ -81,6 +90,42 @@ a chatbot trick. It is a drug-discovery engine.
 - **Bench-ready, not demo-ware.** The response includes mature/precursor
   FASTA, restriction-scrubbed cDNA, Gibson assembly arms, CAI/GC reports,
   and a Twist/IDT-compatible order manifest.
+
+## The story in brief
+
+Condensed from the [live site](https://cozy-peptide.vercel.app/) — each
+section below is a full tab there.
+
+**cozy-peptide wraps Muse Spark.** A raw model proposes; most proposals
+would fail in a real body. Around the model sits a compiler that proves
+each design — knot, charge, safety — before anything touches a cell:
+
+```text
+name the disease → [ cozy-peptide [ compiler [ Muse Spark ] ] ] → yeast cassette
+```
+
+**Biology for everyone.** Chatbots predict the next word; Muse Spark
+predicts the next building block of a protein. DNA spells genes with four
+letters (A, C, G, T); proteins spell themselves with twenty amino-acid
+letters. Swallowed peptides rarely survive stomach acid and pancreatic
+proteases — so the winning design never travels as a pill. It is compiled
+into DNA and installed as a cassette in *Saccharomyces boulardii*, a
+miniature factory living where the disease lives. Full version with market
+figures (1 in 10 with IBS, 7M+ with IBD, $33B in drug sales):
+[cozy-peptide.vercel.app/#biology](https://cozy-peptide.vercel.app/#biology).
+
+**Safe by design, approved by precedent.** The chassis is GRAS yeast with
+decades of safe use; it never colonizes and clears within days of the last
+dose; engineered auxotrophy and CRISPR kill switches contain it; and every
+peptide passes the compiler first. Regulators already know this category:
+Live Biotherapeutic Products go through IND, phased trials, and a full BLA
+at the FDA's Center for Biologics — a path Rebyota (2022, first LBP) and
+Vowst (2023, first oral LBP) already walked to approval for recurrent *C.
+difficile*. Once a chassis-and-compiler platform is proven, a new peptide
+is a cassette swap, not a new factory — pointing toward AI-designed,
+patient-matched peptides and n-of-1 trials where need is highest (see
+milasen, NEJM 2019). Full version:
+[cozy-peptide.vercel.app/#safety](https://cozy-peptide.vercel.app/#safety).
 
 ## 🔬 Watch a prompt become a protein
 
