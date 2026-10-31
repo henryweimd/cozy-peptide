@@ -77,6 +77,9 @@ export default function Home() {
             <a className={styles.navlink} href="#demo">
               the demo
             </a>
+            <a className={styles.navlink} href="#biology">
+              the biology
+            </a>
             <a className={styles.navlink} href="#api">
               the API call
             </a>
@@ -95,38 +98,152 @@ export default function Home() {
           <Field />
           <div className={`container ${styles.herogrid}`}>
             <div className={styles.herotext}>
-              <h1 id="page-title">Name the disease. Get the probiotic.</h1>
+              <h1 id="page-title">
+                Name the disease. Get a novel AI-designed peptide to treat
+                it.
+              </h1>
               <p className="lead">
-                Muse Spark invents knottins. The compiler proves them. Yeast
-                brews them.
+                New peptides, proven by the compiler, brewed in your gut.
               </p>
               <div className={styles.heroactions}>
                 <a className={styles.btn} href="#api">
                   Read the API call
                 </a>
               </div>
-              <figure className={styles.herophoto}>
-                <Image
-                  src="/knottin-exhibit.png"
-                  alt="Structural cartoon of a Muse Spark 1.3-designed knottin for C. difficile"
-                  width={433}
-                  height={453}
-                  sizes="(max-width: 60rem) 96px, 192px"
-                  fetchPriority="high"
-                />
-                <figcaption>
-                  A knottin invented by Muse Spark 1.3 for{" "}
-                  <em>C. difficile</em>, never existed in nature.
-                </figcaption>
-              </figure>
-              <ul className={styles.chips} aria-label="Design constraints">
-                <li>28 to 36 aa</li>
-                <li>6-Cys ICK knot</li>
-                <li>charge +3…+5</li>
-                <li>CAI &gt; 0.85</li>
-              </ul>
             </div>
             <Demo />
+          </div>
+        </section>
+
+        <section className={styles.section} aria-labelledby="biology">
+          <div className="container">
+            <div className={styles.headblock}>
+              <h2 id="biology">Biology for everyone</h2>
+              <p className="lead">
+                Proteins are sentences. AI learned to write them.
+              </p>
+            </div>
+            <div className={styles.bioProse}>
+              <p>
+                Chatbots predict the next word. Muse Spark predicts the
+                next building block of a protein. DNA spells genes with
+                four letters, <code>A</code>, <code>C</code>,{" "}
+                <code>G</code>, <code>T</code>. Proteins spell themselves
+                with twenty amino-acid letters. A good sentence follows
+                grammar. A good protein folds into a working molecule,
+                knot and all.
+              </p>
+            </div>
+            <table className={styles.paperTable}>
+              <thead>
+                <tr>
+                  <th>Same idea</th>
+                  <th>You write</th>
+                  <th>DNA writes</th>
+                  <th>Muse Spark writes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Alphabet</th>
+                  <td data-label="You write">26 letters</td>
+                  <td data-label="DNA writes">
+                    4 bases: <code>A</code>, <code>C</code>, <code>G</code>,{" "}
+                    <code>T</code>
+                  </td>
+                  <td data-label="Muse Spark writes">
+                    20 amino-acid letters
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Sentence</th>
+                  <td data-label="You write">words in order</td>
+                  <td data-label="DNA writes">genes spelled in bases</td>
+                  <td data-label="Muse Spark writes">
+                    protein chains spelled in amino acids
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Good means</th>
+                  <td data-label="You write">grammar and sense</td>
+                  <td data-label="DNA writes">
+                    a folded, working molecule
+                  </td>
+                  <td data-label="Muse Spark writes">
+                    passes the compiler: knot, charge, safety
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className={styles.bioProse}>
+              <p>
+                Swallowed peptides rarely survive the trip. Stomach acid
+                shreds them, and pancreatic proteases finish the job in
+                the small intestine. So the winning design never travels
+                as a pill. It is compiled into DNA and installed as a
+                cassette in baker&apos;s yeast, starting with{" "}
+                <em>Saccharomyces boulardii</em>. Not a probiotic: an
+                engineered living therapeutic, a miniature factory that
+                lives in your gut and brews the medicine where the
+                disease lives.
+              </p>
+            </div>
+            <figure className={styles.bioFigure}>
+              <Image
+                src="/yeast-sem.jpg"
+                alt="Scanning electron micrograph of budding baker's yeast cells"
+                width={1280}
+                height={826}
+                sizes="(max-width: 60rem) 100vw, 896px"
+                loading="lazy"
+              />
+              <figcaption>
+                Baker&apos;s yeast, <em>Saccharomyces cerevisiae</em>,
+                budding under the electron microscope. Each cell becomes
+                a miniature factory for the designed peptide. Micrograph:{" "}
+                <a href="https://commons.wikimedia.org/wiki/File:Saccharomyces_cerevisiae_SEM.jpg">
+                  Mogana Das Murtey and Patchamuthu Ramasamy, CC BY 3.0,
+                  via Wikimedia Commons
+                </a>
+                .
+              </figcaption>
+            </figure>
+            <ul className={styles.statGrid} aria-label="Gut disease burden">
+              <li className={styles.stat}>
+                <span className={styles.statFigure}>1 in 10</span>
+                <p className={styles.statLabel}>
+                  people worldwide live with IBS
+                </p>
+              </li>
+              <li className={styles.stat}>
+                <span className={styles.statFigure}>7M+</span>
+                <p className={styles.statLabel}>
+                  people live with IBD, Crohn&apos;s and colitis
+                </p>
+              </li>
+              <li className={styles.stat}>
+                <span className={styles.statFigure}>500k</span>
+                <p className={styles.statLabel}>
+                  US C. difficile infections a year
+                </p>
+              </li>
+              <li className={styles.stat}>
+                <span className={styles.statFigure}>$33B</span>
+                <p className={styles.statLabel}>
+                  IBS plus IBD drug sales in 2025
+                </p>
+              </li>
+            </ul>
+            <p className={styles.sourceLine}>
+              Sources: CDC; Frontiers in Immunology 2026; Rome Foundation
+              meta-analyses; BCC Research, growing to $52.6B by 2030.
+              Celiac disease affects about 1% of people, and 43% carry{" "}
+              <em>H. pylori</em> (Lancet Gastroenterology 2023).
+            </p>
+            <p className={styles.statement} id="language">
+              A model that writes fluent sentences in the language of life
+              is no chatbot trick. It is a drug-discovery engine.
+            </p>
           </div>
         </section>
 
@@ -320,6 +437,29 @@ export default function Home() {
               </p>
             </div>
             <div className={styles.bento}>
+              <div className={`${styles.tile} ${styles.tileKnottin}`}>
+                <Image
+                  src="/knottin-exhibit.png"
+                  alt="Structural cartoon of a Muse Spark 1.3-designed knottin for C. difficile"
+                  width={433}
+                  height={453}
+                  sizes="(max-width: 60rem) 100vw, 360px"
+                  loading="lazy"
+                />
+                <span className={styles.tileLabel}>
+                  A knottin invented by Muse Spark 1.3 for{" "}
+                  <em>C. difficile</em>, never existed in nature.
+                </span>
+                <ul
+                  className={styles.chips}
+                  aria-label="Design constraints"
+                >
+                  <li>28 to 36 aa</li>
+                  <li>6-Cys ICK knot</li>
+                  <li>charge +3…+5</li>
+                  <li>CAI &gt; 0.85</li>
+                </ul>
+              </div>
               <div className={`${styles.tile} ${styles.tileSeq}`}>
                 <span className={styles.tileLabel}>
                   The C. difficile design, 29 amino acids
@@ -446,24 +586,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={styles.section} aria-labelledby="language">
-          <div className="container">
-            <div className={styles.headblock}>
-              <h2 id="language">Teach AI the sentences of life</h2>
-              <p className="lead">
-                If amino acids are words, proteins are sentences, and a
-                protein is literally text, so Muse Spark 1.3 writes in that
-                language. Drafts that don&apos;t make sense get edited until
-                they do.
-              </p>
-            </div>
-            <p className={styles.statement}>
-              A model that writes fluent sentences in the language of life
-              is no chatbot trick. It is a drug-discovery engine.
-            </p>
-          </div>
-        </section>
-
         <section
           className={`${styles.band} ${styles.bandWash}`}
           aria-label="Design another peptide"
@@ -492,6 +614,9 @@ export default function Home() {
           <nav className={styles.footcol} aria-label="Page">
             <a className={styles.footlink} href="#demo">
               the demo
+            </a>
+            <a className={styles.footlink} href="#biology">
+              the biology
             </a>
             <a className={styles.footlink} href="#api">
               the API call

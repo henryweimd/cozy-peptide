@@ -29,5 +29,31 @@
   "depth": "full",
   "scope": "page",
   "date": "2026-10-31"
+ },
+ {
+  "date": "2026-10-31",
+  "mode": "revision",
+  "scope": "page",
+  "entry": "/",
+  "theme": "cobalt",
+  "headline": "Name the disease. Get a novel AI-designed peptide to treat it.",
+  "lede": "New peptides, proven by the compiler, brewed in your gut.",
+  "added": [
+   "Biology for everyone section (#biology)",
+   "yeast SEM figure with CC BY 3.0 attribution",
+   "market stat grid + sourced source line",
+   "nav the-biology link"
+  ],
+  "removed": [
+   "probiotic framing (now S. boulardii ELT/LBP)",
+   "standalone language statement section (merged into biology)"
+  ],
+  "waived": [
+   "44c"
+  ],
+  "notes": [
+   "h1 11 words kept per explicit user request (58 NOTE accepted)",
+   "render hero: 0 FAIL 0 WARN 1 WAIVED 3 NOTE"
+  ]
  }
 ]

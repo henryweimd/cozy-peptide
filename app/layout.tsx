@@ -24,9 +24,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "cozy-peptide: name the disease, get the probiotic",
+  title:
+    "cozy-peptide: name the disease, get a novel AI-designed peptide to treat it",
   description:
-    "Muse Spark invents gut-stable knottin probiotics and a symbolic compiler proves each design. Run the live demo or call the API.",
+    "Muse Spark invents novel peptides, proven by a symbolic compiler and delivered by engineered yeast. Run the live demo or call the API.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
