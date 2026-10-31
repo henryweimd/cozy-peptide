@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 import { HandoffDownloads, timeAgo } from "./pipeline-shared";
+import ReportDialog from "./report-dialog";
 
 const PeptideViewer = dynamic(() => import("./peptide-viewer"), {
   ssr: false,
@@ -60,6 +61,7 @@ export default function FocusedPeptide({
     body: RunDetailBody;
   } | null>(null);
   const [failedId, setFailedId] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [now] = useState(() => Date.now());
 
   useEffect(() => {
@@ -161,6 +163,22 @@ export default function FocusedPeptide({
       {shown?.lab_handoff !== undefined && (
         <HandoffDownloads
           result={{ success: true, lab_handoff: shown.lab_handoff }}
+        />
+      )}
+
+      {shown !== null && (
+        <button
+          type="button"
+          className={styles.btn}
+          onClick={() => setReportOpen(true)}
+        >
+          Read the literature brief
+        </button>
+      )}
+      {reportOpen && (
+        <ReportDialog
+          source={{ kind: "run", runId }}
+          onClose={() => setReportOpen(false)}
         />
       )}
     </section>

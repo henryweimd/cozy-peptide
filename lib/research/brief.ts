@@ -57,6 +57,8 @@ export interface ResearchProvenance {
   cached: boolean;
   sources: ResearchSourceReport[];
   brief?: ResearchBrief;
+  /** Full citation records behind the brief (present on fresh ok runs). */
+  evidence?: EvidenceItem[];
 }
 
 export interface ResearchRunOptions {
@@ -81,7 +83,10 @@ export const RESEARCH_SYNTHESIS_TEMPERATURE = 0.2;
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 200;
-const cache = new Map<string, { brief: ResearchBrief; expiresAt: number }>();
+const cache = new Map<
+  string,
+  { brief: ResearchBrief; evidence: EvidenceItem[]; expiresAt: number }
+>();
 
 export function researchCacheKey(target: string, mechanism?: string): string {
   return `${target.trim().toLowerCase()}\n${(mechanism ?? "").trim().toLowerCase()}`;
@@ -92,22 +97,28 @@ export function clearResearchCache(): void {
   cache.clear();
 }
 
-function readCache(key: string): ResearchBrief | null {
+function readCache(
+  key: string
+): { brief: ResearchBrief; evidence: EvidenceItem[] } | null {
   const hit = cache.get(key);
   if (hit === undefined) return null;
   if (Date.now() >= hit.expiresAt) {
     cache.delete(key);
     return null;
   }
-  return hit.brief;
+  return { brief: hit.brief, evidence: hit.evidence };
 }
 
-function writeCache(key: string, brief: ResearchBrief): void {
+function writeCache(
+  key: string,
+  brief: ResearchBrief,
+  evidence: EvidenceItem[]
+): void {
   if (cache.size >= CACHE_MAX_ENTRIES) {
     const oldest = cache.keys().next();
     if (!oldest.done) cache.delete(oldest.value);
   }
-  cache.set(key, { brief, expiresAt: Date.now() + CACHE_TTL_MS });
+  cache.set(key, { brief, evidence, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 /**
@@ -342,10 +353,11 @@ export async function runResearchBrief(
       return {
         status: "ok",
         latencyMs: Date.now() - startedAt,
-        evidenceCount: cached.evidenceCount,
+        evidenceCount: cached.brief.evidenceCount,
         cached: true,
         sources: [],
-        brief: cached,
+        brief: cached.brief,
+        evidence: cached.evidence,
       };
     }
 
@@ -440,7 +452,7 @@ export async function runResearchBrief(
         sources,
       };
     }
-    writeCache(key, brief);
+    writeCache(key, brief, evidence);
     emit(
       `Literature brief converged: ${brief.targets.length} target(s), ` +
         `${brief.mechanisms.length} mechanism(s), ${brief.avoid.length} avoid(s)`
@@ -453,6 +465,7 @@ export async function runResearchBrief(
       cached: false,
       sources,
       brief,
+      evidence,
     };
   } catch (error) {
     return fallback(error instanceof Error ? error.message : "unknown error");

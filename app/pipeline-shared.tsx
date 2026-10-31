@@ -71,6 +71,14 @@ export interface PipelinePayload {
       avoid: ResearchEntry[];
       citations: Array<{ ref: string; note: string }>;
     } | null;
+    evidence?: Array<{
+      source: string;
+      id: string;
+      title: string;
+      snippet: string;
+      url: string;
+      year: string | null;
+    }>;
   };
   candidate?: {
     id?: string;

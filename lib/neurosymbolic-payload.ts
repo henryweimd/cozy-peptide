@@ -111,6 +111,7 @@ export function buildNeurosymbolicPayload(
               ...(source.error !== undefined ? { error: source.error } : {}),
             })),
             brief: research.brief ?? null,
+            evidence: research.evidence ?? [],
           },
     neurosymbolic_provenance: {
       proposer_model: displayNameForModel(model),

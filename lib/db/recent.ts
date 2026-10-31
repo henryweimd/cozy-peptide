@@ -75,6 +75,7 @@ function parseRow(value: unknown): RecentRun | null {
 
 export interface RunDetail extends RecentRun {
   targetClass: string | null;
+  narrative: unknown;
   request: unknown;
   researchProvenance: unknown;
   refinementTrace: unknown;
@@ -93,6 +94,7 @@ function parseDetail(value: unknown): RunDetail | null {
   return {
     ...row,
     targetClass: asString(record["target_class"]),
+    narrative: record["research_narrative"] ?? null,
     request: record["request"] ?? null,
     researchProvenance: record["research_provenance"] ?? null,
     refinementTrace: record["refinement_trace"] ?? null,
@@ -226,6 +228,47 @@ export async function fetchRecentRuns(
     return runs;
   } catch {
     return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Caches a synthesized report narrative on a run row. Best-effort:
+ * service-role key only (anon is INSERT-only), never throws, returns
+ * false when the cache write cannot be made.
+ */
+export async function updateRunNarrative(
+  runId: string,
+  narrative: unknown,
+  options: { timeoutMs?: number; fetchImpl?: FetchImpl } = {}
+): Promise<boolean> {
+  const baseUrl = process.env["SUPABASE_URL"]?.trim() ?? "";
+  const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"]?.trim() ?? "";
+  if (baseUrl.length === 0 || serviceKey.length === 0) return false;
+  if (runId.length === 0) return false;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const timeoutMs = options.timeoutMs ?? RECENT_RUNS_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(
+      `${baseUrl.replace(/\/+$/, "")}/rest/v1/peptide_runs?id=eq.${encodeURIComponent(runId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({ research_narrative: narrative }),
+        signal: controller.signal,
+      }
+    );
+    return response.ok;
+  } catch {
+    return false;
   } finally {
     clearTimeout(timer);
   }

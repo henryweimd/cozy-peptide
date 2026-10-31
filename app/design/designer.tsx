@@ -22,6 +22,7 @@ import {
 } from "../../lib/demo-config";
 import { CUSTOM_TARGET_MAX_LENGTH } from "../../lib/target-guard";
 import type { PipelinePayload, StageEvent } from "../pipeline-shared";
+import ReportDialog, { type ReportSource } from "../report-dialog";
 import {
   EventLog,
   HandoffDownloads,
@@ -83,6 +84,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const [events, setEvents] = useState<StageEvent[]>([]);
   const [result, setResult] = useState<PipelinePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -473,7 +475,34 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                     ))}
                   </ul>
                 )}
+              {(researchBrief.status === "ok" ||
+                researchBrief.brief !== undefined ||
+                (researchBrief.evidence?.length ?? 0) > 0) && (
+                <button
+                  type="button"
+                  className={styles.btn}
+                  onClick={() =>
+                    setReportSource({
+                      kind: "inline",
+                      target:
+                        result?.requested_target ??
+                        result?.target ??
+                        "current design",
+                      brief: researchBrief.brief ?? null,
+                      evidence: researchBrief.evidence ?? [],
+                    })
+                  }
+                >
+                  Read the full literature brief
+                </button>
+              )}
             </section>
+          )}
+          {reportSource !== null && (
+            <ReportDialog
+              source={reportSource}
+              onClose={() => setReportSource(null)}
+            />
           )}
 
           <section aria-label="Audit ledger">

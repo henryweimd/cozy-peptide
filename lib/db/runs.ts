@@ -6,6 +6,8 @@
  * research fallback.
  */
 
+import { saveCitations, type StoredCitation } from "./citations";
+
 export type RunSource = "api" | "api-stream" | "demo" | "demo-stream";
 
 export interface RunRequestParams {
@@ -46,6 +48,8 @@ export interface RunRecord {
 
 export interface SaveResult {
   saved: boolean;
+  /** New row id when the insert returned a representation. */
+  id?: string;
   error?: string;
 }
 
@@ -54,7 +58,11 @@ export const SUPABASE_SAVE_TIMEOUT_MS = 8000;
 type FetchImpl = (
   input: string | URL | Request,
   init?: RequestInit
-) => Promise<{ ok: boolean; status: number }>;
+) => Promise<{
+  ok: boolean;
+  status: number;
+  json?(): Promise<unknown>;
+}>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -157,7 +165,7 @@ export async function saveRun(
           "Content-Type": "application/json",
           apikey: key,
           Authorization: `Bearer ${key}`,
-          Prefer: "return=minimal",
+          Prefer: "return=representation",
         },
         body: JSON.stringify(record),
         signal: controller.signal,
@@ -166,7 +174,16 @@ export async function saveRun(
     if (!response.ok) {
       return { saved: false, error: `Supabase HTTP ${response.status}` };
     }
-    return { saved: true };
+    if (typeof response.json !== "function") return { saved: true };
+    const body: unknown = await response.json().catch(() => null);
+    const id =
+      Array.isArray(body) &&
+      typeof body[0] === "object" &&
+      body[0] !== null &&
+      typeof (body[0] as Record<string, unknown>)["id"] === "string"
+        ? ((body[0] as Record<string, unknown>)["id"] as string)
+        : undefined;
+    return id === undefined ? { saved: true } : { saved: true, id };
   } catch (error) {
     const name = error instanceof Error ? error.name : "unknown";
     return {
@@ -178,10 +195,35 @@ export async function saveRun(
   }
 }
 
+function citationsFromRecord(record: RunRecord): StoredCitation[] {
+  const provenance = record.research_provenance;
+  if (typeof provenance !== "object" || provenance === null) return [];
+  const evidence = (provenance as Record<string, unknown>)["evidence"];
+  if (!Array.isArray(evidence)) return [];
+  const citations: StoredCitation[] = [];
+  for (const entry of evidence) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const item = entry as Record<string, unknown>;
+    const source = typeof item["source"] === "string" ? item["source"] : "";
+    const externalId = typeof item["id"] === "string" ? item["id"] : "";
+    if (source.length === 0 || externalId.length === 0) continue;
+    citations.push({
+      source,
+      externalId,
+      title: typeof item["title"] === "string" ? item["title"] : "",
+      snippet: typeof item["snippet"] === "string" ? item["snippet"] : "",
+      url: typeof item["url"] === "string" ? item["url"] : "",
+      year: typeof item["year"] === "string" ? item["year"] : null,
+    });
+  }
+  return citations;
+}
+
 /**
- * Best-effort ledger write for routes: awaits the insert but never
- * throws, warning once when the database is unreachable or unconfigured
- * (silent when unconfigured — local dev without Supabase is normal).
+ * Best-effort ledger write for routes: awaits the run insert plus its
+ * citation rows but never throws, warning once when the database is
+ * unreachable or unconfigured (silent when unconfigured — local dev
+ * without Supabase is normal).
  */
 export async function recordRun(
   record: RunRecord,
@@ -189,8 +231,20 @@ export async function recordRun(
 ): Promise<void> {
   try {
     const result = await saveRun(record, options);
-    if (!result.saved && result.error !== "Supabase env not configured") {
-      console.warn(`[peptide-runs] ledger write failed: ${result.error}`);
+    if (!result.saved) {
+      if (result.error !== "Supabase env not configured") {
+        console.warn(`[peptide-runs] ledger write failed: ${result.error}`);
+      }
+      return;
+    }
+    if (result.id === undefined) return;
+    const citations = citationsFromRecord(record);
+    if (citations.length === 0) return;
+    const stored = await saveCitations(result.id, citations, {
+      timeoutMs: options.timeoutMs,
+    });
+    if (stored.error !== undefined) {
+      console.warn(`[peptide-runs] citations write failed: ${stored.error}`);
     }
   } catch (error) {
     console.warn(
