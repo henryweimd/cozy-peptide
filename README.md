@@ -161,7 +161,8 @@ therapeutic use.*
 
 ```mermaid
 flowchart LR
-    A["🎯 Disease target + charge"] --> B["Muse Spark 1.3 proposes knottins"]
+    A["🎯 Disease target + charge"] --> R["Literature research brief"]
+    R --> B["Muse Spark 1.3 proposes knottins"]
     B --> C{"Symbolic compiler audit"}
     C -->|"fail: diagnostics"| D["Repair loop"]
     D --> B
@@ -173,7 +174,9 @@ flowchart LR
    optional `mechanism`, optional integer `charge_target` (1, 2, 3, or 4),
    optional `modality` (`knottin-6c` default, `disulfide-4c`,
    `disulfide-2c`, or `linear`), and optional `model` (a Meta model id,
-   default `muse-spark-1.3-contributor`; `muse-wonder-1.0` also known).
+   default `muse-spark-1.3-contributor`; `muse-wonder-1.0` also known),
+   and optional `research` boolean (default true; false skips straight
+   to the static brief).
 2. **System prompt steering** (`lib/prompt-steering.ts`) — the system infers
    the therapeutic target class (bacterial colonization, toxin blockade,
    barrier repair, inflammation, pain/motility, metabolic, general) and
@@ -182,7 +185,11 @@ flowchart LR
    (adhesins and colonization factors, toxin receptor-binding surfaces,
    tight-junction biology, mucosal cytokines, enteric receptors, gut-axis
    metabolic pathways). The caller names the disease; the system engineers
-   the rest, threading the advisory `mechanism` note through.
+   the rest, threading the advisory `mechanism` note through. When
+   research is enabled, literature agents first converge PubMed and
+   Europe PMC evidence on the disease into targets, mechanisms, and an
+   avoid list that sharpen the brief; any research fault keeps the
+   static brief untouched.
 3. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) — the Contributor
    API proposes peptide *secretion payloads* for continuous *S. boulardii*
    expression (MFalpha1 pre-pro leader) under the modality grammar
@@ -377,6 +384,13 @@ Sample JSON response (truncated):
 | `422` | Catalytic-enzyme or off-site (non-gut) target refusal. |
 | `502` | Generation failure; no verifiable candidate produced. |
 
+Pass `?stream=1` (or `Accept: text/event-stream`) for server-sent
+`stage` events — research, propose, verify, repair, handoff — followed
+by a final `result` or `error` event, so callers can drive progress UI
+and see which stage failed. Every 200 response also carries
+`research_provenance`: the literature brief, citations, and
+per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
+
 ### More endpoints
 
 - **`POST /api/audit-peptide`** (Bearer [REDACTED] — audit a caller-supplied
@@ -409,6 +423,13 @@ export API_BEARER_TOKEN="your-local-bearer-token"
 export META_API_KEY="your-meta-spark-key"
 # Optional: override the default Meta Spark Contributor endpoint
 # export META_SPARK_API_URL="https://api.example.com/v1"
+# Run ledger (Supabase `peptide_runs` table). Without these, the API runs
+# normally and skips persistence; with them, every web and API generation
+# — success or failure — is recorded with its request, research brief,
+# refinement trace, and output. Service-role key preferred (server-only).
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="sb_secret_..."
+# export SUPABASE_ANON_KEY="sb_publishable_..."  # fallback: INSERT-only policy
 
 npm run dev      # start Next.js dev server at http://localhost:3000
 npm test         # typecheck + node --test suite

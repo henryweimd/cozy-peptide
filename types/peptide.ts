@@ -20,6 +20,13 @@ export const PeptideRequestSchema = z.object({
     .max(100)
     .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/)
     .optional(),
+  /**
+   * Literature research stage: converges PubMed and Europe PMC evidence
+   * into the generation prompt. Defaults to true on the API; set false
+   * for the fastest static-prompt path. Any research fault falls back
+   * to static steering automatically.
+   */
+  research: z.boolean().optional(),
 });
 export type PeptideRequest = z.infer<typeof PeptideRequestSchema>;
 

@@ -1,9 +1,7 @@
 import {
-  MetaSparkResponseSchema,
   type AgentToolResult,
   type KnottinGrammarParse,
   type MetaSparkMessage,
-  type MetaSparkRequest,
   type RefinementTurn,
   type SpecificityReport,
   type SymbolicAuditResult,
@@ -32,7 +30,14 @@ import {
   buildRepairSteering,
   buildSteeringBrief,
   constraintBlockForModality,
+  withResearchBrief,
 } from "./prompt-steering";
+import { requestSparkCompletion } from "./spark-client";
+import {
+  RESEARCH_DEFAULT_BUDGET_MS,
+  runResearchBrief,
+  type ResearchProvenance,
+} from "./research/brief";
 import { assessCandidate } from "./therapeutic-index";
 import { runAgentTools } from "./agent-tools";
 import {
@@ -341,73 +346,25 @@ export async function requestSparkCandidates(
   },
   model: string = META_SPARK_MODEL
 ): Promise<string[]> {
-  const apiKey = process.env.META_API_KEY;
-  if (apiKey === undefined || apiKey.length === 0) return [];
-
-  const payload: MetaSparkRequest = {
-    model,
-    messages,
+  const completion = await requestSparkCompletion(messages, {
+    maxTokens,
+    timeoutMs,
     temperature,
-    max_tokens: maxTokens,
-    reasoning_effort: META_SPARK_REASONING_EFFORT,
-  };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(getMetaSparkApiUrl(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      console.warn(`[meta-spark] upstream HTTP ${response.status}`);
-      return [];
-    }
-
-    const parsed = MetaSparkResponseSchema.safeParse(
-      (await response.json()) as unknown
+    model,
+  });
+  if (completion === null) return [];
+  const candidates = extractCandidateSequences(
+    completion.text,
+    extraction.minLength,
+    extraction.maxLength,
+    extraction.allowBare
+  );
+  if (candidates.length === 0) {
+    console.warn(
+      `[meta-spark] zero candidates extracted from ${completion.text.length} chars (finish=${completion.finish})`
     );
-    if (!parsed.success) {
-      console.warn("[meta-spark] unparseable response envelope");
-      return [];
-    }
-
-    const data = parsed.data;
-    const finish = data.choices?.[0]?.finish_reason ?? "unknown";
-    const content =
-      data.choices
-        ?.map((choice) => choice.message?.content ?? choice.text ?? "")
-        .filter((text) => text.length > 0)
-        .join("\n") ?? "";
-    const completion = `${content}\n${data.output_text ?? ""}`.trim();
-    if (completion.length === 0) {
-      console.warn(`[meta-spark] empty completion (finish=${finish})`);
-      return [];
-    }
-    const candidates = extractCandidateSequences(
-      completion,
-      extraction.minLength,
-      extraction.maxLength,
-      extraction.allowBare
-    );
-    if (candidates.length === 0) {
-      console.warn(
-        `[meta-spark] zero candidates extracted from ${completion.length} chars (finish=${finish})`
-      );
-    }
-    return candidates;
-  } catch (error) {
-    const name = error instanceof Error ? error.name : "unknown";
-    console.warn(`[meta-spark] request error: ${name}`);
-    return [];
-  } finally {
-    clearTimeout(timeout);
   }
+  return candidates;
 }
 
 /**
@@ -575,6 +532,7 @@ export const MAX_SPECIFICITY_CHECKS = 4;
 
 /** Pipeline stages emitted as live telemetry during generation. */
 export type PipelineStage =
+  | "research"
   | "propose"
   | "verify"
   | "repair"
@@ -765,6 +723,24 @@ export interface GenerationOptions {
   modality?: Modality;
   mechanism?: string;
   model?: string;
+  /**
+   * Literature research stage. Disabled by default so the library keeps
+   * its existing contract; API routes enable it explicitly. Any research
+   * fault falls back to the static steering brief.
+   */
+  research?: {
+    enabled?: boolean;
+    budgetMs?: number;
+  };
+}
+
+export interface VerifiedPeptide {
+  candidate: string;
+  audit: SymbolicAuditResult;
+  refinementHistory: RefinementTurn[];
+  agentTools: AgentToolResult[];
+  targetClass: TargetClass;
+  research: ResearchProvenance;
 }
 
 /**
@@ -778,6 +754,10 @@ export interface GenerationOptions {
  * grammar-constrained deterministic synthesizer serve as the final
  * backstop, with source-labeled provenance either way. An optional
  * event callback receives live pipeline telemetry for streaming UIs.
+ * When `options.research.enabled` is set, a literature research stage
+ * first converges PubMed and Europe PMC evidence into a brief that
+ * sharpens the steering prompt; research faults fall back to the
+ * static brief without touching generation or the compiler.
  */
 export async function generateVerifiedPeptide(
   target: string,
@@ -785,13 +765,7 @@ export async function generateVerifiedPeptide(
   maxRefinementTurns = 3,
   onEvent?: (event: PipelineEvent) => void,
   options: GenerationOptions = {}
-): Promise<{
-  candidate: string;
-  audit: SymbolicAuditResult;
-  refinementHistory: RefinementTurn[];
-  agentTools: AgentToolResult[];
-  targetClass: TargetClass;
-}> {
+): Promise<VerifiedPeptide> {
   const refinementHistory: RefinementTurn[] = [];
   const apiKey = process.env.META_API_KEY;
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
@@ -799,41 +773,64 @@ export async function generateVerifiedPeptide(
   const model = options.model ?? DEFAULT_MODEL;
   const modelLabel = shortLabelForModel(model);
   const spec = specForModality(modality);
-  const { targetClass, brief: steeringBrief } = buildSteeringBrief(
+  const { targetClass, brief: staticBrief } = buildSteeringBrief(
     target,
     options.mechanism
   );
   const extraction = extractionForModality(modality);
 
+  /**
+   * Literature research stage. Runs on its own wall-clock budget before
+   * the generation budget clock starts, so research can only sharpen
+   * the prompt — never steal time from propose/repair. Any fault keeps
+   * the static brief: generation and the compiler finish exactly as
+   * before.
+   */
+  const researchEnabled = options.research?.enabled === true;
+  let research: ResearchProvenance;
+  if (!researchEnabled) {
+    research = {
+      status: "disabled",
+      latencyMs: 0,
+      evidenceCount: 0,
+      cached: false,
+      sources: [],
+    };
+  } else if (!apiAvailable) {
+    research = {
+      status: "skipped",
+      reason: "Meta API key not configured",
+      latencyMs: 0,
+      evidenceCount: 0,
+      cached: false,
+      sources: [],
+    };
+  } else {
+    research = await runResearchBrief(target, options.mechanism, {
+      budgetMs: options.research?.budgetMs ?? RESEARCH_DEFAULT_BUDGET_MS,
+      model,
+      onEvent,
+    });
+  }
+  const steeringBrief = withResearchBrief(staticBrief, research.brief ?? null);
+
   const acceptWithTools = async (accepted: {
     candidate: string;
     audit: SymbolicAuditResult;
-  }): Promise<{
-    candidate: string;
-    audit: SymbolicAuditResult;
-    refinementHistory: RefinementTurn[];
-    agentTools: AgentToolResult[];
-    targetClass: TargetClass;
-  }> => {
+  }): Promise<VerifiedPeptide> => {
     const agentTools = await runAgentTools({
       candidate: accepted.candidate,
       target,
       modality,
       charge_target: chargeTarget,
     });
-    return { ...accepted, refinementHistory, agentTools, targetClass };
+    return { ...accepted, refinementHistory, agentTools, targetClass, research };
   };
 
   const synthesize = async (
     turn: number,
     reason: string
-  ): Promise<{
-    candidate: string;
-    audit: SymbolicAuditResult;
-    refinementHistory: RefinementTurn[];
-    agentTools: AgentToolResult[];
-    targetClass: TargetClass;
-  }> => {
+  ): Promise<VerifiedPeptide> => {
     onEvent?.({
       stage: "synthesize",
       turn,

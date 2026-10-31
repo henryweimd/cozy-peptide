@@ -18,6 +18,7 @@ import { buildVerificationReport } from "./symbolic-auditor";
 import { buildCloningPayload, constructTag } from "./lab-handoff";
 import type { TargetClass } from "./prompt-steering";
 import { META_SPARK_MODEL, displayNameForModel } from "./spark-config";
+import type { ResearchProvenance } from "./research/brief";
 
 const LINGUISTIC_PARADIGM = "context_sensitive_loop_grammar";
 
@@ -59,7 +60,8 @@ export function buildNeurosymbolicPayload(
   modality: Modality = DEFAULT_MODALITY,
   agentTools: AgentToolResult[] = [],
   targetClass: TargetClass = "general",
-  model: string = META_SPARK_MODEL
+  model: string = META_SPARK_MODEL,
+  research?: ResearchProvenance
 ): ApiResponse {
   const grammar = parseModalityGrammar(candidate, modality);
   const spec = specForModality(modality);
@@ -80,6 +82,32 @@ export function buildNeurosymbolicPayload(
     modality: spec.responseId,
     specificity,
     agent_tools: agentTools,
+    research_provenance:
+      research === undefined
+        ? {
+            status: "disabled",
+            latency_ms: 0,
+            evidence_count: 0,
+            cached: false,
+            sources: [],
+            brief: null,
+          }
+        : {
+            status: research.status,
+            ...(research.reason !== undefined
+              ? { reason: research.reason }
+              : {}),
+            latency_ms: research.latencyMs,
+            evidence_count: research.evidenceCount,
+            cached: research.cached,
+            sources: research.sources.map((source) => ({
+              name: source.name,
+              count: source.count,
+              latency_ms: source.latencyMs,
+              ...(source.error !== undefined ? { error: source.error } : {}),
+            })),
+            brief: research.brief ?? null,
+          },
     neurosymbolic_provenance: {
       proposer_model: displayNameForModel(model),
       linguistic_paradigm: LINGUISTIC_PARADIGM,

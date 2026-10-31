@@ -1,6 +1,7 @@
 import type { RefinementTurn } from "../types/peptide";
 import type { Modality } from "./modality";
 import { specForModality } from "./modality";
+import type { ResearchBrief } from "./research/brief";
 
 /**
  * Therapeutic target classes inferred from the request text. The system
@@ -178,6 +179,70 @@ export function buildSteeringBrief(
     parts.push(`Caller mechanism note (advisory, constraints win): ${mechanism.trim()}`);
   }
   return { targetClass, brief: parts.join(" ") };
+}
+
+/**
+ * Renders a converged literature brief as compact prompt prose. Capped
+ * and citation-tagged so the generation prompt gains grounding without
+ * prompt bloat or raw-abstract noise.
+ */
+export function renderResearchBrief(brief: ResearchBrief): string {
+  const parts: string[] = [];
+  if (brief.targets.length > 0) {
+    parts.push(
+      `Literature-grounded targets: ${brief.targets
+        .map((entry) =>
+          entry.rationale.length > 0
+            ? `${entry.name} (${entry.rationale})`
+            : entry.name
+        )
+        .join("; ")}.`
+    );
+  }
+  if (brief.mechanisms.length > 0) {
+    parts.push(
+      `Supported mechanisms: ${brief.mechanisms
+        .map((entry) =>
+          entry.rationale.length > 0
+            ? `${entry.name} (${entry.rationale})`
+            : entry.name
+        )
+        .join("; ")}.`
+    );
+  }
+  if (brief.avoid.length > 0) {
+    parts.push(
+      `Explicitly avoid: ${brief.avoid
+        .map((entry) =>
+          entry.rationale.length > 0
+            ? `${entry.name} (${entry.rationale})`
+            : entry.name
+        )
+        .join("; ")}.`
+    );
+  }
+  if (brief.citations.length > 0) {
+    parts.push(
+      `Evidence: ${brief.citations.map((cite) => cite.ref).join(", ")} ` +
+        `(${brief.evidenceCount} papers consulted).`
+    );
+  }
+  return parts.join(" ").slice(0, 1500);
+}
+
+/**
+ * Appends the literature brief to the static steering brief. A null
+ * brief returns the static brief byte-identical — the research fallback
+ * path leaves generation behavior exactly as before.
+ */
+export function withResearchBrief(
+  staticBrief: string,
+  brief: ResearchBrief | null
+): string {
+  if (brief === null) return staticBrief;
+  const rendered = renderResearchBrief(brief);
+  if (rendered.length === 0) return staticBrief;
+  return `${staticBrief} ${rendered}`;
 }
 
 /**

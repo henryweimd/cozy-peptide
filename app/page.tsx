@@ -584,8 +584,29 @@ export default function Home() {
                     <code>muse-wonder-1.0</code> also known.
                   </td>
                 </tr>
+                <tr>
+                  <td data-label="Field">
+                    <code>research</code>
+                  </td>
+                  <td data-label="Type">boolean</td>
+                  <td data-label="Required">no</td>
+                  <td data-label="Description">
+                    Literature research stage (default true). Set false
+                    for the fastest static-prompt path.
+                  </td>
+                </tr>
               </tbody>
             </table>
+
+            <p>
+              Pass <code>?stream=1</code> (or{" "}
+              <code>Accept: text/event-stream</code>) for server-sent{" "}
+              <code>stage</code> events — research, propose, verify,
+              repair, handoff — followed by a final <code>result</code>{" "}
+              or <code>error</code> event. Every response also carries{" "}
+              <code>research_provenance</code> with the literature
+              brief, citations, and per-source timings.
+            </p>
 
             <h3>Response (200, truncated)</h3>
             <pre className={styles.well}>
@@ -835,11 +856,12 @@ export default function Home() {
           <div className="container">
             <div className={styles.headblock}>
               <h2 id="pipeline">A request, from prompt to DNA</h2>
-              <p className="lead">Five stages, one verified sequence.</p>
+              <p className="lead">Six stages, one verified sequence.</p>
             </div>
             <div className={styles.pinned}>
               <div className={styles.pinboard} aria-hidden="true">
                 <span className={styles.pinplate}>Ingest</span>
+                <span className={styles.pinplate}>Research</span>
                 <span className={styles.pinplate}>Propose</span>
                 <span className={styles.pinplate}>Verify</span>
                 <span className={styles.pinplate}>Repair</span>
@@ -853,6 +875,15 @@ export default function Home() {
                     therapeutic target, an optional mechanism, an optional
                     charge target (1 to 4), and an optional modality:
                     knottin, disulfide, or linear.
+                  </p>
+                </li>
+                <li>
+                  <h3>Research</h3>
+                  <p>
+                    Literature agents converge PubMed and Europe PMC
+                    evidence on the disease into targets, mechanisms,
+                    and an avoid list that sharpen the prompt. Any
+                    fault falls back to the static brief.
                   </p>
                 </li>
                 <li>

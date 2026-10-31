@@ -7,7 +7,13 @@ import {
   DEMO_PRESETS,
 } from "../lib/demo-config";
 
-type StageName = "propose" | "verify" | "repair" | "synthesize" | "handoff";
+type StageName =
+  | "research"
+  | "propose"
+  | "verify"
+  | "repair"
+  | "synthesize"
+  | "handoff";
 
 interface StageEvent {
   stage: StageName;
@@ -80,6 +86,7 @@ interface StageDef {
 }
 
 const STAGES: StageDef[] = [
+  { name: "research", title: "Literature research", sub: "Targets and mechanisms from papers" },
   { name: "propose", title: "Semantic proposal", sub: "Muse Spark 1.3 drafts candidates" },
   { name: "verify", title: "Grammar + audit", sub: "Loop topology, charge, liabilities" },
   { name: "repair", title: "Compiler repair", sub: "Diagnostics-guided revision" },
@@ -96,7 +103,9 @@ function stageState(
 ): StageState {
   const seen = events.some((event) => event.stage === stage);
   if (!seen) {
-    if (finished && stage === "repair") return "bypassed";
+    if (finished && (stage === "repair" || stage === "research")) {
+      return "bypassed";
+    }
     return "idle";
   }
   if (finished) return "done";

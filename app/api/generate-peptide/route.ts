@@ -14,6 +14,8 @@ import {
   generateVerifiedPeptide,
 } from "../../../lib/meta-spark";
 import { buildLabHandoff } from "../../../lib/lab-handoff";
+import type { Modality } from "../../../lib/modality";
+import { buildRunRecord, recordRun } from "../../../lib/db/runs";
 import {
   buildNeurosymbolicPayload,
   refinementCycles,
@@ -21,7 +23,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +40,14 @@ export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
+/**
+ * Authenticated peptide generation. Pass `?stream=1` (or
+ * `Accept: text/event-stream`) for server-sent `stage` events as the run
+ * unfolds — research, propose, verify, repair, handoff — followed by a
+ * final `result` (or `error`) event, so callers can drive progress UI
+ * and pinpoint which stage failed. The plain JSON response carries the
+ * same outcome plus `research_provenance` either way.
+ */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const serverToken = process.env.API_BEARER_TOKEN;
   if (serverToken === undefined || serverToken.length === 0) {
@@ -55,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return json(
       {
         success: false,
-        error: "Unauthorized: invalid or missing bearer token.",
+        error: "Unauthorized: invalid or missing Bearer [REDACTED]",
       },
       401
     );
@@ -83,10 +93,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { target, mechanism, charge_target, modality, model } = parsed.data;
+  const { target, mechanism, charge_target, modality, model, research } =
+    parsed.data;
   const chargeTarget = charge_target ?? 4;
   const designModality = modality ?? "knottin-6c";
   const designModel = model ?? META_SPARK_MODEL;
+  const researchEnabled = research ?? true;
   const screeningText = `${target}\n${mechanism ?? ""}`.trim();
 
   const safety = validateRequestSafety(
@@ -135,57 +147,266 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  try {
-    const { candidate, audit, refinementHistory, agentTools, targetClass } =
-      await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
-        modality: designModality,
-        mechanism,
-        model: designModel,
-      });
-    const manifest = buildLabHandoff(candidate, designModality);
-    return json(
-      buildNeurosymbolicPayload(
-        target,
-        chargeTarget,
-        candidate,
-        audit,
-        refinementHistory,
-        manifest,
-        designModality,
-        agentTools,
-        targetClass,
-        designModel
-      ),
-      200
-    );
-  } catch (error) {
-    if (error instanceof NeurosymbolicVerificationError) {
-      return json(
-        {
-          success: false,
-          error:
-            "Upstream generation failed: no candidate passed neurosymbolic verification.",
-          details: {
-            message: error.message,
-            proposer_model: designModel,
-            compiler_refinement_cycles: refinementCycles(
-              error.refinementHistory
-            ),
-            refinement_trace: error.refinementHistory,
-          },
-        },
-        502
-      );
-    }
-    return json(
-      {
-        success: false,
-        error: `Upstream generation failed: ${designModel} API error.`,
-        details: {
-          message: error instanceof Error ? error.message : String(error),
-        },
-      },
-      502
+  const query = request.nextUrl?.searchParams;
+  const wantsStream =
+    query?.get("stream") === "1" ||
+    (request.headers.get("accept") ?? "").includes("text/event-stream");
+  if (wantsStream) {
+    return streamGeneration(
+      target,
+      chargeTarget,
+      designModality,
+      designModel,
+      mechanism,
+      researchEnabled
     );
   }
+
+  const startedAt = Date.now();
+  const runParams = {
+    target,
+    mechanism,
+    charge_target: chargeTarget,
+    modality: designModality,
+    model: designModel,
+    research: researchEnabled,
+  };
+  try {
+    const {
+      candidate,
+      audit,
+      refinementHistory,
+      agentTools,
+      targetClass,
+      research: researchProvenance,
+    } = await generateVerifiedPeptide(target, chargeTarget, 3, undefined, {
+      modality: designModality,
+      mechanism,
+      model: designModel,
+      research: { enabled: researchEnabled },
+    });
+    const manifest = buildLabHandoff(candidate, designModality);
+    const payload = buildNeurosymbolicPayload(
+      target,
+      chargeTarget,
+      candidate,
+      audit,
+      refinementHistory,
+      manifest,
+      designModality,
+      agentTools,
+      targetClass,
+      designModel,
+      researchProvenance
+    );
+    await recordRun(
+      buildRunRecord({
+        source: "api",
+        params: runParams,
+        elapsedMs: Date.now() - startedAt,
+        ok: true,
+        payload,
+      })
+    );
+    return json(payload, 200);
+  } catch (error) {
+    if (error instanceof NeurosymbolicVerificationError) {
+      const body = {
+        success: false,
+        error:
+          "Upstream generation failed: no candidate passed neurosymbolic verification.",
+        details: {
+          message: error.message,
+          proposer_model: designModel,
+          compiler_refinement_cycles: refinementCycles(
+            error.refinementHistory
+          ),
+          refinement_trace: error.refinementHistory,
+        },
+      };
+      await recordRun(
+        buildRunRecord({
+          source: "api",
+          params: runParams,
+          elapsedMs: Date.now() - startedAt,
+          ok: false,
+          payload: body,
+          errorMessage: error.message,
+        })
+      );
+      return json(body, 502);
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    const body = {
+      success: false,
+      error: `Upstream generation failed: ${designModel} API error.`,
+      details: { message },
+    };
+    await recordRun(
+      buildRunRecord({
+        source: "api",
+        params: runParams,
+        elapsedMs: Date.now() - startedAt,
+        ok: false,
+        payload: body,
+        errorMessage: message,
+      })
+    );
+    return json(body, 502);
+  }
+}
+
+function streamGeneration(
+  target: string,
+  chargeTarget: number,
+  modality: Modality,
+  model: string,
+  mechanism: string | undefined,
+  researchEnabled: boolean
+): NextResponse {
+  const encoder = new TextEncoder();
+  const startedAt = Date.now();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: string, data: unknown): void => {
+        controller.enqueue(
+          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        );
+      };
+      try {
+        const {
+          candidate,
+          audit,
+          refinementHistory,
+          agentTools,
+          targetClass,
+          research: researchProvenance,
+        } = await generateVerifiedPeptide(
+          target,
+          chargeTarget,
+          3,
+          (pipelineEvent) =>
+            send("stage", {
+              ...pipelineEvent,
+              elapsedMs: Date.now() - startedAt,
+            }),
+          {
+            modality,
+            mechanism,
+            model,
+            research: { enabled: researchEnabled },
+          }
+        );
+        send("stage", {
+          stage: "handoff",
+          turn: refinementCycles(refinementHistory),
+          message: "Compiling yeast secretion cassette…",
+          elapsedMs: Date.now() - startedAt,
+        });
+        const manifest = buildLabHandoff(candidate, modality);
+        const payload = buildNeurosymbolicPayload(
+          target,
+          chargeTarget,
+          candidate,
+          audit,
+          refinementHistory,
+          manifest,
+          modality,
+          agentTools,
+          targetClass,
+          model,
+          researchProvenance
+        );
+        send("result", payload);
+        await recordRun(
+          buildRunRecord({
+            source: "api-stream",
+            params: {
+              target,
+              mechanism,
+              charge_target: chargeTarget,
+              modality,
+              model,
+              research: researchEnabled,
+            },
+            elapsedMs: Date.now() - startedAt,
+            ok: true,
+            payload,
+          })
+        );
+      } catch (error) {
+        if (error instanceof NeurosymbolicVerificationError) {
+          const body = {
+            success: false,
+            error:
+              "Upstream generation failed: no candidate passed neurosymbolic verification.",
+            details: {
+              message: error.message,
+              proposer_model: model,
+              compiler_refinement_cycles: refinementCycles(
+                error.refinementHistory
+              ),
+              refinement_trace: error.refinementHistory,
+            },
+          };
+          send("error", body);
+          await recordRun(
+            buildRunRecord({
+              source: "api-stream",
+              params: {
+                target,
+                mechanism,
+                charge_target: chargeTarget,
+                modality,
+                model,
+                research: researchEnabled,
+              },
+              elapsedMs: Date.now() - startedAt,
+              ok: false,
+              payload: body,
+              errorMessage: error.message,
+            })
+          );
+        } else {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          const body = {
+            success: false,
+            error: `Upstream generation failed: ${model} API error.`,
+            details: { message },
+          };
+          send("error", body);
+          await recordRun(
+            buildRunRecord({
+              source: "api-stream",
+              params: {
+                target,
+                mechanism,
+                charge_target: chargeTarget,
+                modality,
+                model,
+                research: researchEnabled,
+              },
+              elapsedMs: Date.now() - startedAt,
+              ok: false,
+              payload: body,
+              errorMessage: message,
+            })
+          );
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new NextResponse(stream, {
+    status: 200,
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }

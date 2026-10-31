@@ -84,7 +84,8 @@ const TARGET = "TNF-alpha gut inflammation";
 test("route segment config exports", () => {
   assert.equal(runtime, "nodejs");
   assert.equal(dynamic, "force-dynamic");
-  assert.equal(maxDuration, 60);
+  // 120s headroom: ~15s literature research plus the 50s generation budget.
+  assert.equal(maxDuration, 120);
 });
 
 test("fallback sampler yields grammar-valid, audit-passing candidates", () => {

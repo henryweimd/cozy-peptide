@@ -22,10 +22,11 @@ import {
   buildNeurosymbolicPayload,
   refinementCycles,
 } from "../../../lib/neurosymbolic-payload";
+import { buildRunRecord, recordRun } from "../../../lib/db/runs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Streaming twin of the demo endpoint for the landing page. Same guards
@@ -118,17 +119,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       };
       try {
-        const { candidate, audit, refinementHistory, agentTools, targetClass } =
-          await generateVerifiedPeptide(
-            target,
-            DEMO_CHARGE_TARGET,
-            3,
-            (pipelineEvent) =>
-              send("stage", {
-                ...pipelineEvent,
-                elapsedMs: Date.now() - startedAt,
-              })
-          );
+        const {
+          candidate,
+          audit,
+          refinementHistory,
+          agentTools,
+          targetClass,
+          research,
+        } = await generateVerifiedPeptide(
+          target,
+          DEMO_CHARGE_TARGET,
+          3,
+          (pipelineEvent) =>
+            send("stage", {
+              ...pipelineEvent,
+              elapsedMs: Date.now() - startedAt,
+            }),
+          { research: { enabled: true } }
+        );
         send("stage", {
           stage: "handoff",
           turn: refinementCycles(refinementHistory),
@@ -136,23 +144,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           elapsedMs: Date.now() - startedAt,
         });
         const manifest = buildLabHandoff(candidate);
-        send(
-          "result",
-          buildNeurosymbolicPayload(
-            target,
-            DEMO_CHARGE_TARGET,
-            candidate,
-            audit,
-            refinementHistory,
-            manifest,
-            "knottin-6c",
-            agentTools,
-            targetClass
-          )
+        const payload = buildNeurosymbolicPayload(
+          target,
+          DEMO_CHARGE_TARGET,
+          candidate,
+          audit,
+          refinementHistory,
+          manifest,
+          "knottin-6c",
+          agentTools,
+          targetClass,
+          undefined,
+          research
+        );
+        send("result", payload);
+        await recordRun(
+          buildRunRecord({
+            source: "demo-stream",
+            params: {
+              target,
+              charge_target: DEMO_CHARGE_TARGET,
+              modality: "knottin-6c",
+              research: true,
+            },
+            elapsedMs: Date.now() - startedAt,
+            ok: true,
+            payload,
+          })
         );
       } catch (error) {
         if (error instanceof NeurosymbolicVerificationError) {
-          send("error", {
+          const body = {
             success: false,
             error:
               "Upstream generation failed: no candidate passed neurosymbolic verification.",
@@ -160,16 +182,48 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               message: error.message,
               refinement_trace: error.refinementHistory,
             },
-          });
+          };
+          send("error", body);
+          await recordRun(
+            buildRunRecord({
+              source: "demo-stream",
+              params: {
+                target,
+                charge_target: DEMO_CHARGE_TARGET,
+                modality: "knottin-6c",
+                research: true,
+              },
+              elapsedMs: Date.now() - startedAt,
+              ok: false,
+              payload: body,
+              errorMessage: error.message,
+            })
+          );
         } else {
-          send("error", {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          const body = {
             success: false,
             error:
               "Upstream generation failed: Meta Spark 1.3 Contributor API error.",
-            details: {
-              message: error instanceof Error ? error.message : String(error),
-            },
-          });
+            details: { message },
+          };
+          send("error", body);
+          await recordRun(
+            buildRunRecord({
+              source: "demo-stream",
+              params: {
+                target,
+                charge_target: DEMO_CHARGE_TARGET,
+                modality: "knottin-6c",
+                research: true,
+              },
+              elapsedMs: Date.now() - startedAt,
+              ok: false,
+              payload: body,
+              errorMessage: message,
+            })
+          );
         }
       } finally {
         controller.close();

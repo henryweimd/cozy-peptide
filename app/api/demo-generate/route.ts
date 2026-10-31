@@ -22,10 +22,11 @@ import {
   buildNeurosymbolicPayload,
   refinementCycles,
 } from "../../../lib/neurosymbolic-payload";
+import { buildRunRecord, recordRun } from "../../../lib/db/runs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Public, unauthenticated demo endpoint for the landing page. Abuse is
@@ -107,52 +108,91 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
   recordDemoCall(ip);
 
+  const startedAt = Date.now();
+  const runParams = {
+    target,
+    charge_target: DEMO_CHARGE_TARGET,
+    modality: "knottin-6c",
+    research: true,
+  };
   try {
-    const { candidate, audit, refinementHistory, agentTools, targetClass } =
-      await generateVerifiedPeptide(target, DEMO_CHARGE_TARGET);
+    const {
+      candidate,
+      audit,
+      refinementHistory,
+      agentTools,
+      targetClass,
+      research,
+    } = await generateVerifiedPeptide(target, DEMO_CHARGE_TARGET, 3, undefined, {
+      research: { enabled: true },
+    });
     const manifest = buildLabHandoff(candidate);
-    return json(
-      buildNeurosymbolicPayload(
-        target,
-        DEMO_CHARGE_TARGET,
-        candidate,
-        audit,
-        refinementHistory,
-        manifest,
-        "knottin-6c",
-        agentTools,
-        targetClass
-      ),
-      200
+    const payload = buildNeurosymbolicPayload(
+      target,
+      DEMO_CHARGE_TARGET,
+      candidate,
+      audit,
+      refinementHistory,
+      manifest,
+      "knottin-6c",
+      agentTools,
+      targetClass,
+      undefined,
+      research
     );
+    await recordRun(
+      buildRunRecord({
+        source: "demo",
+        params: runParams,
+        elapsedMs: Date.now() - startedAt,
+        ok: true,
+        payload,
+      })
+    );
+    return json(payload, 200);
   } catch (error) {
     if (error instanceof NeurosymbolicVerificationError) {
-      return json(
-        {
-          success: false,
-          error:
-            "Upstream generation failed: no candidate passed neurosymbolic verification.",
-          details: {
-            message: error.message,
-            compiler_refinement_cycles: refinementCycles(
-              error.refinementHistory
-            ),
-            refinement_trace: error.refinementHistory,
-          },
-        },
-        502
-      );
-    }
-    return json(
-      {
+      const body = {
         success: false,
         error:
-          "Upstream generation failed: Meta Spark 1.3 Contributor API error.",
+          "Upstream generation failed: no candidate passed neurosymbolic verification.",
         details: {
-          message: error instanceof Error ? error.message : String(error),
+          message: error.message,
+          compiler_refinement_cycles: refinementCycles(
+            error.refinementHistory
+          ),
+          refinement_trace: error.refinementHistory,
         },
-      },
-      502
+      };
+      await recordRun(
+        buildRunRecord({
+          source: "demo",
+          params: runParams,
+          elapsedMs: Date.now() - startedAt,
+          ok: false,
+          payload: body,
+          errorMessage: error.message,
+        })
+      );
+      return json(body, 502);
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    const body = {
+      success: false,
+      error:
+        "Upstream generation failed: Meta Spark 1.3 Contributor API error.",
+      details: { message },
+    };
+    await recordRun(
+      buildRunRecord({
+        source: "demo",
+        params: runParams,
+        elapsedMs: Date.now() - startedAt,
+        ok: false,
+        payload: body,
+        errorMessage: message,
+      })
     );
+    return json(body, 502);
   }
 }
