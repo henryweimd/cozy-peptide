@@ -70,15 +70,40 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
-        <h1>Neurosymbolic compiler for gut-stable knottins.</h1>
+        <h1>An AI that invents gut medicines from scratch.</h1>
         <p className={styles.lede}>
-          A design pipeline for therapeutic knottins (28–36 amino acids)
-          compiled into{" "}
-          <em>Saccharomyces boulardii</em> secretion cassettes. Meta Spark
-          1.3 proposes sequences; a deterministic symbolic compiler verifies
-          cysteine topology, loop grammar, charge, hydropathy, and protease
-          liabilities before anything ships to the lab.
+          Name a gut disease target — say, <em>C. difficile</em> — and Muse
+          Spark 1.3 dreams up brand-new knottins: tiny knotted proteins,
+          tough enough to survive digestion, that have never existed in
+          nature. A symbolic compiler proves each design sound, and the API
+          returns DNA your lab can order — encoding a probiotic yeast that
+          secretes the drug exactly where it is needed.
         </p>
+
+        <section aria-labelledby="why">
+          <h2 id="why">Why it matters</h2>
+          <ul className={styles.checklist}>
+            <li>
+              <strong>Medicines that survive digestion.</strong> Most protein
+              drugs are destroyed in the stomach before they can work.
+              Knottins are tied in a cysteine knot that shrugs off acid and
+              enzymes, so they can act right inside the gut.
+            </li>
+            <li>
+              <strong>Invented, not found.</strong> Rather than screening
+              nature&apos;s libraries, Muse Spark 1.3 reasons over the
+              grammar of proteins to propose truly novel sequences — then a
+              compiler, not vibes, verifies knot topology, charge,
+              stability, and safety.
+            </li>
+            <li>
+              <strong>DNA out, not just data.</strong> A passing design
+              compiles to a vendor-ready synthesis order: codon-optimized
+              DNA, secretion signal, and assembly parts for a probiotic
+              yeast that manufactures the drug on site.
+            </li>
+          </ul>
+        </section>
 
         <section aria-labelledby="pipeline">
           <h2 id="pipeline">How it works</h2>

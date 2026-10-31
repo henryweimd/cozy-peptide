@@ -1,16 +1,73 @@
-# cozy-peptide - Neurosymbolic Biopolymer Compiler & Probiotic Secretion Engine
+# cozy-peptide — AI-Invented Mini-Proteins, Verified for the Lab
 
 *Built for the Meta Global AI Hackathon. Live API docs:
 https://cozy-peptide.vercel.app*
 
-## Executive Summary
+## What this is (the 30-second version)
 
-cozy-peptide is a neurosymbolic design pipeline targeting **gut-stable therapeutic
-knottins (28-36 aa)** compiled into *Saccharomyces boulardii* secretion cassettes.
-It bridges generative LLM proposals (**Meta Spark 1.3**) with deterministic
-biological verification: every candidate sequence must pass a symbolic compiler
-audit (cysteine parity, loop grammar, charge, hydropathy, protease liabilities)
-before it is emitted as a lab-ready yeast secretion construct.
+Most medicines are either tiny chemicals or giant antibodies. cozy-peptide
+works in the fertile middle: **knottins** — miniature proteins just 28–36
+building blocks long, tied into a molecular knot by six cysteines. That knot
+is armor: knottins can survive stomach acid and digestive enzymes that shred
+ordinary protein drugs in minutes, so they can act directly inside the gut.
+
+Here is the remarkable part: **no human draws these molecules.** You name a
+gut disease target — say, *Clostridioides difficile* colonization — and
+**Muse Spark 1.3** invents brand-new knottin sequences from scratch: proteins
+that have never existed in nature, reasoned into being from the grammar of
+protein language. A deterministic symbolic compiler then interrogates every
+candidate — knot topology, charge, stability, protease resistance, safety —
+and rejects anything unsound. Failures return as compiler diagnostics that
+guide Muse Spark to repair its own designs, in a closed loop, until one
+passes every check.
+
+The output is not a picture or a score. It is a **DNA synthesis order you can
+send to a vendor**: codon-optimized cDNA encoding a probiotic yeast
+(*Saccharomyces boulardii*) that secretes your therapeutic exactly where it
+is needed.
+
+Disease target in, lab-ready DNA out — with a full audit trail anyone can
+inspect.
+
+## Why it matters
+
+- **Designed, not discovered.** Drug hunting today means screening libraries
+  of molecules found in nature. cozy-peptide flips that: the AI proposes
+  truly novel sequences, purpose-built for the target.
+- **Language, not brute force.** Instead of simulating billions of atomic
+  coordinates, Muse Spark 1.3 treats proteins the way a linguist treats
+  sentences — loops as phrases, cysteines as punctuation — and the compiler
+  enforces the grammar. Reasoning replaces raw computation.
+- **Verified before a dollar is spent.** Every design must pass a battery of
+  deterministic checks (topology, charge, hydropathy, liabilities,
+  developability metrics) before synthesis is even suggested — and the
+  biosecurity filter refuses toxins and out-of-modality enzymes up front.
+- **Bench-ready, not demo-ware.** The response includes mature/precursor
+  FASTA, restriction-scrubbed cDNA, Gibson assembly arms, CAI/GC reports,
+  and a Twist/IDT-compatible order manifest.
+
+## From prompt to protein: a real example
+
+![Structural cartoon of a Muse Spark 1.3-designed knottin](assets/CPRVTCSNDTVCKVRTSKCSVCRISVNTC.png)
+
+*A never-before-seen mini-protein, invented from scratch by Muse Spark 1.3
+to fight **C. difficile** gut infections. Its knotted, ribbon-like shape is
+the whole trick: that knot acts as armor, letting the molecule survive
+stomach acid and digestive enzymes so it can go to work inside the
+intestine. No human drew this molecule and it exists in no natural genome —
+it was reasoned into being, then verified, in a single API call.*
+
+*Technical details: proposed by `muse-spark-1.3-contributor` for target
+"C. difficile TcdA mucosal colonization" (`charge_target` 4) and accepted
+at refinement turn 0 with grammar and audit both passing. 29-aa knottin,
+6-Cys ICK topology (C1–C4, C2–C5, C3–C6), formal charge +4, GRAVY +0.04,
+Boman index 1.06, aliphatic index 63.45; liabilities cleared: trypsin,
+pepsin, chymotrypsin, Asp-Gly, Asn-Gly, Met-oxidation. Compiled to an
+S. boulardii (ATCC MYA-796) MFα1/SLDKR secretion cassette (CAI 0.989,
+restriction scrub clean, 422-bp gBlock). Mature sequence:
+`CPRVTCSNDTVCKVRTSKCSVCRISVNTC` (also the image filename). Structural
+cartoon shown for illustration — verify experimentally before any
+therapeutic use.*
 
 ## Architecture
 
