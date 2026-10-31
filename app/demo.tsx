@@ -1,148 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import styles from "./page.module.css";
 import {
   DEMO_COOLDOWN_SECONDS,
   DEMO_PRESETS,
 } from "../lib/demo-config";
 
-type StageName =
-  | "research"
-  | "propose"
-  | "verify"
-  | "repair"
-  | "synthesize"
-  | "handoff";
-
-interface StageEvent {
-  stage: StageName;
-  turn: number;
-  message: string;
-  source?: string;
-  candidate?: string;
-  grammarValid?: boolean;
-  auditPassed?: boolean;
-  issues?: number;
-  elapsedMs?: number;
-}
-
-interface TraceTurn {
-  turn: number;
-  candidate: string;
-  grammar_valid: boolean;
-  audit_passed: boolean;
-  disposition: string;
-  source: string;
-}
-
-interface DemoPayload {
-  success: boolean;
-  error?: string;
-  details?: { retry_after_seconds?: number };
-  neurosymbolic_provenance?: {
-    compiler_refinement_cycles: number;
-    refinement_trace: TraceTurn[];
-  };
-  candidate?: {
-    mature_sequence: string;
-    topology: string;
-    grammar_breakdown: Record<string, string>;
-  };
-  symbolic_audit?: {
-    passed: boolean;
-    charge: number;
-    gravy: number;
-    boman_index: number;
-    aliphatic_index: number;
-    liabilities_cleared: string[];
-  };
-  lab_handoff?: {
-    cai: number;
-    restriction_scrub: { status: string };
-    synthesis_order: {
-      sequence_name: string;
-      dna_length: number;
-      gc_percent: number;
-    };
-  };
-  specificity?: {
-    checked: boolean;
-    pass: boolean;
-    predicted_targets: string[];
-    off_targets: string[];
-    warnings: string[];
-    reason: string;
-  };
-}
+import type { PipelinePayload, StageEvent } from "./pipeline-shared";
+import {
+  EventLog,
+  StageDetail,
+  StageStrip,
+  formatCountdown,
+  parseSseFrame,
+} from "./pipeline-shared";
+import Recent from "./recent";
 
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
 const LOOP_ORDER = ["L1", "L2", "L3", "L4", "L5"];
-
-interface StageDef {
-  name: StageName;
-  title: string;
-  sub: string;
-}
-
-const STAGES: StageDef[] = [
-  { name: "research", title: "Literature research", sub: "Targets and mechanisms from papers" },
-  { name: "propose", title: "Semantic proposal", sub: "Muse Spark 1.3 drafts candidates" },
-  { name: "verify", title: "Grammar + audit", sub: "Loop topology, charge, liabilities" },
-  { name: "repair", title: "Compiler repair", sub: "Diagnostics-guided revision" },
-  { name: "synthesize", title: "Synthesis backstop", sub: "Deterministic grammar sampler" },
-  { name: "handoff", title: "Lab handoff", sub: "Yeast cassette and DNA order" },
-];
-
-type StageState = "idle" | "active" | "done" | "bypassed";
-
-function stageState(
-  events: StageEvent[],
-  finished: boolean,
-  stage: StageName
-): StageState {
-  const seen = events.some((event) => event.stage === stage);
-  if (!seen) {
-    if (finished && (stage === "repair" || stage === "research")) {
-      return "bypassed";
-    }
-    return "idle";
-  }
-  if (finished) return "done";
-  const latest = events[events.length - 1];
-  return latest?.stage === stage ? "active" : "done";
-}
-
-function stageElapsed(events: StageEvent[], stage: StageName): string | null {
-  const matches = events.filter((event) => event.stage === stage);
-  const last = matches[matches.length - 1];
-  if (last?.elapsedMs === undefined) return null;
-  return `+${Math.floor(last.elapsedMs / 1000)}s`;
-}
-
-function mark(value: boolean | undefined): string {
-  if (value === undefined) return "–";
-  return value ? "✓" : "✗";
-}
-
-function logLine(event: StageEvent): string {
-  const stamp = `+${Math.floor((event.elapsedMs ?? 0) / 1000)}s`;
-  const bits = [`turn ${event.turn}`];
-  if (event.candidate !== undefined) bits.push(event.candidate);
-  bits.push(event.message);
-  if (event.stage === "verify" && event.issues !== undefined) {
-    const checks = `grammar ${mark(event.grammarValid)}, audit ${mark(event.auditPassed)}`;
-    bits.push(event.issues > 0 ? `${checks}, ${event.issues} faults` : checks);
-  }
-  return `[${stamp}] ${bits.join(", ")}`;
-}
-
-function formatCountdown(totalSeconds: number): string {
-  const clamped = Math.max(0, totalSeconds);
-  const minutes = Math.floor(clamped / 60);
-  const seconds = clamped % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
 
 export default function Demo() {
   const [presetId, setPresetId] = useState<string>(DEMO_PRESETS[0]?.id ?? "");
@@ -151,7 +28,7 @@ export default function Demo() {
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [events, setEvents] = useState<StageEvent[]>([]);
-  const [result, setResult] = useState<DemoPayload | null>(null);
+  const [result, setResult] = useState<PipelinePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
 
@@ -198,30 +75,16 @@ export default function Demo() {
     window.localStorage.setItem(COOLDOWN_KEY, String(until));
   }
 
-  function handleFrame(frame: string): DemoPayload | null {
-    let eventName = "";
-    const dataLines: string[] = [];
-    for (const line of frame.split("\n")) {
-      if (line.startsWith("event:")) eventName = line.slice(6).trim();
-      else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
-    }
-    if (dataLines.length === 0) return null;
-    let data: unknown = null;
-    try {
-      data = JSON.parse(dataLines.join("\n")) as unknown;
-    } catch {
-      return null;
-    }
-    if (eventName === "stage") {
-      const stage = data as StageEvent;
+  function handleFrame(frame: string): PipelinePayload | null {
+    const parsed = parseSseFrame(frame);
+    if (parsed.kind === "stage") {
+      const stage = parsed.event;
       setEvents((prev) =>
         prev.length >= 60 ? [...prev.slice(-59), stage] : [...prev, stage]
       );
       return null;
     }
-    if (eventName === "result" || eventName === "error") {
-      return data as DemoPayload;
-    }
+    if (parsed.kind === "result") return parsed.payload;
     return null;
   }
 
@@ -242,7 +105,7 @@ export default function Demo() {
       if (!response.ok || response.body === null) {
         const payload = (await response
           .json()
-          .catch(() => null)) as DemoPayload | null;
+          .catch(() => null)) as PipelinePayload | null;
         setError(
           payload?.error ?? `Request failed (${response.status}).`
         );
@@ -254,7 +117,7 @@ export default function Demo() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let outcome: DemoPayload | null = null;
+      let outcome: PipelinePayload | null = null;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -292,9 +155,6 @@ export default function Demo() {
     result?.success === true ? result.specificity : undefined;
   const showFeed = loading || events.length > 0;
   const finished = !loading && (result !== null || error !== null);
-  const showSynthesis = events.some(
-    (event) => event.stage === "synthesize"
-  );
 
   return (
     <section className={styles.board} id="demo" aria-labelledby="demo-title">
@@ -342,8 +202,12 @@ export default function Demo() {
       </button>
       <p className={styles.note}>
         Runs the live pipeline in your browser. One design per minute per
-        visitor. Preset conditions only, no token needed.
+        visitor. Preset conditions only, no token needed.{" "}
+        <Link className={styles.designerlink} href="/design">
+          Open the full designer
+        </Link>
       </p>
+      <Recent />
 
       <div className={styles.feed} aria-live="polite">
         <div className={styles.feedhead}>
@@ -356,68 +220,13 @@ export default function Demo() {
                 : "standby"}
           </span>
         </div>
-        <ol className={styles.strip} aria-label="Pipeline stages">
-          {STAGES.filter(
-            (stage) => stage.name !== "synthesize" || showSynthesis
-          ).map((stage) => (
-            <li
-              key={stage.name}
-              data-state={stageState(events, finished, stage.name)}
-            >
-              <span aria-hidden="true">
-                {(() => {
-                  const state = stageState(events, finished, stage.name);
-                  return state === "done"
-                    ? "✓"
-                    : state === "active"
-                      ? "●"
-                      : state === "bypassed"
-                        ? "–"
-                        : "○";
-                })()}
-              </span>{" "}
-              {stage.title}
-            </li>
-          ))}
-        </ol>
+        <StageStrip events={events} finished={finished} />
         {showFeed && (
           <>
-          <ol className={styles.stages}>
-            {STAGES.filter(
-              (stage) => stage.name !== "synthesize" || showSynthesis
-            ).map((stage) => {
-              const state = stageState(events, finished, stage.name);
-              const stamp = stageElapsed(events, stage.name);
-              return (
-                <li key={stage.name} data-state={state}>
-                  <span className={styles.stagemark} aria-hidden="true">
-                    {state === "done"
-                      ? "✓"
-                      : state === "active"
-                        ? "●"
-                        : state === "bypassed"
-                          ? "–"
-                          : "○"}
-                  </span>
-                  <span className={styles.stageline}>
-                    <strong>{stage.title}</strong> <span>{stage.sub}</span>
-                  </span>
-                  {stamp !== null && (
-                    <span className={styles.stagestamp}>{stamp}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-          <div className={styles.log} ref={logRef} aria-label="Event log">
-            {events.map((event, index) => (
-              <p key={`${event.turn}-${event.stage}-${index}`}>
-                {logLine(event)}
-              </p>
-            ))}
-          </div>
+            <StageDetail events={events} finished={finished} />
+            <EventLog events={events} logRef={logRef} />
           </>
-          )}
+        )}
       </div>
 
       {error !== null && !loading && (

@@ -39,6 +39,13 @@ export const maxDuration = 120;
 
 const DemoStreamRequestSchema = z.object({
   target: z.string().min(1).max(500),
+  charge_target: z
+    .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+    .optional(),
+  modality: z
+    .enum(["knottin-6c", "disulfide-4c", "disulfide-2c", "linear"])
+    .optional(),
+  research: z.boolean().optional(),
 });
 
 function json(body: ApiResponse, status: number): NextResponse {
@@ -69,6 +76,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const target = parsed.data.target.trim();
+  const chargeTarget = parsed.data.charge_target ?? DEMO_CHARGE_TARGET;
+  const designModality = parsed.data.modality ?? "knottin-6c";
+  const researchEnabled = parsed.data.research ?? true;
+  const runParams = {
+    target,
+    charge_target: chargeTarget,
+    modality: designModality,
+    research: researchEnabled,
+  };
   if (!isDemoPresetTarget(target)) {
     return json(
       {
@@ -128,14 +144,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           research,
         } = await generateVerifiedPeptide(
           target,
-          DEMO_CHARGE_TARGET,
+          chargeTarget,
           3,
           (pipelineEvent) =>
             send("stage", {
               ...pipelineEvent,
               elapsedMs: Date.now() - startedAt,
             }),
-          { research: { enabled: true } }
+          {
+            modality: designModality,
+            research: { enabled: researchEnabled },
+          }
         );
         send("stage", {
           stage: "handoff",
@@ -143,15 +162,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           message: "Compiling yeast secretion cassette…",
           elapsedMs: Date.now() - startedAt,
         });
-        const manifest = buildLabHandoff(candidate);
+        const manifest = buildLabHandoff(candidate, designModality);
         const payload = buildNeurosymbolicPayload(
           target,
-          DEMO_CHARGE_TARGET,
+          chargeTarget,
           candidate,
           audit,
           refinementHistory,
           manifest,
-          "knottin-6c",
+          designModality,
           agentTools,
           targetClass,
           undefined,
@@ -161,12 +180,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         await recordRun(
           buildRunRecord({
             source: "demo-stream",
-            params: {
-              target,
-              charge_target: DEMO_CHARGE_TARGET,
-              modality: "knottin-6c",
-              research: true,
-            },
+            params: runParams,
             elapsedMs: Date.now() - startedAt,
             ok: true,
             payload,
@@ -187,12 +201,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           await recordRun(
             buildRunRecord({
               source: "demo-stream",
-              params: {
-                target,
-                charge_target: DEMO_CHARGE_TARGET,
-                modality: "knottin-6c",
-                research: true,
-              },
+              params: runParams,
               elapsedMs: Date.now() - startedAt,
               ok: false,
               payload: body,
@@ -212,12 +221,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           await recordRun(
             buildRunRecord({
               source: "demo-stream",
-              params: {
-                target,
-                charge_target: DEMO_CHARGE_TARGET,
-                modality: "knottin-6c",
-                research: true,
-              },
+              params: runParams,
               elapsedMs: Date.now() - startedAt,
               ok: false,
               payload: body,

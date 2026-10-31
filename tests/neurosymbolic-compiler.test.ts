@@ -649,6 +649,50 @@ test("demo stream emits stages then the full result", async () => {
   assert.equal(rejected.status, 400);
 });
 
+test("demo stream accepts designer options, rejects bad ones", async () => {
+  delete process.env.META_API_KEY;
+  delete process.env.META_SPARK_API_URL;
+  const streamReq = (body: unknown, ip: string): NextRequest =>
+    ({
+      headers: new Headers({ "x-forwarded-for": ip }),
+      json: async () => body,
+    }) as unknown as NextRequest;
+
+  const preset = DEMO_PRESETS[0];
+  assert.ok(preset !== undefined);
+  const ok = await demoStreamPOST(
+    streamReq(
+      {
+        target: preset.target,
+        charge_target: 2,
+        modality: "linear",
+        research: false,
+      },
+      "test-stream-ip-opts"
+    )
+  );
+  assert.equal(ok.status, 200);
+  const body = await ok.text();
+  assert.ok(body.includes('"success":true'));
+  assert.ok(body.includes("engineered_linear_peptide"));
+
+  const badCharge = await demoStreamPOST(
+    streamReq(
+      { target: preset.target, charge_target: 9 },
+      "test-stream-ip-bad1"
+    )
+  );
+  assert.equal(badCharge.status, 400);
+
+  const badModality = await demoStreamPOST(
+    streamReq(
+      { target: preset.target, modality: "antibody" },
+      "test-stream-ip-bad2"
+    )
+  );
+  assert.equal(badModality.status, 400);
+});
+
 test("prompts carry scaffolds, secretion framing, and bioprocess gates", () => {
   for (const prompt of [
     buildKnottinPrompt(TARGET, 4),
