@@ -27,6 +27,7 @@ export const MetaSparkRequestSchema = z.object({
   messages: z.array(MetaSparkMessageSchema).min(1),
   temperature: z.number().min(0).max(2).optional(),
   max_tokens: z.number().int().positive().optional(),
+  reasoning_effort: z.string().optional(),
 });
 export type MetaSparkRequest = z.infer<typeof MetaSparkRequestSchema>;
 
@@ -42,6 +43,7 @@ export const MetaSparkResponseSchema = z.object({
     .array(
       z.object({
         index: z.number().int().optional(),
+        finish_reason: z.string().optional(),
         message: z
           .object({
             role: z.string().optional(),

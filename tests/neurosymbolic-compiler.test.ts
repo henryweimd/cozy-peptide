@@ -34,7 +34,10 @@ import {
   generateVerifiedPeptide,
   sampleFallbackCandidates,
 } from "../lib/meta-spark";
-import { MetaSparkResponseSchema } from "../types/peptide";
+import {
+  MetaSparkRequestSchema,
+  MetaSparkResponseSchema,
+} from "../types/peptide";
 import {
   POST,
   OPTIONS,
@@ -182,6 +185,12 @@ test("completion extraction handles scratchpad prose and labels", () => {
   ].join("\n");
   assert.deepEqual(extractCandidateSequences(completion), pool);
   assert.deepEqual(extractCandidateSequences("no sequences here"), []);
+
+  const spaced = `${pool[0]?.slice(0, 10)} ${pool[0]?.slice(10, 20)} ${pool[0]?.slice(20)}`;
+  assert.deepEqual(
+    extractCandidateSequences(`CANDIDATE 3: ${spaced}`),
+    [pool[0]]
+  );
 });
 
 test("generateVerifiedPeptide synthesizes with provenance and no key", async () => {
@@ -206,6 +215,16 @@ test("completion schema tolerates null message content", () => {
       { index: 0, message: { role: "assistant", content: null } },
       { index: 1, message: null },
     ],
+  });
+  assert.equal(parsed.success, true);
+});
+
+test("request schema carries reasoning effort control", () => {
+  const parsed = MetaSparkRequestSchema.safeParse({
+    model: "muse-spark-1.3-contributor",
+    messages: [{ role: "user", content: "hi" }],
+    reasoning_effort: "minimal",
+    max_tokens: 4096,
   });
   assert.equal(parsed.success, true);
 });

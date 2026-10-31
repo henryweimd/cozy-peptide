@@ -11,7 +11,12 @@ import { L4_HELIX_FORMERS, parseKnottinGrammar } from "./protein-grammar";
 
 export const META_SPARK_MODEL = "muse-spark-1.3-contributor";
 export const META_SPARK_DEFAULT_URL = "https://api.meta.ai/v1/chat/completions";
-export const META_SPARK_TIMEOUT_MS = 15000;
+export const META_SPARK_TIMEOUT_MS = 30000;
+export const META_SPARK_REASONING_EFFORT = "minimal";
+export const META_SPARK_PROPOSE_MAX_TOKENS = 4096;
+export const META_SPARK_REPAIR_MAX_TOKENS = 2048;
+/** Minimum remaining API budget (ms) required to start another request. */
+export const META_SPARK_MIN_REQUEST_BUDGET_MS = 10000;
 export const KNOTTIN_TOPOLOGY = "C-X(3,7)-C-X(4,6)-C-X(4,7)-C-X(1,3)-C-X(4,8)-C";
 
 export function getMetaSparkApiUrl(): string {
@@ -65,7 +70,7 @@ export function buildSemanticProposePrompt(
     `5. Formal charge (K+R-D-E) exactly +${chargeTarget}; allocate charge preferentially to the L3 functional cassette and L5 presentation loop.`,
     "6. No [KR]{2}, no [FYW]L, no N[GS], no D[GS], no methionine.",
     "7. GRAVY between -0.40 and +0.10; gut-stable and non-toxic.",
-    "For each candidate, first write a <scratchpad> trace explaining why its loop composition satisfies the target receptor interface without triggering host mucosal clearance, then emit the candidate on its own line as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>.",
+    "For each candidate, first write a <scratchpad> trace of exactly one sentence explaining why its loop composition satisfies the target receptor interface without triggering host mucosal clearance, then emit the candidate on its own line as: CANDIDATE <n>: <BARE UPPERCASE SEQUENCE>.",
   ].join("\n");
 }
 
@@ -121,13 +126,25 @@ export function extractCandidateSequences(completion: string): string[] {
     }
   }
 
-  const candidateRe = /CANDIDATE\s*\d*\s*[:\-]\s*([A-Za-z]{28,36})/gi;
-  let candidateMatch: RegExpExecArray | null;
-  while ((candidateMatch = candidateRe.exec(completion)) !== null) {
-    const seq = (candidateMatch[1] ?? "").toUpperCase();
-    if (CANONICAL_AA_PATTERN.test(seq)) {
-      hits.push({ index: candidateMatch.index, seq });
+  // Labeled candidates, one per line; internal spaces are tolerated.
+  let lineStart = 0;
+  for (const line of completion.split("\n")) {
+    const candidateMatch = /CANDIDATE\s*\d*\s*[:\-]\s*([A-Za-z][A-Za-z ]*)/i.exec(
+      line
+    );
+    if (candidateMatch !== null) {
+      const seq = (candidateMatch[1] ?? "")
+        .replace(/\s+/g, "")
+        .toUpperCase();
+      if (
+        seq.length >= 28 &&
+        seq.length <= 36 &&
+        CANONICAL_AA_PATTERN.test(seq)
+      ) {
+        hits.push({ index: lineStart + candidateMatch.index, seq });
+      }
     }
+    lineStart += line.length + 1;
   }
 
   const bareRe = /\b[ACDEFGHIKLMNPQRSTVWYacdefghiklmnpqrstvwy]{28,36}\b/g;
@@ -157,7 +174,8 @@ export function extractCandidateSequences(completion: string): string[] {
  */
 export async function requestSparkCandidates(
   messages: MetaSparkMessage[],
-  maxTokens = 1024
+  maxTokens = META_SPARK_PROPOSE_MAX_TOKENS,
+  timeoutMs = META_SPARK_TIMEOUT_MS
 ): Promise<string[]> {
   const apiKey = process.env.META_API_KEY;
   if (apiKey === undefined || apiKey.length === 0) return [];
@@ -167,10 +185,11 @@ export async function requestSparkCandidates(
     messages,
     temperature: 0.7,
     max_tokens: maxTokens,
+    reasoning_effort: META_SPARK_REASONING_EFFORT,
   };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), META_SPARK_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(getMetaSparkApiUrl(), {
       method: "POST",
@@ -181,23 +200,41 @@ export async function requestSparkCandidates(
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.warn(`[meta-spark] upstream HTTP ${response.status}`);
+      return [];
+    }
 
     const parsed = MetaSparkResponseSchema.safeParse(
       (await response.json()) as unknown
     );
-    if (!parsed.success) return [];
+    if (!parsed.success) {
+      console.warn("[meta-spark] unparseable response envelope");
+      return [];
+    }
 
     const data = parsed.data;
+    const finish = data.choices?.[0]?.finish_reason ?? "unknown";
     const content =
       data.choices
         ?.map((choice) => choice.message?.content ?? choice.text ?? "")
         .filter((text) => text.length > 0)
         .join("\n") ?? "";
     const completion = `${content}\n${data.output_text ?? ""}`.trim();
-    if (completion.length === 0) return [];
-    return extractCandidateSequences(completion);
-  } catch {
+    if (completion.length === 0) {
+      console.warn(`[meta-spark] empty completion (finish=${finish})`);
+      return [];
+    }
+    const candidates = extractCandidateSequences(completion);
+    if (candidates.length === 0) {
+      console.warn(
+        `[meta-spark] zero candidates extracted from ${completion.length} chars (finish=${finish})`
+      );
+    }
+    return candidates;
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "unknown";
+    console.warn(`[meta-spark] request error: ${name}`);
     return [];
   } finally {
     clearTimeout(timeout);
@@ -316,7 +353,7 @@ function verifyCandidate(
 }
 
 /** Total upstream API time budget per generation, reserving room for synthesis and handoff inside maxDuration. */
-export const META_SPARK_API_BUDGET_MS = 45000;
+export const META_SPARK_API_BUDGET_MS = 50000;
 
 /**
  * Evaluates one candidate pool, recording provenance; returns the first
@@ -405,17 +442,43 @@ export async function generateVerifiedPeptide(
     return synthesize(0);
   }
 
-  let pool = await requestSparkCandidates([
-    {
-      role: "system",
-      content:
-        "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
-    },
-    { role: "user", content: buildSemanticProposePrompt(target, chargeTarget) },
-  ]);
+  const startedAt = Date.now();
+
+  /**
+   * One budgeted upstream request: capped by the remaining API budget,
+   * or null when too little budget remains to start another request.
+   */
+  const requestBudgeted = async (
+    messages: MetaSparkMessage[],
+    maxTokens: number
+  ): Promise<string[] | null> => {
+    const remaining = META_SPARK_API_BUDGET_MS - (Date.now() - startedAt);
+    if (remaining < META_SPARK_MIN_REQUEST_BUDGET_MS) return null;
+    return requestSparkCandidates(
+      messages,
+      maxTokens,
+      Math.min(META_SPARK_TIMEOUT_MS, remaining)
+    );
+  };
+
+  let pool =
+    (await requestBudgeted(
+      [
+        {
+          role: "system",
+          content:
+            "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+        },
+        {
+          role: "user",
+          content: buildSemanticProposePrompt(target, chargeTarget),
+        },
+      ],
+      META_SPARK_PROPOSE_MAX_TOKENS
+    )) ??
+    [];
   let cycle = 0;
 
-  const startedAt = Date.now();
   for (;;) {
     const accepted = evaluatePool(
       pool,
@@ -440,17 +503,22 @@ export async function generateVerifiedPeptide(
       (entry) => entry.disposition !== "accepted"
     );
     if (failures.length === 0) {
-      pool = await requestSparkCandidates([
-        {
-          role: "system",
-          content:
-            "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
-        },
-        {
-          role: "user",
-          content: buildSemanticProposePrompt(target, chargeTarget),
-        },
-      ]);
+      pool =
+        (await requestBudgeted(
+          [
+            {
+              role: "system",
+              content:
+                "You are Meta Spark 1.3, a semantic evolutionary orator for therapeutic micro-proteins.",
+            },
+            {
+              role: "user",
+              content: buildSemanticProposePrompt(target, chargeTarget),
+            },
+          ],
+          META_SPARK_PROPOSE_MAX_TOKENS
+        )) ??
+        [];
     } else {
       let best = failures[0];
       for (const entry of failures) {
@@ -461,25 +529,27 @@ export async function generateVerifiedPeptide(
       }
       const failedCandidate = best?.candidate ?? "";
       const failedGrammar = parseKnottinGrammar(failedCandidate);
-      pool = await requestSparkCandidates(
-        [
-          {
-            role: "system",
-            content:
-              "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
-          },
-          {
-            role: "user",
-            content: buildRepairPrompt(
-              failedCandidate,
-              best?.compiler_diagnostic ?? "",
-              chargeTarget,
-              failedGrammar.loops["L3"]
-            ),
-          },
-        ],
-        1024
-      );
+      pool =
+        (await requestBudgeted(
+          [
+            {
+              role: "system",
+              content:
+                "You are Meta Spark 1.3 performing deterministic compiler-guided repair of a knottin candidate.",
+            },
+            {
+              role: "user",
+              content: buildRepairPrompt(
+                failedCandidate,
+                best?.compiler_diagnostic ?? "",
+                chargeTarget,
+                failedGrammar.loops["L3"]
+              ),
+            },
+          ],
+          META_SPARK_REPAIR_MAX_TOKENS
+        )) ??
+        [];
     }
     cycle += 1;
   }
