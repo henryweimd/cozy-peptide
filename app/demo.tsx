@@ -1,57 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { StructureGuide } from "./peptide-viewer";
-
-const PeptideViewer = dynamic(() => import("./peptide-viewer"), {
-  ssr: false,
-  loading: () => <p className={styles.note}>Loading 3D viewer…</p>,
-});
-import {
-  DEMO_COOLDOWN_SECONDS,
-  DEMO_PRESETS,
-} from "../lib/demo-config";
+import { DEMO_PRESETS } from "../lib/demo-config";
 import { CUSTOM_TARGET_MAX_LENGTH } from "../lib/target-guard";
-
-import type { PipelinePayload, StageEvent } from "./pipeline-shared";
-import {
-  EventLog,
-  HandoffDownloads,
-  StageDetail,
-  formatCountdown,
-  parseSseFrame,
-} from "./pipeline-shared";
-import Recent, { type RecentRun } from "./recent";
-import FocusedPeptide from "./focused-peptide";
+import { formatCountdown } from "./pipeline-shared";
+import Recent from "./recent";
 
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
-const LOOP_ORDER = ["L1", "L2", "L3", "L4", "L5"];
 
+/**
+ * Landing launcher: pick a preset or describe a condition, then
+ * continue to the designer page where the run happens. No pipeline
+ * here — the landing page stays quiet.
+ */
 export default function Demo() {
+  const router = useRouter();
   const [presetId, setPresetId] = useState<string>(DEMO_PRESETS[0]?.id ?? "");
   const [custom, setCustom] = useState("");
-  const customActive = presetId === "other";
-  const [loading, setLoading] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [events, setEvents] = useState<StageEvent[]>([]);
-  const [result, setResult] = useState<PipelinePayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [focused, setFocused] = useState<RecentRun | null>(null);
-  const logRef = useRef<HTMLDivElement | null>(null);
-  const focusRef = useRef<HTMLDivElement | null>(null);
+  const customActive = presetId === "other";
 
   useEffect(() => {
     const stored = window.localStorage.getItem(COOLDOWN_KEY);
     if (stored !== null) {
       const until = Number.parseInt(stored, 10);
       if (Number.isFinite(until) && until > Date.now()) {
-        // Mount-only sync from an external store (localStorage); a lazy
-        // useState initializer would mismatch the server render instead.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setCooldownUntil(until);
       }
@@ -60,135 +37,32 @@ export default function Demo() {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (!loading) return;
-    const started = Date.now();
-    const timer = window.setInterval(
-      () => setElapsed(Math.floor((Date.now() - started) / 1000)),
-      500
-    );
-    return () => window.clearInterval(timer);
-  }, [loading]);
-
-  useEffect(() => {
-    const log = logRef.current;
-    if (log !== null) log.scrollTop = log.scrollHeight;
-  }, [events.length]);
-
   const remaining =
-    cooldownUntil === null
-      ? 0
-      : Math.ceil((cooldownUntil - now) / 1000);
+    cooldownUntil === null ? 0 : Math.ceil((cooldownUntil - now) / 1000);
   const cooling = remaining > 0;
-  const busy = loading || cooling;
 
-  function lockCooldown(retryAfterSeconds: number): void {
-    const until = Date.now() + retryAfterSeconds * 1000;
-    setCooldownUntil(until);
-    window.localStorage.setItem(COOLDOWN_KEY, String(until));
-  }
-
-  function handleFrame(frame: string): PipelinePayload | null {
-    const parsed = parseSseFrame(frame);
-    if (parsed.kind === "stage") {
-      const stage = parsed.event;
-      setEvents((prev) =>
-        prev.length >= 60 ? [...prev.slice(-59), stage] : [...prev, stage]
-      );
-      return null;
-    }
-    if (parsed.kind === "result") return parsed.payload;
-    return null;
-  }
-
-  async function generate(): Promise<void> {
-    const preset = DEMO_PRESETS.find((entry) => entry.id === presetId);
-    const target = customActive
-      ? custom.trim()
-      : (preset?.target ?? "");
-    if (target.length === 0 || loading || cooling) {
-      if (customActive && custom.trim().length === 0 && !loading && !cooling) {
+  function go(): void {
+    if (cooling) return;
+    if (customActive) {
+      const target = custom.trim();
+      if (target.length === 0) {
         setError("Describe a gut condition first.");
-      }
-      return;
-    }
-    setLoading(true);
-    setElapsed(0);
-    setError(null);
-    setResult(null);
-    setEvents([]);
-    try {
-      const response = await fetch("/api/demo-stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target }),
-      });
-      if (!response.ok || response.body === null) {
-        const payload = (await response
-          .json()
-          .catch(() => null)) as PipelinePayload | null;
-        setError(
-          payload?.error ?? `Request failed (${response.status}).`
-        );
-        // Only rate limits consume the cooldown: validation and safety
-        // refusals leave the visitor free to fix their input.
-        if (response.status === 429) {
-          lockCooldown(
-            payload?.details?.retry_after_seconds ?? DEMO_COOLDOWN_SECONDS
-          );
-        }
         return;
       }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let outcome: PipelinePayload | null = null;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let split = buffer.indexOf("\n\n");
-        while (split !== -1) {
-          const frame = buffer.slice(0, split);
-          buffer = buffer.slice(split + 2);
-          const payload = handleFrame(frame);
-          if (payload !== null) outcome = payload;
-          split = buffer.indexOf("\n\n");
-        }
-      }
-      if (outcome !== null && outcome.success) {
-        setResult(outcome);
-      } else {
-        setError(outcome?.error ?? "Stream ended without a result.");
-      }
-      lockCooldown(DEMO_COOLDOWN_SECONDS);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed.");
-      lockCooldown(DEMO_COOLDOWN_SECONDS);
-    } finally {
-      setLoading(false);
+      router.push(`/design?custom=${encodeURIComponent(target)}`);
+      return;
     }
+    router.push(`/design?target=${encodeURIComponent(presetId)}`);
   }
-
-  const audit = result?.success === true ? result.symbolic_audit : undefined;
-  const candidate =
-    result?.success === true ? result.candidate : undefined;
-  const provenance =
-    result?.success === true ? result.neurosymbolic_provenance : undefined;
-  const handoff = result?.success === true ? result.lab_handoff : undefined;
-  const specificity =
-    result?.success === true ? result.specificity : undefined;
-  const showFeed = loading || events.length > 0;
-  const finished = !loading && (result !== null || error !== null);
 
   return (
     <section className={styles.board} id="demo" aria-labelledby="demo-title">
       <h2 className={styles.boardtitle} id="demo-title">
-        Design a peptide in your browser
+        Design a peptide
       </h2>
       <p className={styles.boardsub}>
-        Pick a gut condition and run the real pipeline, proposal to lab
-        handoff.
+        Pick a gut condition and continue to the designer to run the
+        live pipeline.
       </p>
       <div
         className={styles.cells}
@@ -205,7 +79,10 @@ export default function Demo() {
                 ? `${styles.cell} ${styles.cellActive}`
                 : styles.cell
             }
-            onClick={() => setPresetId(preset.id)}
+            onClick={() => {
+              setPresetId(preset.id);
+              setError(null);
+            }}
           >
             {preset.label}
           </button>
@@ -220,17 +97,17 @@ export default function Demo() {
               ? `${styles.cell} ${styles.cellActive}`
               : styles.cell
           }
-          onClick={() => setPresetId("other")}
+          onClick={() => {
+            setPresetId("other");
+            setError(null);
+          }}
         >
           Other…
         </button>
       </div>
       {customActive && (
         <div className={styles.otherwrap}>
-          <label
-            className={styles.optlabel}
-            htmlFor="demo-other-target"
-          >
+          <label className={styles.optlabel} htmlFor="demo-other-target">
             Describe the gut condition
           </label>
           <input
@@ -242,204 +119,36 @@ export default function Demo() {
             autoComplete="off"
             spellCheck={false}
             placeholder="e.g. bile acid diarrhea"
-            onChange={(event) => setCustom(event.target.value)}
+            onChange={(event) => {
+              setCustom(event.target.value);
+              setError(null);
+            }}
             onKeyDown={(event) => {
-              if (event.key === "Enter") void generate();
+              if (event.key === "Enter") go();
             }}
           />
         </div>
       )}
-
       <button
         type="button"
         className={`${styles.btn} ${styles.btnPrimary} ${styles.designbtn}`}
-        disabled={busy}
-        aria-busy={loading}
-        onClick={() => void generate()}
+        disabled={cooling}
+        onClick={go}
       >
-        {loading
-          ? `Designing… ${elapsed}s`
-          : cooling
-            ? `Next design in ${formatCountdown(remaining)}`
-            : "Design my peptide"}
+        {cooling
+          ? `Next design in ${formatCountdown(remaining)}`
+          : "Design my peptide"}
       </button>
-      <p className={styles.note}>
-        Runs the live pipeline in your browser. One design per minute per
-        visitor. Pick a preset or describe your own gut condition under
-        Other — guarded input, no token needed.{" "}
-        <Link className={styles.designerlink} href="/design">
-          Open the full designer
-        </Link>
-      </p>
-      <Recent
-        onUse={(run) => {
-          setFocused(run);
-          requestAnimationFrame(() => {
-            const reduced = window.matchMedia(
-              "(prefers-reduced-motion: reduce)"
-            ).matches;
-            focusRef.current?.scrollIntoView({
-              behavior: reduced ? "auto" : "smooth",
-              block: "start",
-            });
-          });
-        }}
-      />
-      {focused !== null && (
-        <div ref={focusRef}>
-          <FocusedPeptide run={focused} onClose={() => setFocused(null)} />
-        </div>
-      )}
-
-      <div className={styles.feed} aria-live="polite">
-        <div className={styles.feedhead}>
-          <span className={styles.feedlabel}>Pipeline telemetry</span>
-          <span className={styles.feedlive} role="status">
-            {loading
-              ? `live ${elapsed}s`
-              : events.length > 0
-                ? `done ${elapsed}s`
-                : "standby"}
-          </span>
-        </div>
-        <StageDetail
-          events={events}
-          finished={finished}
-          failed={error !== null && !loading}
-        />
-        {showFeed && <EventLog events={events} logRef={logRef} />}
-      </div>
-
-      {error !== null && !loading && (
+      {error !== null && (
         <p className={styles.errorbox} role="alert">
           {error}
         </p>
       )}
-
-      {result?.success === true &&
-        candidate !== undefined &&
-        audit !== undefined && (
-          <div className={styles.result}>
-            <section aria-label="Designed sequence">
-              <h3>Designed sequence</h3>
-              <p className={styles.sequence}>{candidate.mature_sequence}</p>
-              <p className={styles.topology}>{candidate.topology}</p>
-              {result?.requested_target !== undefined &&
-                result.target !== undefined && (
-                  <p className={styles.interpreted}>
-                    Interpreted as: {result.target}
-                  </p>
-                )}
-            </section>
-
-            <section aria-label="Predicted structure">
-              <h3>Predicted structure</h3>
-              <PeptideViewer sequence={candidate.mature_sequence} />
-              <StructureGuide />
-            </section>
-
-            <section aria-label="Loop grammar">
-              <h3>Loop grammar</h3>
-              <ul className={styles.loopchips}>
-                {LOOP_ORDER.map((loop) => (
-                  <li key={loop}>
-                    <span>{loop}</span>
-                    <code>
-                      {candidate.grammar_breakdown[loop] ?? "—"}
-                    </code>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section aria-label="Audit ledger">
-              <h3>Audit ledger</h3>
-              <dl className={styles.metrics}>
-                <div>
-                  <dt>Charge</dt>
-                  <dd>+{audit.charge}</dd>
-                </div>
-                <div>
-                  <dt>GRAVY</dt>
-                  <dd>{audit.gravy}</dd>
-                </div>
-                <div>
-                  <dt>Boman</dt>
-                  <dd>{audit.boman_index}</dd>
-                </div>
-                <div>
-                  <dt>Aliphatic</dt>
-                  <dd>{audit.aliphatic_index}</dd>
-                </div>
-              </dl>
-              <p className={styles.cleared}>
-                {audit.liabilities_cleared.map((name) => (
-                  <span key={name}>✓ {name}</span>
-                ))}
-              </p>
-            </section>
-
-            {provenance !== undefined && (
-              <section aria-label="Provenance">
-                <h3>Provenance</h3>
-                <ul className={styles.trace}>
-                  {provenance.refinement_trace.map((turn, index) => (
-                    <li key={`${turn.turn}-${index}`}>
-                      turn {turn.turn}, {turn.source}, {turn.disposition}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {specificity !== undefined && (
-              <section aria-label="Specificity review">
-                <h3>Specificity review</h3>
-                <p className={styles.handoffline}>
-                  {specificity.checked
-                    ? specificity.pass
-                      ? "✓ blinded review confirms the intended target"
-                      : `✗ ${specificity.reason}`
-                    : `○ not checked, ${specificity.reason}`}
-                </p>
-                {specificity.predicted_targets.length > 0 && (
-                  <ul className={styles.trace}>
-                    {specificity.predicted_targets.map((target) => (
-                      <li key={target}>predicted: {target}</li>
-                    ))}
-                  </ul>
-                )}
-                {specificity.off_targets.length > 0 && (
-                  <ul className={styles.trace}>
-                    {specificity.off_targets.map((flag) => (
-                      <li key={flag}>off-target flag: {flag}</li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )}
-
-            {handoff !== undefined && result !== null && (
-              <section aria-label="Lab handoff">
-                <h3>Lab handoff</h3>
-                <p className={styles.handoffline}>
-                  {handoff.synthesis_order.sequence_name},{" "}
-                  {handoff.synthesis_order.dna_length} bp, CAI{" "}
-                  {handoff.cai}, scrub{" "}
-                  {handoff.restriction_scrub.status}
-                </p>
-                <HandoffDownloads result={result} />
-              </section>
-            )}
-
-            <details className={styles.rawjson}>
-              <summary>Full JSON response</summary>
-              <pre>
-                <code>{JSON.stringify(result, null, 2)}</code>
-              </pre>
-            </details>
-          </div>
-        )}
+      <p className={styles.note}>
+        One design per minute per visitor. Presets or your own
+        condition under Other — guarded input, no token needed.
+      </p>
+      <Recent onUse={(run) => router.push(`/design?run=${run.id}`)} />
     </section>
   );
 }

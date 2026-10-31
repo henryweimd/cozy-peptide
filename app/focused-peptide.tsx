@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 import { HandoffDownloads, timeAgo } from "./pipeline-shared";
-import type { RecentRun } from "./recent";
 
 const PeptideViewer = dynamic(() => import("./peptide-viewer"), {
   ssr: false,
@@ -12,6 +11,10 @@ const PeptideViewer = dynamic(() => import("./peptide-viewer"), {
 });
 
 interface RunDetailBody {
+  target?: string;
+  createdAt?: string;
+  candidateSequence?: string | null;
+  candidateId?: string | null;
   candidate?: {
     id?: string;
     sequence?: string;
@@ -42,14 +45,14 @@ function isDetailBody(value: unknown): value is RunDetailBody {
 
 /**
  * Focused past run: sequence, on-demand 3D structure, audit metrics,
- * and lab handoff downloads for a ledger row chosen in the recent
- * strip. Fetches full blobs; degrades to a short note on any fault.
+ * and lab handoff downloads for one ledger row. Fetches full blobs by
+ * id; degrades to a short note on any fault.
  */
 export default function FocusedPeptide({
-  run,
+  runId,
   onClose,
 }: {
-  run: RecentRun;
+  runId: string;
   onClose: () => void;
 }): React.ReactElement {
   const [detail, setDetail] = useState<{
@@ -61,7 +64,6 @@ export default function FocusedPeptide({
 
   useEffect(() => {
     let live = true;
-    const runId = run.id;
     fetch(`/api/peptide-run?id=${encodeURIComponent(runId)}`)
       .then((response) =>
         response.ok ? response.json() : Promise.reject(new Error("run"))
@@ -84,11 +86,11 @@ export default function FocusedPeptide({
     return () => {
       live = false;
     };
-  }, [run.id]);
+  }, [runId]);
 
-  const shown = detail !== null && detail.id === run.id ? detail.body : null;
-  const failed = failedId === run.id;
-  const sequence = run.candidateSequence ?? "";
+  const shown = detail !== null && detail.id === runId ? detail.body : null;
+  const failed = failedId === runId;
+  const sequence = shown?.candidateSequence ?? "";
   const audit = shown?.symbolic_audit;
 
   return (
@@ -96,9 +98,13 @@ export default function FocusedPeptide({
       <div className={styles.focusedhead}>
         <div>
           <h3>From the ledger</h3>
-          <p className={styles.recentMeta}>
-            {run.target} — {timeAgo(run.createdAt, now)}
-          </p>
+          {shown?.target !== undefined && (
+            <p className={styles.recentMeta}>
+              {shown.target}
+              {shown.createdAt !== undefined &&
+                ` — ${timeAgo(shown.createdAt, now)}`}
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -110,24 +116,23 @@ export default function FocusedPeptide({
         </button>
       </div>
 
-      {sequence.length > 0 && (
-        <>
-          <p className={styles.sequence}>{sequence}</p>
-          <p className={styles.topology}>
-            {run.candidateId ?? ""}, {sequence.length} residues
-          </p>
-          <PeptideViewer key={run.id} sequence={sequence} />
-        </>
-      )}
-
       {shown === null && !failed && (
         <p className={styles.note}>Loading run details…</p>
       )}
       {failed && (
         <p className={styles.note}>
-          Couldn&apos;t load that run&apos;s details — the structure above
-          still folds from its sequence.
+          Couldn&apos;t load that run — it may have been removed.
         </p>
+      )}
+
+      {sequence.length > 0 && (
+        <>
+          <p className={styles.sequence}>{sequence}</p>
+          <p className={styles.topology}>
+            {shown?.candidateId ?? ""}, {sequence.length} residues
+          </p>
+          <PeptideViewer key={runId} sequence={sequence} />
+        </>
       )}
 
       {audit !== undefined && (

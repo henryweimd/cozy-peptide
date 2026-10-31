@@ -2,8 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import styles from "../page.module.css";
 import { StructureGuide } from "../peptide-viewer";
+import FocusedPeptide from "../focused-peptide";
+import {
+  parseDesignParams,
+  type DesignParams,
+} from "../../lib/design-params";
 
 const PeptideViewer = dynamic(() => import("../peptide-viewer"), {
   ssr: false,
@@ -42,8 +48,25 @@ const CHARGES = [1, 2, 3, 4] as const;
  * per-visitor cooldown, no token).
  */
 export default function Designer() {
-  const [presetId, setPresetId] = useState<string>(DEMO_PRESETS[0]?.id ?? "");
-  const [custom, setCustom] = useState("");
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  return (
+    <DesignerInner
+      key={query}
+      initial={parseDesignParams(searchParams)}
+    />
+  );
+}
+
+function DesignerInner({ initial }: { initial: DesignParams }) {
+  const [presetId, setPresetId] = useState<string>(
+    initial.presetId ??
+      (initial.custom !== undefined ? "other" : (DEMO_PRESETS[0]?.id ?? ""))
+  );
+  const [custom, setCustom] = useState(initial.custom ?? "");
+  const [focusRunId, setFocusRunId] = useState<string | null>(
+    initial.runId ?? null
+  );
   const customActive = presetId === "other";
   const [modality, setModality] = useState<string>("knottin-6c");
   const [charge, setCharge] = useState<number>(DEMO_CHARGE_TARGET);
@@ -90,15 +113,36 @@ export default function Designer() {
   const cooling = remaining > 0;
   const busy = loading || cooling;
 
+  // Deep-link auto-run: arrivals from the landing page start their
+  // design at once; direct visits stay idle. Cooling arrivals wait
+  // for the countdown instead. The outer key remounts per query, so
+  // mount-only is correct here.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current) return;
+    autoStarted.current = true;
+    const target =
+      initial.custom ??
+      DEMO_PRESETS.find((entry) => entry.id === initial.presetId)?.target;
+    if (target === undefined) return;
+    const stored = window.localStorage.getItem(COOLDOWN_KEY);
+    const until =
+      stored === null ? Number.NaN : Number.parseInt(stored, 10);
+    if (Number.isFinite(until) && until > Date.now()) return;
+    void generate(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function lockCooldown(retryAfterSeconds: number): void {
     const until = Date.now() + retryAfterSeconds * 1000;
     setCooldownUntil(until);
     window.localStorage.setItem(COOLDOWN_KEY, String(until));
   }
 
-  async function generate(): Promise<void> {
+  async function generate(explicit?: string): Promise<void> {
     const preset = DEMO_PRESETS.find((entry) => entry.id === presetId);
-    const target = customActive ? custom.trim() : (preset?.target ?? "");
+    const target =
+      explicit ?? (customActive ? custom.trim() : (preset?.target ?? ""));
     if (target.length === 0 || loading || cooling) {
       if (customActive && custom.trim().length === 0 && !loading && !cooling) {
         setError("Describe a gut condition first.");
@@ -187,7 +231,16 @@ export default function Designer() {
 
   return (
     <div className={styles.designer}>
+      {focusRunId !== null && (
+        <div id="design-focus">
+          <FocusedPeptide
+            runId={focusRunId}
+            onClose={() => setFocusRunId(null)}
+          />
+        </div>
+      )}
       <div
+        id="design-controls"
         className={styles.cells}
         role="group"
         aria-label="Condition to design for"
@@ -326,9 +379,9 @@ export default function Designer() {
         cooldown shared across both pages.
       </p>
 
-      <div className={styles.feed} aria-live="polite">
+      <div className={styles.feed} id="design-status" aria-live="polite">
         <div className={styles.feedhead}>
-          <span className={styles.feedlabel}>Pipeline telemetry</span>
+          <span className={styles.feedlabel}>Design status</span>
           <span className={styles.feedlive} role="status">
             {loading
               ? `live ${elapsed}s`
@@ -337,6 +390,9 @@ export default function Designer() {
                 : "standby"}
           </span>
         </div>
+        <p className={styles.feedsub}>
+          What&apos;s happening right now, stage by stage.
+        </p>
         <StageDetail
           events={events}
           finished={finished}
@@ -352,7 +408,7 @@ export default function Designer() {
       )}
 
       {ok && candidate !== undefined && audit !== undefined && (
-        <div className={styles.result}>
+        <div className={styles.result} id="design-result">
           <section aria-label="Designed sequence">
             <h3>Designed sequence</h3>
             <p className={styles.sequence}>{candidate.mature_sequence}</p>
