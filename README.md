@@ -267,3 +267,89 @@ npm run build    # production build
 MIT — see `LICENSE` (or the SPDX `MIT` grant in package metadata) for details.
 This is hackathon software: verify all generated sequences experimentally
 before any therapeutic or clinical use.
+
+## 🧪 Why this could actually work — a note for skeptics
+
+Let's be honest: an AI best known for writing text, inventing new medicines?
+That should sound implausible. It stops sounding implausible once you look
+at what these models trained on.
+
+**1. Protein sequences are text, and the training data is full of them.**
+Public databases like UniProtKB hold hundreds of millions of annotated
+protein sequences — amino-acid strings paired with functions, structures,
+and literature — and metagenomic troves hold billions more. Add decades of
+papers and patents, and a frontier-scale model has effectively "read" more
+protein sequences than any human ever will. To a language model, a knottin
+sequence is not chemistry homework; it is a sentence in a language it has
+seen countless times. [1]
+
+**2. Models trained this way demonstrably learn protein biology.** Meta's
+ESM-1b showed that structure and function *emerge* from scaling unsupervised
+learning over 250 million sequences, and ESMFold showed atomic-level
+structure can be read straight out of a language model's representations.
+The model isn't memorizing — it internalizes the statistical grammar
+linking sequence to fold to function. AlphaFold proved the same mapping
+from the other direction: sequence determines structure, predictably, at
+scale. [2][3][4]
+
+**3. Generative models have already invented working proteins.** Salesforce's
+ProGen used next-token prediction — the same mechanism as a chatbot — to
+generate artificial proteins with predictable function across families,
+including experimentally tested examples. ProtGPT2, a GPT-style model
+trained on UniRef50, designs de novo sequences that fold stably. AI-written,
+functional, never-before-seen proteins are published, peer-reviewed fact —
+not speculation. [5][6]
+
+**4. Knottins are an ideal dialect for an AI to speak.** Short (28–36
+residues), rigidly grammatical (six cysteines in the inhibitor cystine knot
+topology defined in 1994 [7]), and enormously exemplified in nature —
+spider, cone snail, plant, and insect peptides by the thousands. A short,
+rule-governed, data-rich format is exactly where generative models shine —
+and exactly what a strict compiler can verify.
+
+**5. Generation is cheap; verification is strict.** The crucial asymmetry:
+Muse Spark doesn't need to be right every time. It needs to propose
+plausible candidates while the deterministic compiler — grammar, charge,
+hydropathy, liabilities, developability — rejects everything unsound and
+coaches repairs. Even modest hit rates compound into verified designs,
+because only fluent sentences survive.
+
+**Honest caveats.** Compiler-verified is not wet-lab-validated: binding,
+efficacy, immunogenicity, and manufacturability still require experiments.
+What this pipeline claims is narrower and checkable — that every emitted
+sequence satisfies explicit biophysical rules — and the refinement trace
+shows its work. Incredulity is welcome; that is what the audit ledger is
+for.
+
+### References
+
+1. The UniProt Consortium. UniProt: the Universal Protein Knowledgebase in
+   2023. *Nucleic Acids Research* 51(D1), D523–D531 (2023).
+   Publication: <https://academic.oup.com/nar/article/51/D1/D523/6835362>
+   · DOI: <https://doi.org/10.1093/nar/gkac1052>
+2. Rives A. et al. Biological structure and function emerge from scaling
+   unsupervised learning to 250 million protein sequences. *PNAS* 118(15),
+   e2016239118 (2021).
+   Publication: <https://www.pnas.org/doi/full/10.1073/pnas.2016239118>
+   · DOI: <https://doi.org/10.1073/pnas.2016239118>
+3. Lin Z. et al. Evolutionary-scale prediction of atomic-level protein
+   structure with a language model. *Science* 379(6637) (2023).
+   Publication: <https://www.science.org/doi/10.1126/science.ade2574>
+   · DOI: <https://doi.org/10.1126/science.ade2574>
+4. Jumper J. et al. Highly accurate protein structure prediction with
+   AlphaFold. *Nature* 596, 583–589 (2021).
+   Publication: <https://www.nature.com/articles/s41586-021-03819-2>
+   · DOI: <https://doi.org/10.1038/s41586-021-03819-2>
+5. Madani A. et al. Large language models generate functional protein
+   sequences across diverse families. *Nature Biotechnology* (2023).
+   Publication: <https://www.nature.com/articles/s41587-022-01618-2>
+   · DOI: <https://doi.org/10.1038/s41587-022-01618-2>
+6. Ferruz N. et al. ProtGPT2 is a deep unsupervised language model for
+   protein design. *Nature Communications* 13, 4348 (2022).
+   Publication: <https://www.nature.com/articles/s41467-022-32007-7>
+   · DOI: <https://doi.org/10.1038/s41467-022-32007-7>
+7. Pallaghy P. K. et al. A common structural motif incorporating a cystine
+   knot and a triple-stranded β-sheet in toxic and inhibitory polypeptides.
+   *Protein Science* 3, 1833–1839 (1994).
+   Publication: <https://onlinelibrary.wiley.com/doi/10.1002/pro.5560031022>
+   · DOI: <https://doi.org/10.1002/pro.5560031022>
