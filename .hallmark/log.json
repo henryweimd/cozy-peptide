@@ -130,5 +130,12 @@
   "notes": [
    "tests 49/49; source lint clean; endpoints live-checked; API band shot verified"
   ]
+ },
+ {
+  "turn": 12,
+  "action": "finish-review (fresh-context subagent, read-only)",
+  "result": "SHIP: 6/6 PASS; content preserved, copy clean, no layout regression, token swaps value-identical; caveats: disabled/report-panel states code-inferred not pixel-verified",
+  "gates": "tests 161/161, lint clean, build pass (unchanged since green runs)",
+  "screenshots": "/tmp/hm-after-{home,design,biology,lbp}.png"
  }
 ]

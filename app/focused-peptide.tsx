@@ -265,8 +265,8 @@ export default function FocusedPeptide({
           {target !== null && (
             <p className={styles.recentMeta}>
               {target}
-              {createdAt !== null && ` — ${timeAgo(createdAt, now)}`}
-              {elapsedMs !== null && ` · ${(elapsedMs / 1000).toFixed(1)}s`}
+              {createdAt !== null && `, ${timeAgo(createdAt, now)}`}
+              {elapsedMs !== null && `, ${(elapsedMs / 1000).toFixed(1)}s`}
             </p>
           )}
         </div>
@@ -285,7 +285,7 @@ export default function FocusedPeptide({
       )}
       {failed && (
         <p className={styles.note}>
-          Couldn&apos;t load that run — it may have been removed.
+          Couldn&apos;t load that run. It may have been removed.
         </p>
       )}
 
@@ -308,7 +308,7 @@ export default function FocusedPeptide({
             <p className={styles.note}>
               {status !== "success"
                 ? "This run failed; a step-by-step trace was not recorded."
-                : "A step-by-step trace was not recorded for this run — "}
+                : "A step-by-step trace was not recorded for this run: "}
               {status === "success" &&
                 `research ${researchStatus ?? "unknown"}, ${refinementTurns} refinement turn${refinementTurns === 1 ? "" : "s"}, audit ${auditPassed === true ? "passed" : auditPassed === false ? "failed" : "unknown"}, handoff ${handoffBlob !== null ? "compiled" : "missing"}.`}
             </p>

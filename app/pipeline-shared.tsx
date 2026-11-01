@@ -310,7 +310,7 @@ export function SparkStatusPill({
       className={styles.sparkpill}
       data-state={status.state}
       role="status"
-      title={`${status.model} · ${status.detail} · checked ${status.checkedAt}`}
+      title={`${status.model}, ${status.detail}, checked ${status.checkedAt}`}
     >
       <span className={styles.sparkdot} aria-hidden="true" />
       {SPARK_STATE_LABEL[status.state]} · {status.detail}
@@ -329,10 +329,10 @@ export function researchOutcomeLine(
   evidenceCount: number | null | undefined
 ): string {
   if (status === "ok") return `Converged from ${evidenceCount ?? 0} papers`;
-  if (status === "disabled") return "Disabled — static prompt";
+  if (status === "disabled") return "Disabled: static prompt";
   const base = `Fallback to the static prompt (${reason ?? status ?? "unknown"})`;
   return (evidenceCount ?? 0) > 0
-    ? `${base} — ${evidenceCount} retrieved paper(s) are in the full brief below`
+    ? `${base}. ${evidenceCount} retrieved paper(s) are in the full brief below`
     : base;
 }
 
@@ -545,7 +545,7 @@ export function DesignedPeptideHero({
     `${sequence.length} residues`,
   ]
     .filter((bit) => bit !== undefined && bit.length > 0)
-    .join(" · ");
+    .join(", ");
   const stem = safeStem(constructId ?? "peptide");
   return (
     <section className={styles.peptidehero} aria-label={heading}>
@@ -557,7 +557,7 @@ export function DesignedPeptideHero({
         {sequence}
       </p>
       <p className={styles.herometa}>
-        {meta} — proven by the symbolic compiler
+        {meta}. Proven by the symbolic compiler
       </p>
       {interpreted !== undefined && (
         <p className={styles.herointerpreted}>
@@ -572,13 +572,16 @@ export function DesignedPeptideHero({
           <h4>LBP-ready DNA</h4>
           <p>
             The coding sequence for this peptide, optimized for{" "}
-            <i>E. coli</i> — the workhorse LBP chassis — with a TAA
+            <i>E. coli</i>, the workhorse LBP chassis, with a TAA
             stop. Clone it downstream of your vector&apos;s ATG start
             codon and the LBP transcribes it into the peptide above.
           </p>
           <p className={styles.herodnastats}>
-            {transfer.length} nt · GC {cds.gcPercent}% · CAI{" "}
-            {cds.cai.toFixed(2)}
+            <span>{transfer.length} nt</span>
+            <span aria-hidden="true" className={styles.stathair} />
+            <span>GC {cds.gcPercent}%</span>
+            <span aria-hidden="true" className={styles.stathair} />
+            <span>CAI {cds.cai.toFixed(2)}</span>
           </p>
           <code className={styles.herodnaseq}>
             {codonSpaced(transfer)}
@@ -648,7 +651,7 @@ function stageReason(stage: StageName, state: StageState): string | null {
       ? "Static prompt used"
       : "No repair needed";
   }
-  if (state === "error") return "Failed here — see the error below";
+  if (state === "error") return "Failed here. See the error below.";
   if (state === "unreached") return "Run stopped before this stage";
   return null;
 }

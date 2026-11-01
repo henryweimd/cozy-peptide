@@ -67,7 +67,7 @@ export default function LbpPage(): React.ReactElement {
                 </span>
               </h1>
               <p className="lead">
-                Living medicines, made of microbes — medicines made of
+                Living medicines, made of microbes: medicines made of
                 living microbes that treat disease from inside the gut.
               </p>
               <p className={styles.heroactions}>
@@ -90,15 +90,15 @@ export default function LbpPage(): React.ReactElement {
               whose active ingredient is alive: carefully chosen
               bacteria or yeast, given as a pill or enema, that take
               up residence in the gut and do therapeutic work there.
-              The FDA treats LBPs as biological drugs — manufactured,
-              dosed, and tested in trials like any medicine — which
+              The FDA treats LBPs as biological drugs (manufactured,
+              dosed, and tested in trials like any medicine), which
               sets them apart from yogurt probiotics on one side and
               raw donor-stool transplants on the other.
             </p>
             <p>
               The simplest picture is a garden. Antibiotics are a
               wildfire: they kill the infection, but they also clear
-              the ground. Whatever grows back first wins — and too
+              the ground. Whatever grows back first wins, and too
               often that is a pathogen. An LBP reseeds the ground
               with the right community so the pathogen finds no room
               to invade, a protection doctors call colonization
@@ -125,8 +125,8 @@ export default function LbpPage(): React.ReactElement {
               A landmark 2013 trial proved the alternative: restoring
               the missing community cured most recurrent cases where
               antibiotics alone kept failing. LBPs are that insight
-              turned into real products — standardized, screened, and
-              dosed — and the same logic now extends toward
+              turned into real products (standardized, screened, and
+              dosed), and the same logic now extends toward
               inflammatory bowel disease, bloodstream infections
               after transplant, and beyond.
             </p>
@@ -139,12 +139,12 @@ export default function LbpPage(): React.ReactElement {
             <p>
               Two LBPs have earned full FDA approval so far, both to
               prevent <em>C. difficile</em> from coming back after
-              antibiotics — and both made from screened donor
+              antibiotics, and both made from screened donor
               microbiota rather than engineered strains. No engineered
               LBP has been approved anywhere yet: that is the frontier
               this site builds toward.
             </p>
-            <h3>Rebyota — first across the line</h3>
+            <h3>Rebyota: first across the line</h3>
             <p>
               Made by Ferring and approved in November 2022, Rebyota
               is a single rectal dose of screened donor microbiota.
@@ -152,11 +152,11 @@ export default function LbpPage(): React.ReactElement {
               patients recurrence-free at eight weeks, against 58% on
               placebo.
             </p>
-            <h3>Vowst — the first LBP pill</h3>
+            <h3>Vowst: the first LBP pill</h3>
             <p>
               Developed by Seres Therapeutics (commercial rights moved
               to Nestlé Health Science in 2024) and approved in April
-              2023, Vowst is purified bacterial spores in capsules —
+              2023, Vowst is purified bacterial spores in capsules,
               four a day for three days. In the 182-patient ECOSPOR
               III trial, published in the New England Journal of
               Medicine, only 12% of recipients relapsed within eight
@@ -170,8 +170,8 @@ export default function LbpPage(): React.ReactElement {
             <h2 id="lbp-pipeline">The late-stage pipeline</h2>
             <p>
               The next wave replaces donor stool with defined,
-              manufactured consortia — every strain known, every dose
-              identical — and pushes beyond <em>C. difficile</em>{" "}
+              manufactured consortia (every strain known, every dose
+              identical) and pushes beyond <em>C. difficile</em>{" "}
               into transplant medicine and inflammatory disease.
             </p>
             <table className={styles.apitable}>
@@ -239,7 +239,7 @@ export default function LbpPage(): React.ReactElement {
               happen to make. The engineered generation will carry
               custom payloads: a harmless gut yeast, rewritten to
               secrete a designed peptide exactly where the pathogen
-              lives — a living factory with a programmable product.
+              lives: a living factory with a programmable product.
             </p>
             <ol className={styles.storyrow}>
               {STORY.map((step) => (
@@ -283,33 +283,28 @@ export default function LbpPage(): React.ReactElement {
                 <a href="https://www.frontiersin.org/journals/microbiology/articles/10.3389/fmicb.2026.2002085/full">
                   Engineered live biotherapeutic products: design
                   decisions and clinical translation
-                </a>{" "}
-                — Frontiers in Microbiology (approvals, engineered
+                </a>,{" "}Frontiers in Microbiology (approvals, engineered
                 frontier)
               </li>
               <li>
                 <a href="https://conferences.medicom-publishers.com/specialisation/gastroenterology/spore-therapy-cuts-c-difficile-reinfection-by-68-in-8-week-study/">
                   ECOSPOR III: spore therapy cuts reinfection by 68%
-                </a>{" "}
-                — NEJM trial report (Vowst 12% vs 40%)
+                </a>,{" "}NEJM trial report (Vowst 12% vs 40%)
               </li>
               <li>
                 <a href="https://pulse2.com/vedanta-biosciences-raises-60-million-to-advance-phase-3-ve303-study/">
                   Vedanta advances Phase 3 VE303 study
-                </a>{" "}
-                — RESTORATiVE303 timelines
+                </a>,{" "}RESTORATiVE303 timelines
               </li>
               <li>
                 <a href="https://www.globenewswire.com/news-release/2026/08/05/3339196/0/en/seres-therapeutics-reports-second-quarter-2026-financial-results-and-provides-business-updates-including-further-action-to-reduce-ongoing-facilities-costs.html">
                   Seres Q2 2026 update
-                </a>{" "}
-                — SER-155 Phase 2 readiness
+                </a>,{" "}SER-155 Phase 2 readiness
               </li>
               <li>
                 <a href="https://www.biospace.com/maat-pharma-announces-first-patient-dosed-in-phase-2b-randomized-clinical-trial-evaluating-maat033-in-patients-receiving-allo-hsct">
                   MaaT Pharma doses first Phase 2b patient
-                </a>{" "}
-                — MaaT033 PHOEBUS trial
+                </a>,{" "}MaaT033 PHOEBUS trial
               </li>
             </ul>
           </div>

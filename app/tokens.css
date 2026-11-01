@@ -18,6 +18,8 @@
   --color-glyph-1: oklch(89% 0.025 254); --color-glyph-2: oklch(81% 0.045 255); --color-glyph-3: oklch(70% 0.085 256); --color-glyph-4: oklch(60% 0.13 257);
   --color-graphite-glyph-1: oklch(33% 0.03 262); --color-graphite-glyph-2: oklch(41% 0.05 260); --color-graphite-glyph-3: oklch(53% 0.1 258);
   --color-key-face: oklch(99.4% 0.003 250); --color-key-edge: oklch(80% 0.016 254);
+  --color-scrim: rgb(0 0 0 / 0.45);
+  --color-plddt-high: #1a46c8; --color-plddt-mid: #22c3d6; --color-plddt-low: #e3c81c; --color-plddt-poor: #e2571e;
   --font-display: "Familjen Grotesk", system-ui, sans-serif; --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-outlier: "JetBrains Mono", ui-monospace, monospace;
   --radius-card: 8px; --radius-input: 6px; --radius-pill: 999px;
@@ -26,5 +28,6 @@
   --shadow-key: 0 3px 0 0 var(--color-key-edge), 0 6px 8px -4px oklch(21% 0.028 262 / 0.28), inset 0 1px 0 oklch(100% 0 0 / 0.9);
   --shadow-key-accent: 0 3px 0 0 var(--color-accent-edge), 0 6px 8px -4px oklch(30% 0.12 260 / 0.45), inset 0 1px 0 oklch(100% 0 0 / 0.22);
   --shadow-key-press: inset 0 1px 2px oklch(21% 0.028 262 / 0.14);
+  --shadow-modal: 0 1.5rem 4rem rgb(0 0 0 / 0.3);
   --tracking-display: -0.028em; --display-weight: 600;
 }

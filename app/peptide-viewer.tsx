@@ -156,7 +156,7 @@ export default function PeptideViewer({
               break;
             }
             setMessage(
-              `ESM Atlas is warming up — retry ${retry + 1} of ${RETRY_DELAYS_MS.length}…`
+              `ESM Atlas is warming up: retry ${retry + 1} of ${RETRY_DELAYS_MS.length}…`
             );
             setSleepUntil(Date.now() + delay);
             await sleep(delay);
@@ -169,7 +169,7 @@ export default function PeptideViewer({
             const delay = RETRY_DELAYS_MS[retry];
             if (delay === undefined) break;
             setMessage(
-              `ESM Atlas is warming up — retry ${retry + 1} of ${RETRY_DELAYS_MS.length}…`
+              `ESM Atlas is warming up: retry ${retry + 1} of ${RETRY_DELAYS_MS.length}…`
             );
             setSleepUntil(Date.now() + delay);
             await sleep(delay);
@@ -183,7 +183,7 @@ export default function PeptideViewer({
           // say so plainly instead of quoting milliseconds.
           setMessage(
             lastKind !== null && RETRYABLE_KINDS.has(lastKind)
-              ? "ESM Atlas is overloaded right now. Your peptide and everything below are unaffected — retry when ready."
+              ? "ESM Atlas is overloaded right now. Your peptide and everything below are unaffected. Retry when ready."
               : lastError
           );
           return;
@@ -306,7 +306,7 @@ export default function PeptideViewer({
       )}
       {status === "error" && (
         <div className={styles.viewerstatus} role="alert">
-          <span>Structure unavailable — {message}</span>
+          <span>Structure unavailable: {message}</span>
           <button
             type="button"
             className={styles.btn}
@@ -373,8 +373,8 @@ export function StructureGuide(): React.ReactElement {
           <dd>
             3D coordinates are predicted in near real time by Meta&apos;s
             ESMFold through the ESM Atlas API, which infers physical
-            topology directly from single-sequence representations —
-            no slow multiple sequence alignments required. Folding runs
+            topology directly from single-sequence representations.
+            No slow multiple sequence alignments required. Folding runs
             on demand for each accepted design.
           </dd>
         </div>
@@ -387,7 +387,7 @@ export function StructureGuide(): React.ReactElement {
               <li>
                 <span
                   className={styles.swatch}
-                  style={{ backgroundColor: "#1a46c8" }}
+                  style={{ backgroundColor: "var(--color-plddt-high)" }}
                   aria-hidden="true"
                 />{" "}
                 Above 90 (dark blue): very high confidence, well-ordered
@@ -396,7 +396,7 @@ export function StructureGuide(): React.ReactElement {
               <li>
                 <span
                   className={styles.swatch}
-                  style={{ backgroundColor: "#22c3d6" }}
+                  style={{ backgroundColor: "var(--color-plddt-mid)" }}
                   aria-hidden="true"
                 />{" "}
                 70 to 90 (cyan): high confidence, reliable secondary
@@ -405,7 +405,7 @@ export function StructureGuide(): React.ReactElement {
               <li>
                 <span
                   className={styles.swatch}
-                  style={{ backgroundColor: "#e3c81c" }}
+                  style={{ backgroundColor: "var(--color-plddt-low)" }}
                   aria-hidden="true"
                 />{" "}
                 50 to 70 (yellow): low confidence, possible flexible loop,
@@ -414,7 +414,7 @@ export function StructureGuide(): React.ReactElement {
               <li>
                 <span
                   className={styles.swatch}
-                  style={{ backgroundColor: "#e2571e" }}
+                  style={{ backgroundColor: "var(--color-plddt-poor)" }}
                   aria-hidden="true"
                 />{" "}
                 Below 50 (orange and red): disordered or non-folding region.

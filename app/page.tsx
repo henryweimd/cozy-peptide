@@ -89,7 +89,7 @@ const PROCESS_STEPS: Array<{
   },
   {
     title: "Verify symbolically",
-    body: "The compiler checks loop grammar, charge, and chemical liabilities — nothing model-made passes unchecked.",
+    body: "The compiler checks loop grammar, charge, and chemical liabilities. Nothing model-made passes unchecked.",
     meta: false,
   },
   {
@@ -254,8 +254,8 @@ export default function Home() {
             <p>
               Pass <code>?stream=1</code> (or{" "}
               <code>Accept: text/event-stream</code>) for server-sent{" "}
-              <code>stage</code> events — research, propose, verify,
-              repair, handoff — followed by a final <code>result</code>{" "}
+              <code>stage</code> events (research, propose, verify,
+              repair, handoff) followed by a final <code>result</code>{" "}
               or <code>error</code> event. Every response also carries{" "}
               <code>research_provenance</code> with the literature
               brief, citations, and per-source timings.

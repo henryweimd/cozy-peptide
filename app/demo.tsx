@@ -154,7 +154,7 @@ export default function Demo() {
       )}
       <p className={styles.note}>
         One design per minute per visitor. Presets or your own
-        condition under Other — guarded input, no token needed.
+        condition under Other. Guarded input, no token needed.
       </p>
       <Recent onUse={(run) => router.push(`/design?run=${run.id}`)} />
     </section>

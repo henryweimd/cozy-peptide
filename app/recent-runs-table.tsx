@@ -113,7 +113,7 @@ export default function RecentRunsTable({
         <p className={styles.note}>Loading recent designs…</p>
       ) : runs.length === 0 ? (
         <p className={styles.note}>
-          No saved designs yet — run one above and it lands here.
+          No saved designs yet. Run one above and it lands here.
         </p>
       ) : (
         <>

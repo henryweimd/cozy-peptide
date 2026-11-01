@@ -81,7 +81,7 @@ export default function Recent({
             {run.candidateSequence ?? run.candidateId ?? "—"}
           </code>
           <span className={styles.recentMeta}>
-            {run.target} — {timeAgo(run.createdAt, now)}
+            {run.target}, {timeAgo(run.createdAt, now)}
             {metaLine(run).length > 0 ? `, ${metaLine(run)}` : ""}
           </span>
           {onUse !== undefined && run.candidateSequence !== null && (

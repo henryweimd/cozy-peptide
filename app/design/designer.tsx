@@ -348,7 +348,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           <p className={styles.guardtitle}>That condition won&apos;t work</p>
           <p>{error}</p>
           <p className={styles.guardsub}>
-            Try one of these instead — tapping one runs it immediately:
+            Try one of these instead (tapping one runs it immediately):
           </p>
           <div className={styles.guardchips} role="group" aria-label="Suggested conditions">
             {GUARD_RECOVERY_SUGGESTIONS.map((suggestion) => (
@@ -447,7 +447,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           onChange={(event) => setResearch(event.target.checked)}
         />
         <span>
-          Literature research stage — ground the prompt in PubMed and
+          Literature research stage: ground the prompt in PubMed and
           Europe PMC before generating
         </span>
       </label>
@@ -469,7 +469,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
       )}
       <p className={styles.note}>
         {locked
-          ? "Chosen on the overview — return there to pick a different condition. One design per minute per visitor."
+          ? "Chosen on the overview. Return there to pick a different condition. One design per minute per visitor."
           : "Presets or your own gut condition under Other, one design per minute per visitor, cooldown shared across both pages."}
       </p>
 
@@ -507,12 +507,12 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           research and proposals are running on deterministic fallbacks.
           Designs still verify through the symbolic compiler
           {sparkStatus.state === "blocked"
-            ? " — only the AI drafting is degraded; check the API key's standing."
+            ? " Only the AI drafting is degraded; check the API key's standing."
             : sparkStatus.state === "rate_limited"
-              ? " — retry shortly; the brief library keeps reports rich meanwhile."
+              ? " Retry shortly; the brief library keeps reports rich meanwhile."
               : sparkStatus.state === "unconfigured"
-                ? " — set META_API_KEY on the server to enable model drafting."
-                : " — the brief library and compiler hold meanwhile."}
+                ? " Set META_API_KEY on the server to enable model drafting."
+                : " The brief library and compiler hold meanwhile."}
         </p>
       )}
 

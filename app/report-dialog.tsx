@@ -79,19 +79,19 @@ function reportToHtml(report: ReportModel): string {
           ref.url.length > 0
             ? `<a href="${escapeHtml(ref.url)}">${escapeHtml(ref.title)}</a>`
             : escapeHtml(ref.title)
-        } <em>— ${escapeHtml(ref.source)}${ref.year !== null ? `, ${escapeHtml(ref.year)}` : ""}</em></li>`
+        }, <em>${escapeHtml(ref.source)}${ref.year !== null ? `, ${escapeHtml(ref.year)}` : ""}</em></li>`
     )
     .join("\n");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Literature Brief — ${escapeHtml(report.target)}</title>
+<title>Literature Brief: ${escapeHtml(report.target)}</title>
 <style>body{font-family:system-ui,sans-serif;max-width:44rem;margin:2rem auto;padding:0 1rem;line-height:1.6}h1{font-size:1.5rem}.meta{color:#555;font-style:italic}ol.refs li{margin-bottom:.4rem}</style>
 </head>
 <body>
-<h1>Literature Brief — ${escapeHtml(report.target)}</h1>
-<p class="meta">Generated ${escapeHtml(report.generatedAt)} · ${escapeHtml(report.model)} · ${report.evidenceCount} references${report.cached ? " · cached" : ""}${report.fallback ? " · synthesis fallback" : ""}</p>
+<h1>Literature Brief: ${escapeHtml(report.target)}</h1>
+<p class="meta">Generated ${escapeHtml(report.generatedAt)}, ${escapeHtml(report.model)}, ${report.evidenceCount} references${report.cached ? ", cached" : ""}${report.fallback ? ", synthesis fallback" : ""}</p>
 <h2>Background</h2>
 <p>${escapeHtml(narrative.background)}</p>
 <h2>Biological rationale</h2>
@@ -266,12 +266,6 @@ export default function ReportDialog({
 
         {report !== null && (
           <>
-            <p className={styles.recentMeta}>
-              {report.target} — {report.evidenceCount} references ·{" "}
-              {report.model}
-              {report.cached ? " · cached" : ""}
-              {report.fallback ? " · model synthesis unavailable" : ""}
-            </p>
             <h4>Background</h4>
             <p>{report.narrative.background}</p>
             <h4>Biological rationale</h4>
@@ -311,14 +305,21 @@ export default function ReportDialog({
                     </a>
                   ) : (
                     ref.title
-                  )}{" "}
+                  )}{", "}
                   <span className={styles.recentMeta}>
-                    — {ref.source}
+                    {ref.source}
                     {ref.year !== null ? `, ${ref.year}` : ""}
                   </span>
                 </li>
               ))}
             </ol>
+
+            <p className={styles.recentMeta}>
+              Brief for {report.target}: {report.evidenceCount} references
+              via {report.model}
+              {report.cached ? ", cached" : ""}
+              {report.fallback ? ", model synthesis unavailable" : ""}
+            </p>
 
             <div className={`${styles.reportactions} report-actions`}>
               <button

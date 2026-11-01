@@ -74,70 +74,63 @@ export default function DesignPage() {
               <li>
                 <a href="https://www.twistbioscience.com">
                   Twist Bioscience
-                </a>{" "}
-                — silicon-platform gene synthesis and oligo pools.
+                </a>,{" "}silicon-platform gene synthesis and oligo pools.
               </li>
               <li>
                 <a href="https://www.idtdna.com">
                   Integrated DNA Technologies (IDT)
-                </a>{" "}
-                — gBlocks gene fragments and custom gene synthesis.
+                </a>,{" "}gBlocks gene fragments and custom gene synthesis.
               </li>
               <li>
-                <a href="https://www.genscript.com">GenScript</a> —
+                <a href="https://www.genscript.com">GenScript</a>,
                 custom gene synthesis with cloning into your vector.
               </li>
               <li>
-                <a href="https://www.azenta.com">Azenta (GENEWIZ)</a>{" "}
-                — gene synthesis plus Sanger and NGS verification.
+                <a href="https://www.azenta.com">Azenta (GENEWIZ)</a>,{" "}gene synthesis plus Sanger and NGS verification.
               </li>
               <li>
                 <a href="https://www.eurofinsgenomics.com">
                   Eurofins Genomics
-                </a>{" "}
-                — gene synthesis and oligonucleotides, EU and US labs.
+                </a>,{" "}gene synthesis and oligonucleotides, EU and US labs.
               </li>
               <li>
                 <a href="https://www.camenabio.com">
                   Camena Bioscience
-                </a>{" "}
-                — enzymatic gene synthesis for long, complex
+                </a>,{" "}enzymatic gene synthesis for long, complex
                 constructs.
               </li>
             </ul>
             <h3>Engineered LBP development and manufacturing</h3>
             <p>
               Turning the construct into an engineered live
-              biotherapeutic — strain engineering, process
-              development, and GMP manufacturing — needs a
+              biotherapeutic (strain engineering, process
+              development, and GMP manufacturing) needs a
               microbiome-capable partner:
             </p>
             <ul className={styles.providerlist}>
               <li>
-                <a href="https://www.ginkgo.bio">Ginkgo Bioworks</a>{" "}
-                — foundry strain engineering, including Saccharomyces
+                <a href="https://www.ginkgo.bio">Ginkgo Bioworks</a>,{" "}foundry strain engineering, including Saccharomyces
                 yeast chassis development.
               </li>
               <li>
                 <a href="https://lallemand-health-solutions.com">
                   Lallemand Health Solutions
-                </a>{" "}
-                — probiotic yeast manufacturer producing
+                </a>,{" "}probiotic yeast manufacturer producing
                 Saccharomyces boulardii under GMP.
               </li>
               <li>
-                <a href="https://listlabs.com">List Labs</a> —
+                <a href="https://listlabs.com">List Labs</a>,
                 microbial CDMO with cGMP live biotherapeutic
                 manufacturing for early clinical supply.
               </li>
               <li>
-                <a href="https://www.wacker.com">Wacker Biotech</a> —
+                <a href="https://www.wacker.com">Wacker Biotech</a>,
                 microbial CDMO with a dedicated LBP development and
                 GMP manufacturing platform.
               </li>
             </ul>
             <p className={styles.providernote}>
-              Independent providers, listed for orientation — not
+              Independent providers, listed for orientation, not
               endorsements. Confirm current capabilities, organism
               scope, and quality systems directly before engaging.
               Engineered LBPs are FDA-regulated drugs: clinical work
