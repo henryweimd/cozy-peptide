@@ -12,7 +12,7 @@ export type SitePage = "home" | "design" | "lbp";
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
   { id: "design", href: "/design", label: "design a peptide" },
-  { id: "lbp", href: "/lbp", label: "LBP guide" },
+  { id: "lbp", href: "/lbp", label: "Live Biotherapeutic Product" },
 ];
 
 export default function SiteNav({
