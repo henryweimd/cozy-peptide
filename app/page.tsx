@@ -75,13 +75,6 @@ export default function Home() {
       </a>
       <SiteNav
         current="home"
-        sections={[
-          { href: "#demo", label: "the demo" },
-          { href: "#biology", label: "the biology" },
-          { href: "#api", label: "the API call" },
-          { href: "#pipeline", label: "the pipeline" },
-          { href: "#safety", label: "safety" },
-        ]}
         action={{ href: "#demo", label: "Design a peptide" }}
       />
 

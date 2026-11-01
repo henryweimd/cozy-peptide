@@ -66,11 +66,6 @@ export default function DesignPage() {
       </a>
       <SiteNav
         current="design"
-        sections={[
-          { href: "/#api", label: "the API call" },
-          { href: "/#pipeline", label: "the pipeline" },
-          { href: "/#safety", label: "safety" },
-        ]}
         action={{ href: "#design-controls", label: "Start designing" }}
       />
       <nav className={styles.subnav} aria-label="On this page">

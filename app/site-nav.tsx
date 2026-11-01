@@ -2,26 +2,34 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 /**
- * Site-wide top bar: identical on every whole page. The page links
- * stay fixed so future pages join by adding one entry; each page may
- * append its own section anchors plus a call to action.
+ * Site-wide top bar: identical on every whole page. Page links and
+ * landing-page anchors stay fixed; each page supplies only its own
+ * call to action, and in-page navigation lives in a subnav below.
  */
 
 export type SitePage = "home" | "design" | "lbp";
 
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
-  { id: "design", href: "/design", label: "design a peptide" },
   { id: "lbp", href: "/lbp", label: "Live Biotherapeutic Product" },
+];
+
+/**
+ * Explainer anchors on the landing page, reachable from every whole
+ * page. The Design call to action stays a button, never a text link.
+ */
+const SECTIONS: Array<{ href: string; label: string }> = [
+  { href: "/#biology", label: "The Biology" },
+  { href: "/#api", label: "API Docs" },
+  { href: "/#pipeline", label: "AI Pipeline" },
+  { href: "/#safety", label: "Safety" },
 ];
 
 export default function SiteNav({
   current,
-  sections = [],
   action,
 }: {
   current: SitePage;
-  sections?: Array<{ href: string; label: string }>;
   action?: { href: string; label: string };
 }): React.ReactElement {
   return (
@@ -50,7 +58,7 @@ export default function SiteNav({
               </Link>
             )
           )}
-          {sections.map((section) => (
+          {SECTIONS.map((section) => (
             <a
               key={section.href}
               className={styles.navlink}

@@ -44,14 +44,16 @@ export default function LbpPage(): React.ReactElement {
       </a>
       <SiteNav
         current="lbp"
-        sections={[
-          { href: "#what", label: "what they are" },
-          { href: "#approved", label: "approved" },
-          { href: "#pipeline", label: "pipeline" },
-          { href: "#peptides", label: "peptides" },
-        ]}
         action={{ href: "/design", label: "Design a peptide" }}
       />
+      <nav className={styles.subnav} aria-label="On this page">
+        <div className="container">
+          <a href="#lbp-what">What they are</a>
+          <a href="#lbp-approved">Approved</a>
+          <a href="#lbp-pipeline">Pipeline</a>
+          <a href="#lbp-peptides">Peptides</a>
+        </div>
+      </nav>
       <main className={styles.main} id="main">
         <section className={styles.section} aria-labelledby="lbp-title">
           <div className="container">
