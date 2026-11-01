@@ -153,7 +153,8 @@ export default function Home() {
               <p className="lead">
                 Novel AI-designed peptides for gut disease — every one
                 safety-verified, then compiled to DNA so engineered
-                probiotics can make it where it&apos;s needed.
+                Live Biotherapeutic Products can make it where
+                it&apos;s needed.
               </p>
               <div className={styles.heroactions}>
                 <a className={styles.btn} href="#api">
