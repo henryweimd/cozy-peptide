@@ -2179,6 +2179,64 @@
   margin-top: var(--space-md);
 }
 
+.labTimePill {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-2);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-pill);
+  padding: 0.15em 0.7em;
+  white-space: nowrap;
+}
+
+.labPlan {
+  margin-top: var(--space-lg);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+}
+
+.labPlanBar {
+  display: flex;
+  gap: 2px;
+  height: 0.9rem;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-top: var(--space-sm);
+}
+
+.labPlanSeg {
+  display: block;
+  min-width: 0.5rem;
+}
+
+.labPlanLegend {
+  list-style: none;
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-lg);
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+
+.labPlanLegend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.labPlanSwatch {
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 0.2em;
+  flex: none;
+}
+
 .labUpload {
   margin-top: var(--space-md);
   background: var(--color-paper-2);

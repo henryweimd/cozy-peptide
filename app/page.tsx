@@ -151,10 +151,10 @@ export default function Home() {
                 Name the disease. We design the peptide.
               </h1>
               <p className="lead">
-                Novel AI-designed peptides for gut disease — every one
-                safety-verified, then compiled to DNA so engineered
-                Live Biotherapeutic Products can make it where
-                it&apos;s needed.
+                Novel AI-designed peptides for disease — every one
+                screened for safety, then compiled to DNA so engineered
+                Live Biotherapeutic Products can produce peptides
+                locally.
               </p>
               <div className={styles.heroactions}>
                 <a className={styles.btn} href="#api">

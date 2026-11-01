@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import styles from "../page.module.css";
 import BiosafetyFooter from "../biosafety-footer";
+import SectionIcon from "../section-icons";
 import SiteNav from "../site-nav";
 import Guide from "./guide";
 
@@ -38,7 +39,10 @@ export default function LabGuidePage() {
         <section className={styles.section} aria-labelledby="lab-title">
           <div className="container">
             <div className={styles.headblock}>
-              <h1 id="lab-title">Lab Guide</h1>
+              <h1 id="lab-title">
+                <SectionIcon name="flask" />
+                Lab Guide
+              </h1>
               <p className="lead">
                 From designed sequence to lab result, step by step —
                 and every result you feed back makes the next designs

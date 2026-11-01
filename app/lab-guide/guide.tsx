@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import styles from "../page.module.css";
 import Recent, { type RecentRun } from "../recent";
+import SectionIcon, { type SectionIconName } from "../section-icons";
 import {
   ASSAY_TEMPLATE_VERSION,
   ASSAY_TEMPLATES,
@@ -94,18 +95,88 @@ function StepHead({
   index,
   title,
   done,
+  icon,
+  time,
 }: {
   id: string;
   index: string;
   title: string;
   done: boolean;
+  icon: SectionIconName;
+  time?: string;
 }): React.ReactElement {
   return (
     <div className={styles.labStepHead} id={id}>
       <h2>
+        <SectionIcon name={icon} />
         <span className={styles.labStepNum}>{index}</span> {title}
       </h2>
+      {time !== undefined && (
+        <span
+          className={styles.labTimePill}
+          title="Typical turnaround when outsourced — see Plan the run"
+        >
+          <SectionIcon name="clock" />
+          {time}
+        </span>
+      )}
       {done && <span className={styles.livebadge}>Done</span>}
+    </div>
+  );
+}
+
+const PLAN_SEGMENTS: Array<{
+  anchor: string;
+  step: string;
+  label: string;
+  time: string;
+  grow: number;
+  color: string;
+}> = [
+  { anchor: "lab-order", step: "1", label: "Order the DNA", time: "5–10 business days", grow: 6, color: "var(--color-glyph-2)" },
+  { anchor: "lab-build", step: "2", label: "Build the strain", time: "1–3 weeks", grow: 8, color: "var(--color-glyph-3)" },
+  { anchor: "lab-verify", step: "3", label: "Verify the sequence", time: "2–5 days", grow: 2, color: "var(--color-glyph-4)" },
+  { anchor: "lab-express", step: "4", label: "Express and measure titer", time: "3–7 days", grow: 3, color: "var(--color-accent-2)" },
+  { anchor: "lab-assay", step: "5", label: "Assay function", time: "1–2 weeks", grow: 6, color: "var(--color-accent)" },
+];
+
+function PlanStrip(): React.ReactElement {
+  return (
+    <div className={styles.labPlan} aria-label="Outsourced run planning timeline">
+      <p className={styles.bioCellTitle}>
+        <strong>Plan the run: ≈ 4–9 weeks from DNA order to assay data</strong>
+      </p>
+      <div className={styles.labPlanBar} aria-hidden="true">
+        {PLAN_SEGMENTS.map((seg) => (
+          <span
+            key={seg.step}
+            className={styles.labPlanSeg}
+            style={{ flexGrow: seg.grow, background: seg.color }}
+            title={`${seg.label} — ${seg.time}`}
+          />
+        ))}
+      </div>
+      <ul className={styles.labPlanLegend}>
+        {PLAN_SEGMENTS.map((seg) => (
+          <li key={seg.step}>
+            <span
+              className={styles.labPlanSwatch}
+              style={{ background: seg.color }}
+              aria-hidden="true"
+            />
+            <a href={`#${seg.anchor}`}>
+              {seg.step} · {seg.label}
+            </a>{" "}
+            — {seg.time}
+          </li>
+        ))}
+      </ul>
+      <p className={styles.note}>
+        Planning ranges for an outsourced run: vendor queues, CRO
+        scheduling, and strain troubleshooting move these — MIC and
+        cytotoxicity already run in parallel inside step 5. Steps 0, 6,
+        and 7 are bench-free.
+      </p>
     </div>
   );
 }
@@ -518,6 +589,7 @@ export default function Guide(): React.ReactElement {
           next generation of design models.
         </p>
       </div>
+      <PlanStrip />
       {demo && (
         <p className={styles.note}>
           Demo mode: sample run, simulated submissions — nothing is
@@ -533,7 +605,7 @@ export default function Guide(): React.ReactElement {
       )}
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-run">
-        <StepHead id="lab-run-head" index="0" title="Bind a run" done={run !== null} />
+        <StepHead id="lab-run-head" index="0" title="Bind a run" done={run !== null} icon="link" time="minutes" />
         <div className={styles.bioProse}>
           <p>
             {run === null
@@ -575,7 +647,7 @@ export default function Guide(): React.ReactElement {
       </div>
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-order">
-        <StepHead id="lab-order-head" index="1" title="Order the DNA" done={progress.ordered} />
+        <StepHead id="lab-order-head" index="1" title="Order the DNA" done={progress.ordered} icon="dna" time="5–10 business days" />
         <div className={styles.bioProse}>
           <p>
             From your run&apos;s Lab Handoff tab, download the order
@@ -604,7 +676,7 @@ export default function Guide(): React.ReactElement {
       </div>
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-build">
-        <StepHead id="lab-build-head" index="2" title="Build the strain" done={progress.built} />
+        <StepHead id="lab-build-head" index="2" title="Build the strain" done={progress.built} icon="microbe" time="1–3 weeks" />
         <div className={styles.bioProse}>
           <p>
             Clone the fragment into{" "}
@@ -648,6 +720,8 @@ export default function Guide(): React.ReactElement {
           index="3"
           title="Verify the sequence"
           done={progress.submitted.includes("sequence_verification")}
+          icon="clipboard"
+          time="2–5 days"
         />
         <div className={styles.bioProse}>
           <p>
@@ -676,6 +750,8 @@ export default function Guide(): React.ReactElement {
           index="4"
           title="Express and measure titer"
           done={progress.submitted.includes("expression_titer")}
+          icon="flask"
+          time="3–7 days"
         />
         <div className={styles.bioProse}>
           <p>
@@ -706,6 +782,8 @@ export default function Guide(): React.ReactElement {
             progress.submitted.includes("mic") &&
             progress.submitted.includes("cytotoxicity")
           }
+          icon="target"
+          time="1–2 weeks"
         />
         <div className={styles.bioProse}>
           <p>
@@ -740,7 +818,7 @@ export default function Guide(): React.ReactElement {
       </div>
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-consent">
-        <StepHead id="lab-consent-head" index="6" title="Review and consent" done={false} />
+        <StepHead id="lab-consent-head" index="6" title="Review and consent" done={false} icon="shield" time="minutes" />
         <div className={styles.bioProse}>
           <p>
             Your submissions always improve your own next designs:
@@ -769,6 +847,8 @@ export default function Guide(): React.ReactElement {
           index="7"
           title="Submit and iterate"
           done={progress.submitted.length === 4}
+          icon="loop"
+          time="as you go"
         />
         <div className={styles.bioProse}>
           <p>
@@ -786,7 +866,7 @@ export default function Guide(): React.ReactElement {
       </div>
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-integrators">
-        <StepHead id="lab-integrators-head" index="API" title="For lab integrators" done={false} />
+        <StepHead id="lab-integrators-head" index="API" title="For lab integrators" done={false} icon="briefcase" />
         <div className={styles.bioProse}>
           <p>
             Contract labs and CRO pipelines skip the browser: every
