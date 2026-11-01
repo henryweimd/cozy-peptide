@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
+import SectionIcon from "./section-icons";
 import { timeAgo } from "./pipeline-shared";
 
 const PAGE_SIZE = 10;
@@ -108,7 +109,10 @@ export default function RecentRunsTable({
 
   return (
     <section aria-label="Recent designs">
-      <h3>Recent designs</h3>
+      <h3>
+        <SectionIcon name="layers" />
+        Recent designs
+      </h3>
       {runs === null ? (
         <p className={styles.note}>Loading recent designs…</p>
       ) : runs.length === 0 ? (

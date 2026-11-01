@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import styles from "../page.module.css";
 import SiteNav from "../site-nav";
+import SectionIcon from "../section-icons";
 import Designer from "./designer";
 import { providersByKind } from "../../lib/providers";
 
@@ -61,13 +62,19 @@ export default function DesignPage() {
         >
           <div className="container" id="providers">
             <div className={styles.headblock}>
-              <h2 id="providers-title">Build it: service providers</h2>
+              <h2 id="providers-title">
+                <SectionIcon name="briefcase" />
+                Build it: service providers
+              </h2>
               <p className="lead">
                 From the downloads above to DNA to a living drug: who
                 can make each step real.
               </p>
             </div>
-            <h3>Custom DNA synthesis</h3>
+            <h3>
+              <SectionIcon name="dna" />
+              Custom DNA synthesis
+            </h3>
             <p>
               Order the DNA order CSV and gBlock FASTA from any
               synthesis house. Each builds custom double-stranded
@@ -84,7 +91,10 @@ export default function DesignPage() {
                 </li>
               ))}
             </ul>
-            <h3>Engineered LBP development and manufacturing</h3>
+            <h3>
+              <SectionIcon name="factory" />
+              Engineered LBP development and manufacturing
+            </h3>
             <p>
               Turning the construct into an engineered live
               biotherapeutic (strain engineering, process

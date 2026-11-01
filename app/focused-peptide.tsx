@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
+import SectionIcon from "./section-icons";
 import {
   ChassisTable,
   ContainmentSummary,
@@ -281,7 +282,10 @@ export default function FocusedPeptide({
     <section className={styles.focused} aria-label="Peptide from the ledger">
       <div className={styles.focusedhead}>
         <div>
-          <h3>From the ledger</h3>
+          <h3>
+            <SectionIcon name="ledger" />
+            From the ledger
+          </h3>
           {target !== null && (
             <p className={styles.recentMeta}>
               {target}
@@ -311,7 +315,10 @@ export default function FocusedPeptide({
 
       {shown !== null && (
         <>
-          <h4>Design status</h4>
+          <h4>
+            <SectionIcon name="pulse" />
+            Design status
+          </h4>
           {stageEvents.length > 0 ? (
             <>
               <StageDetail
@@ -336,7 +343,10 @@ export default function FocusedPeptide({
 
           {requestBlob !== null && (
             <>
-              <h4>Parameters</h4>
+              <h4>
+                <SectionIcon name="list" />
+                Parameters
+              </h4>
               <dl className={styles.metrics}>
                 {typeof requestBlob["requested_target"] === "string" && (
                   <div>
@@ -414,7 +424,10 @@ export default function FocusedPeptide({
 
           {researchBlob !== null && (
             <>
-              <h4>Literature brief</h4>
+              <h4>
+                <SectionIcon name="document" />
+                Literature brief
+              </h4>
               <p className={styles.handoffline}>
                 {researchOutcomeLine(
                   researchStatus,
@@ -438,7 +451,10 @@ export default function FocusedPeptide({
 
           {sequence.length > 0 && (
             <>
-              <h4>Predicted structure</h4>
+              <h4>
+                <SectionIcon name="cube" />
+                Predicted structure
+              </h4>
               <PeptideViewer
                 key={runId}
                 sequence={sequence}
@@ -455,7 +471,10 @@ export default function FocusedPeptide({
 
           {auditBlob !== null && (
             <>
-              <h4>Audit ledger</h4>
+              <h4>
+                <SectionIcon name="clipboard" />
+                Audit ledger
+              </h4>
               <dl className={styles.metrics}>
                 {typeof auditBlob["charge"] === "number" && (
                   <div>
@@ -489,7 +508,10 @@ export default function FocusedPeptide({
 
           {specificityLine !== null && (
             <>
-              <h4>Specificity review</h4>
+              <h4>
+                <SectionIcon name="target" />
+                Specificity review
+              </h4>
               <p className={styles.handoffline}>{specificityLine}</p>
             </>
           )}
@@ -497,7 +519,10 @@ export default function FocusedPeptide({
           {chassisBlob !== null &&
             Array.isArray(chassisBlob["compatibility"]) && (
               <>
-                <h4>Chassis compatibility</h4>
+                <h4>
+                  <SectionIcon name="microbe" />
+                  Chassis compatibility
+                </h4>
                 <ChassisTable
                   chassis={
                     chassisBlob as unknown as NonNullable<
@@ -511,7 +536,10 @@ export default function FocusedPeptide({
           {biocontainmentBlob !== null &&
             Array.isArray(biocontainmentBlob["auxotrophy"]) && (
               <>
-                <h4>Biocontainment</h4>
+                <h4>
+                <SectionIcon name="shield" />
+                Biocontainment
+              </h4>
                 <ContainmentSummary
                   biocontainment={
                     biocontainmentBlob as unknown as NonNullable<
@@ -524,14 +552,20 @@ export default function FocusedPeptide({
 
           {downloadResult !== null && (
             <>
-              <h4>Lab handoff</h4>
+              <h4>
+                <SectionIcon name="flask" />
+                Lab handoff
+              </h4>
               <HandoffDownloads result={downloadResult} />
             </>
           )}
 
           {refinementTurns > 0 && (
             <>
-              <h4>Provenance</h4>
+              <h4>
+                <SectionIcon name="link" />
+                Provenance
+              </h4>
               <ul className={styles.trace}>
                 {(refinementTrace as Array<Record<string, unknown>>).map(
                   (turn, index) => (

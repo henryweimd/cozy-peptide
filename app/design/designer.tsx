@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import styles from "../page.module.css";
 import FocusedPeptide from "../focused-peptide";
+import SectionIcon from "../section-icons";
 import {
   parseDesignParams,
   type DesignParams,
@@ -566,7 +567,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
       <div className={styles.feed} id="design-status" aria-live="polite">
         <div className={styles.feedhead}>
-          <span className={styles.feedlabel}>Design status</span>
+          <span className={styles.feedlabel}>
+            <SectionIcon name="pulse" />
+            Design status
+          </span>
           <span className={styles.feedside}>
             <SparkStatusPill status={sparkStatus} />
             <span className={styles.feedlive} role="status">
@@ -638,7 +642,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           {(modalitySelection?.reason ?? chassis?.reason) !== undefined && (
             <section aria-label="Automatic choices">
-              <h3>Auto choices</h3>
+              <h3>
+                <SectionIcon name="sparkle" />
+                Auto choices
+              </h3>
               <ul className={styles.trace}>
                 {modalitySelection?.reason !== undefined && (
                   <li>scaffold: {modalitySelection.reason}</li>
@@ -652,7 +659,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           {researchBrief !== undefined && (
             <section aria-label="Literature brief">
-              <h3>Literature brief</h3>
+              <h3>
+                <SectionIcon name="document" />
+                Literature brief
+              </h3>
               <p className={styles.handoffline}>
                 {researchOutcomeLine(
                   researchBrief.status,
@@ -709,7 +719,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           )}
 
           <section aria-label="Predicted structure">
-            <h3>Predicted structure</h3>
+            <h3>
+              <SectionIcon name="cube" />
+              Predicted structure
+            </h3>
             <PeptideViewer
               sequence={candidate.mature_sequence}
               runId={result?.run_id ?? streamRunId}
@@ -718,7 +731,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           </section>
 
           <section aria-label="Audit ledger">
-            <h3>Audit ledger</h3>
+            <h3>
+              <SectionIcon name="clipboard" />
+              Audit ledger
+            </h3>
             <dl className={styles.metrics}>
               <div>
                 <dt>Charge</dt>
@@ -746,7 +762,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           {loopEntries.length > 0 && (
             <section aria-label="Loop grammar">
-              <h3>Loop grammar</h3>
+              <h3>
+                <SectionIcon name="loop" />
+                Loop grammar
+              </h3>
               <ul className={styles.loopchips}>
                 {loopEntries.map((loop) => (
                   <li key={loop}>
@@ -762,7 +781,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           {specificity !== undefined && (
             <section aria-label="Specificity review">
-              <h3>Specificity review</h3>
+              <h3>
+                <SectionIcon name="target" />
+                Specificity review
+              </h3>
               <p className={styles.handoffline}>
                 {specificity.checked
                   ? specificity.pass
@@ -775,26 +797,38 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           {chassis !== undefined && (
             <section aria-label="Chassis compatibility">
-              <h3>Chassis compatibility</h3>
+              <h3>
+                <SectionIcon name="microbe" />
+                Chassis compatibility
+              </h3>
               <ChassisTable chassis={chassis} />
             </section>
           )}
 
           {biocontainment !== undefined && (
             <section aria-label="Biocontainment">
-              <h3>Biocontainment</h3>
+              <h3>
+                <SectionIcon name="shield" />
+                Biocontainment
+              </h3>
               <ContainmentSummary biocontainment={biocontainment} />
             </section>
           )}
 
           <section aria-label="Coming next">
-            <h3>Coming next</h3>
+            <h3>
+              <SectionIcon name="clock" />
+              Coming next
+            </h3>
             <FutureStubs />
           </section>
 
           {handoff !== undefined && result !== null && (
             <section aria-label="Lab handoff">
-              <h3>Lab handoff</h3>
+              <h3>
+                <SectionIcon name="flask" />
+                Lab handoff
+              </h3>
               <p className={styles.handoffline}>
                 {handoff.synthesis_order.sequence_name},{" "}
                 {handoff.synthesis_order.dna_length} bp, CAI {handoff.cai},
@@ -813,7 +847,10 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
           {provenance !== undefined && (
             <section aria-label="Provenance">
-              <h3>Provenance</h3>
+              <h3>
+                <SectionIcon name="link" />
+                Provenance
+              </h3>
               <ul className={styles.trace}>
                 {provenance.refinement_trace.map((turn, index) => (
                   <li key={`${turn.turn}-${index}`}>

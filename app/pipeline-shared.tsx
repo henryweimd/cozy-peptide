@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import styles from "./page.module.css";
+import SectionIcon from "./section-icons";
 import { optimizeCdsForHostId } from "../lib/codon-optimizer";
 import { hostLabel } from "../lib/hosts";
 import { providersForHost } from "../lib/providers";
@@ -620,7 +621,10 @@ export function DesignedPeptideHero({
       </div>
       {transfer !== null && cds !== null ? (
         <div className={styles.herodna}>
-          <h4>LBP-ready DNA</h4>
+          <h4>
+            <SectionIcon name="dna" />
+            LBP-ready DNA
+          </h4>
           <p>
             The coding sequence for this peptide, optimized for{" "}
             <i>{hostId !== undefined ? hostLabel(hostId as HostId) : "E. coli"}</i>
