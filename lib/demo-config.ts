@@ -69,7 +69,7 @@ export const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "salmonella",
     label: "Salmonella blockade",
-    target: "Salmonella gut colonization blockade",
+    target: "pathogenic salmonella gut colonization",
   },
   {
     id: "dysbiosis",

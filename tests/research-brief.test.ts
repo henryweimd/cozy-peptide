@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  andQuery,
   searchEuropePmc,
   searchPubMed,
   type FetchImpl,
@@ -545,4 +546,42 @@ test("generation defaults research to disabled", async () => {
   const result = await generateVerifiedPeptide(TARGET, 4, 1);
   assert.equal(result.audit.passed, true);
   assert.equal(result.research.status, "disabled");
+});
+
+test("andQuery joins sanitized words and strips injected operators", () => {
+  assert.equal(
+    andQuery("Salmonella gut colonization peptide"),
+    "Salmonella AND gut AND colonization AND peptide"
+  );
+  assert.equal(
+    andQuery('salmonella OR "cancer" NOT gut; DROP TABLE x'),
+    "salmonella AND cancer AND gut AND DROP AND TABLE AND x"
+  );
+  assert.equal(andQuery("  "), "");
+});
+
+test("mechanism retrieval AND-joins the Europe PMC query", async () => {
+  clearResearchCache();
+  try {
+    let europeUrl = "";
+    const capture: FetchImpl = async (input) => {
+      const url = String(input);
+      if (url.includes("ebi.ac.uk")) europeUrl = url;
+      return stubFetch(LITERATURE_HANDLER)(input);
+    };
+    await runResearchBrief(TARGET, undefined, {
+      fetchImpl: capture,
+      synthesizeImpl: async () => SYNTHESIS_OK,
+      briefStore: {
+        load: async () => null,
+        save: async () => ({ saved: true }),
+      },
+    });
+    assert.ok(
+      decodeURIComponent(europeUrl).includes(" AND "),
+      `expected an AND-joined query, got ${europeUrl.slice(0, 160)}`
+    );
+  } finally {
+    clearResearchCache();
+  }
 });

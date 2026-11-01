@@ -6,6 +6,7 @@ import { DEFAULT_MODEL, shortLabelForModel } from "../spark-config";
 import {
   RETRIEVAL_MAX_RESULTS,
   RETRIEVAL_TIMEOUT_MS,
+  andQuery,
   searchEuropePmc,
   searchPubMed,
   type EvidenceItem,
@@ -197,8 +198,10 @@ async function mineTargets(
 }
 
 /**
- * Agent 2 — mechanism ranker. Queries Europe PMC for peptide-therapeutic
- * mechanisms tied to the disease. Never throws.
+ * Agent 2 — mechanism ranker. Queries Europe PMC for peptide
+ * mechanisms tied to the disease, with every term AND-joined: the
+ * backend degrades loose word bags to off-topic subset matches
+ * instead of returning few results. Never throws.
  */
 async function rankMechanisms(
   target: string,
@@ -206,7 +209,7 @@ async function rankMechanisms(
   timeoutMs: number
 ): Promise<EvidenceResult> {
   try {
-    return await searchEuropePmc(`${target} peptide therapeutic mechanism`, {
+    return await searchEuropePmc(andQuery(`${target} peptide`), {
       timeoutMs,
       maxResults: RETRIEVAL_MAX_RESULTS,
       fetchImpl,

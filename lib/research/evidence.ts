@@ -61,6 +61,26 @@ export function sanitizeQuery(query: string, maxLength = 200): string {
     .slice(0, maxLength);
 }
 
+/**
+ * AND-joins sanitized query words for backends that silently degrade
+ * loose multi-word queries to subset matching (Europe PMC returns
+ * off-topic papers instead of few results when the bag of words is
+ * unsatisfiable). Caller-supplied boolean operators are stripped
+ * first so disease text cannot inject query syntax.
+ */
+export function andQuery(terms: string, maxLength = 200): string {
+  const words = sanitizeQuery(terms, maxLength)
+    .split(" ")
+    .filter(
+      (word) =>
+        word.length > 0 &&
+        word.toUpperCase() !== "AND" &&
+        word.toUpperCase() !== "OR" &&
+        word.toUpperCase() !== "NOT"
+    );
+  return words.join(" AND ").slice(0, maxLength);
+}
+
 async function fetchJson(
   url: string,
   timeoutMs: number,
