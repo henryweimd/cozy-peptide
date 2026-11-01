@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import styles from "./page.module.css";
 import { optimizeForEcoli } from "../lib/codon-optimizer";
 
@@ -187,6 +187,135 @@ export function stageState(
   if (finished) return "done";
   const latest = events[events.length - 1];
   return latest?.stage === stage ? "active" : "done";
+}
+
+export type SparkProviderState =
+  | "ok"
+  | "blocked"
+  | "rate_limited"
+  | "unreachable"
+  | "unconfigured";
+
+export interface SparkProviderStatus {
+  state: SparkProviderState;
+  detail: string;
+  model: string;
+  latencyMs: number;
+  checkedAt: string;
+}
+
+/** Session-level cache so every pill shares one status fetch. */
+let sparkStatusCache: { status: SparkProviderStatus; at: number } | null =
+  null;
+const SPARK_STATUS_POLL_MS = 60000;
+
+function parseSparkStatus(body: unknown): SparkProviderStatus | null {
+  if (typeof body !== "object" || body === null) return null;
+  const record = body as Record<string, unknown>;
+  const state = record["state"];
+  if (
+    state !== "ok" &&
+    state !== "blocked" &&
+    state !== "rate_limited" &&
+    state !== "unreachable" &&
+    state !== "unconfigured"
+  ) {
+    return null;
+  }
+  return {
+    state,
+    detail: typeof record["detail"] === "string" ? record["detail"] : "",
+    model: typeof record["model"] === "string" ? record["model"] : "",
+    latencyMs:
+      typeof record["latency_ms"] === "number" ? record["latency_ms"] : 0,
+    checkedAt:
+      typeof record["checked_at"] === "string" ? record["checked_at"] : "",
+  };
+}
+
+/**
+ * Live Meta provider verdict, polled minutely and shared across all
+ * pills on the page. Null until the first fetch resolves.
+ */
+export function useSparkStatus(): SparkProviderStatus | null {
+  const [status, setStatus] = useState<SparkProviderStatus | null>(
+    sparkStatusCache?.status ?? null
+  );
+  useEffect(() => {
+    let live = true;
+    const refresh = (): void => {
+      fetch("/api/spark-status")
+        .then((response) =>
+          response.ok ? response.json() : Promise.reject(new Error("status"))
+        )
+        .then((body: unknown) => {
+          if (!live) return;
+          const parsed = parseSparkStatus(body);
+          if (parsed === null) return;
+          sparkStatusCache = { status: parsed, at: Date.now() };
+          setStatus(parsed);
+        })
+        .catch(() => {
+          if (!live) return;
+          // The status endpoint itself failing is a signal, not a crash.
+          const down: SparkProviderStatus = {
+            state: "unreachable",
+            detail: "status check failed",
+            model: "",
+            latencyMs: 0,
+            checkedAt: new Date().toISOString(),
+          };
+          sparkStatusCache = { status: down, at: Date.now() };
+          setStatus(down);
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, SPARK_STATUS_POLL_MS);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+  return status;
+}
+
+const SPARK_STATE_LABEL: Record<SparkProviderState, string> = {
+  ok: "Meta operational",
+  blocked: "Meta blocked",
+  rate_limited: "Meta rate-limited",
+  unreachable: "Meta unreachable",
+  unconfigured: "Meta unconfigured",
+};
+
+/**
+ * Compact provider pill: green when research and proposals run on
+ * the model, red/amber with the HTTP detail otherwise. The title
+ * carries model, detail, and check time for troubleshooting.
+ */
+export function SparkStatusPill({
+  status,
+}: {
+  status: SparkProviderStatus | null;
+}): React.ReactElement {
+  if (status === null) {
+    return (
+      <span className={styles.sparkpill} data-state="checking" role="status">
+        <span className={styles.sparkdot} aria-hidden="true" />
+        Checking Meta…
+      </span>
+    );
+  }
+  return (
+    <span
+      className={styles.sparkpill}
+      data-state={status.state}
+      role="status"
+      title={`${status.model} · ${status.detail} · checked ${status.checkedAt}`}
+    >
+      <span className={styles.sparkdot} aria-hidden="true" />
+      {SPARK_STATE_LABEL[status.state]} · {status.detail}
+    </span>
+  );
 }
 
 /**

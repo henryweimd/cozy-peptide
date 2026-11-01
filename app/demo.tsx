@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { DEMO_PRESETS } from "../lib/demo-config";
 import { CUSTOM_TARGET_MAX_LENGTH } from "../lib/target-guard";
-import { formatCountdown } from "./pipeline-shared";
+import {
+  SparkStatusPill,
+  formatCountdown,
+  useSparkStatus,
+} from "./pipeline-shared";
 import Recent from "./recent";
 
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
@@ -23,6 +27,7 @@ export default function Demo() {
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const customActive = presetId === "other";
+  const sparkStatus = useSparkStatus();
 
   useEffect(() => {
     const stored = window.localStorage.getItem(COOLDOWN_KEY);
@@ -63,6 +68,9 @@ export default function Demo() {
       <p className={styles.boardsub}>
         Pick a gut condition and continue to the designer to run the
         live pipeline.
+      </p>
+      <p className={styles.boardsub}>
+        <SparkStatusPill status={sparkStatus} />
       </p>
       <div
         className={`${styles.cells} ${styles.cellsGrid}`}

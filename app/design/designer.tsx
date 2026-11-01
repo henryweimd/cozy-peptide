@@ -33,10 +33,12 @@ import {
   DesignedPeptideHero,
   EventLog,
   HandoffDownloads,
+  SparkStatusPill,
   StageDetail,
   formatCountdown,
   parseSseFrame,
   researchOutcomeLine,
+  useSparkStatus,
 } from "../pipeline-shared";
 
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
@@ -107,6 +109,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const [streamRunId, setStreamRunId] = useState<string | null>(null);
   const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
+  const sparkStatus = useSparkStatus();
 
   useEffect(() => {
     const stored = window.localStorage.getItem(COOLDOWN_KEY);
@@ -473,12 +476,15 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
       <div className={styles.feed} id="design-status" aria-live="polite">
         <div className={styles.feedhead}>
           <span className={styles.feedlabel}>Design status</span>
-          <span className={styles.feedlive} role="status">
-            {loading
-              ? `live ${elapsed}s`
-              : events.length > 0
-                ? `done ${elapsed}s`
-                : "standby"}
+          <span className={styles.feedside}>
+            <SparkStatusPill status={sparkStatus} />
+            <span className={styles.feedlive} role="status">
+              {loading
+                ? `live ${elapsed}s`
+                : events.length > 0
+                  ? `done ${elapsed}s`
+                  : "standby"}
+            </span>
           </span>
         </div>
         <p className={styles.feedsub}>
@@ -491,6 +497,24 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         />
         {showFeed && <EventLog events={events} logRef={logRef} />}
       </div>
+
+      {sparkStatus !== null && sparkStatus.state !== "ok" && (
+        <p className={styles.providerbanner} role="status">
+          <strong>
+            Meta API {sparkStatus.state.replace("_", " ")} (
+            {sparkStatus.detail}):
+          </strong>{" "}
+          research and proposals are running on deterministic fallbacks.
+          Designs still verify through the symbolic compiler
+          {sparkStatus.state === "blocked"
+            ? " — only the AI drafting is degraded; check the API key's standing."
+            : sparkStatus.state === "rate_limited"
+              ? " — retry shortly; the brief library keeps reports rich meanwhile."
+              : sparkStatus.state === "unconfigured"
+                ? " — set META_API_KEY on the server to enable model drafting."
+                : " — the brief library and compiler hold meanwhile."}
+        </p>
+      )}
 
       {error !== null && errorKind !== "validation" && !loading && (
         <p className={styles.errorbox} role="alert">
