@@ -416,19 +416,42 @@ per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 
 ### Try it in the browser
 
-The landing page includes a live demo that runs the real pipeline with no
-token required. Pick one of five preset gut conditions — or choose Other
-and describe your own condition in free text. Custom input passes an
-aggressive server-side guard (`lib/target-guard.ts`) that refuses prompt
-injection, markup, off-topic prompts, obscenity, gibberish, non-medical
-text, and distant-organ targets, then revises survivors (cleanup plus
-shorthand expansion like "c diff" → "Clostridioides difficile"); the
-response carries the interpreted target when revision applied. One design
-per minute per visitor (server-enforced cooldown), so the shared demo
-stays responsive and the upstream budget stays intact. While a design
-runs, the page streams live pipeline telemetry — research, proposal,
-grammar and audit verdicts per candidate, repair cycles, and handoff —
-over `POST /api/demo-stream`.
+Three pages share one top bar (`home`, `Live Biotherapeutic Product`,
+`The Biology`, `API Docs`, `AI Pipeline`, `Safety`, plus the design
+call to action):
+
+- **`/`** — the landing page: a live demo that runs the real pipeline
+  with no token required, the biology explainer, the API call, the
+  pipeline walkthrough, safety notes, and the single most recent
+  design with a link into the full runs table.
+- **`/design`** — the full designer: how-it-works primer, condition
+  grid, live Design status timeline and event log, the designed
+  sequence with 3D structure and lab handoff downloads, the
+  **Recent designs** ledger table (ten at a time with a pager; any
+  row reopens the full pipeline output), and the service-provider
+  directory.
+- **`/lbp`** — the Live Biotherapeutic Product guide: what LBPs are,
+  the two FDA-approved products, the late-stage pipeline, and how
+  designed peptides turn microbes into living drug factories,
+  illustrated with wordless story images (design → insert →
+  produce).
+
+Pick one of twelve preset gut conditions from the grid — or choose
+Other and describe your own condition in free text. Custom input
+passes an aggressive server-side guard (`lib/target-guard.ts`) that
+refuses prompt injection, markup, off-topic prompts, obscenity,
+gibberish, non-medical text, and distant-organ targets, then revises
+survivors (cleanup plus shorthand expansion like "c diff" →
+"Clostridioides difficile"); the response carries the interpreted
+target when revision applied. Scaffold and charge default to the best
+choice for the objective, with expert overrides behind disclosures.
+One design per minute per visitor (server-enforced cooldown), so the
+shared demo stays responsive and the upstream budget stays intact.
+While a design runs, the page streams live pipeline telemetry —
+research with retrieved paper titles, the Muse Spark brief-build
+announcement, proposal, grammar and audit verdicts per candidate,
+repair cycles, and handoff — over `POST /api/demo-stream` (or
+`POST /api/generate-peptide?stream=1` with a bearer token).
 
 ## 🔬 Live 3D structure prediction (ESMFold & 3Dmol.js)
 

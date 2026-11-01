@@ -900,10 +900,6 @@
   vertical-align: top;
 }
 
-.apitable tbody tr:first-child {
-  background: var(--color-graphite-2);
-}
-
 .apitable tr:last-child td {
   border-bottom: 0;
 }
@@ -2045,4 +2041,11 @@
 
 .cellsGrid {
   grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+/* Grid cells show full condition names instead of truncating. */
+.cellsGrid .cell {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
