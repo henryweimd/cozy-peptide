@@ -6,6 +6,13 @@ import {
   META_SPARK_TIMEOUT_MS,
   getMetaSparkApiUrl,
 } from "./spark-config";
+import {
+  SPARK_MESSAGE_MAX_CHARS,
+  SPARK_RESPONSE_MAX_CHARS,
+  capText,
+  currentRequestId,
+  recordSparkFailure,
+} from "./spark-trace";
 
 /**
  * Shared Meta Model API text client. Lives in its own module so both the
@@ -29,6 +36,11 @@ export interface SparkCompletion {
  * Sends one chat completion and returns the raw text, or null on any
  * failure (missing key, HTTP error, unparseable envelope, empty
  * completion, timeout). Never throws.
+ *
+ * Every call is logged compactly (one line, Vercel-visible); failures
+ * additionally log the full outbound payload and stash it under the
+ * ambient trace id for the ledger, so a blocked key or policy fault
+ * leaves exact evidence of what was sent.
  */
 export async function requestSparkCompletion(
   messages: MetaSparkMessage[],
@@ -43,6 +55,68 @@ export async function requestSparkCompletion(
     temperature = 0.3,
     model = "muse-spark-1.3-contributor",
   } = options;
+
+  const reqId = currentRequestId();
+  const tag = reqId === null ? "untraced" : `req=${reqId}`;
+  const startedAt = Date.now();
+  const promptChars = messages.reduce(
+    (sum, message) =>
+      sum + (typeof message.content === "string" ? message.content.length : 0),
+    0
+  );
+  const fail = (
+    error: string,
+    httpStatus: number | null,
+    finishReason: string | null,
+    responseSnippet: string | null
+  ): null => {
+    const latencyMs = Date.now() - startedAt;
+    const capped = messages.map((message) => {
+      const content =
+        typeof message.content === "string" ? message.content : "";
+      const cappedContent = capText(content, SPARK_MESSAGE_MAX_CHARS);
+      return {
+        role: message.role,
+        content: cappedContent.text,
+        chars: cappedContent.chars,
+      };
+    });
+    recordSparkFailure({
+      at: new Date(startedAt).toISOString(),
+      model,
+      temperature,
+      maxTokens,
+      timeoutMs,
+      latencyMs,
+      messages: capped,
+      promptChars,
+      httpStatus,
+      finishReason,
+      error,
+      responseSnippet,
+    });
+    console.warn(
+      `[meta-spark] FAIL ${tag} model=${model} temp=${temperature} ` +
+        `max_tokens=${maxTokens} prompt_chars=${promptChars} ` +
+        `latency_ms=${latencyMs} status=${httpStatus ?? "-"} ` +
+        `finish=${finishReason ?? "-"} error=${error}`
+    );
+    console.warn(
+      `[meta-spark] FAIL ${tag} outbound=${JSON.stringify({
+        model,
+        messages: capped.map((entry) => ({
+          role: entry.role,
+          content: entry.content,
+        })),
+        temperature,
+        max_tokens: maxTokens,
+      })}`
+    );
+    if (responseSnippet !== null) {
+      console.warn(`[meta-spark] FAIL ${tag} response=${responseSnippet}`);
+    }
+    return null;
+  };
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -63,15 +137,31 @@ export async function requestSparkCompletion(
       signal: controller.signal,
     });
     if (!response.ok) {
-      console.warn(`[meta-spark] upstream HTTP ${response.status}`);
-      return null;
+      let snippet: string | null = null;
+      try {
+        const text = await response.text();
+        snippet = capText(text, SPARK_RESPONSE_MAX_CHARS).text;
+      } catch {
+        snippet = null;
+      }
+      return fail(
+        `upstream HTTP ${response.status}`,
+        response.status,
+        null,
+        snippet
+      );
     }
-    const parsed = MetaSparkResponseSchema.safeParse(
-      (await response.json()) as unknown
-    );
+    const raw: unknown = await response.json().catch(() => null);
+    const parsed = MetaSparkResponseSchema.safeParse(raw);
     if (!parsed.success) {
-      console.warn("[meta-spark] unparseable response envelope");
-      return null;
+      const envelope =
+        typeof raw === "string" ? raw : (JSON.stringify(raw) ?? "");
+      return fail(
+        "unparseable response envelope",
+        response.status,
+        null,
+        capText(envelope, SPARK_RESPONSE_MAX_CHARS).text
+      );
     }
     const data = parsed.data;
     const finish = data.choices?.[0]?.finish_reason ?? "unknown";
@@ -82,14 +172,17 @@ export async function requestSparkCompletion(
         .join("\n") ?? "";
     const text = `${content}\n${data.output_text ?? ""}`.trim();
     if (text.length === 0) {
-      console.warn(`[meta-spark] empty completion (finish=${finish})`);
-      return null;
+      return fail("empty completion", response.status, finish, null);
     }
+    console.info(
+      `[meta-spark] ok ${tag} model=${model} prompt_chars=${promptChars} ` +
+        `completion_chars=${text.length} latency_ms=${Date.now() - startedAt} ` +
+        `finish=${finish}`
+    );
     return { text, finish };
   } catch (error) {
     const name = error instanceof Error ? error.name : "unknown";
-    console.warn(`[meta-spark] request error: ${name}`);
-    return null;
+    return fail(`request error: ${name}`, null, null, null);
   } finally {
     clearTimeout(timeout);
   }

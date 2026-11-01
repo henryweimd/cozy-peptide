@@ -1,5 +1,6 @@
 import { updateRunNarrative } from "../db/recent";
 import { citationsFromRecord, type RunRecord } from "../db/runs";
+import { runWithRequestId } from "../spark-trace";
 import { asResearchBrief } from "./report-request";
 import type { ResearchBrief } from "./brief";
 import { buildReport, type ReportOptions } from "./report";
@@ -68,15 +69,16 @@ export async function buildAndCacheNarrative(
   options: CacheNarrativeOptions = {}
 ): Promise<boolean> {
   try {
-    const { fresh } = await buildReport(
-      {
+    const { result } = runWithRequestId(() =>
+      buildReport({
         target: input.target,
         brief: input.brief,
         citations: input.citations,
         snippets: input.snippets,
         options,
-      }
+      })
     );
+    const { fresh } = await result;
     if (fresh === null) return false;
     return await updateRunNarrative(runId, fresh, {
       timeoutMs: options.timeoutMs,

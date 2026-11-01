@@ -46,6 +46,10 @@ function scheduleNarrative(runId: string | null, record: RunRecord): void {
   });
 }
 import { guardCustomTarget } from "../../../lib/target-guard";
+import {
+  runWithRequestId,
+  takeSparkFailures,
+} from "../../../lib/spark-trace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,6 +72,11 @@ function json(body: ApiResponse, status: number): NextResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const { result } = runWithRequestId(() => handlePost(request));
+  return result;
+}
+
+async function handlePost(request: NextRequest): Promise<NextResponse> {
   let raw: unknown;
   try {
     raw = (await request.json()) as unknown;
@@ -200,6 +209,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ok: true,
       payload,
       stageTrace,
+      sparkFailures: takeSparkFailures(),
     });
     const runId = await recordRun(record);
     scheduleNarrative(runId, record);
@@ -227,6 +237,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           payload: body,
           errorMessage: error.message,
           stageTrace,
+          sparkFailures: takeSparkFailures(),
         })
       );
       return json(body, 502);
@@ -247,6 +258,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         payload: body,
         errorMessage: message,
         stageTrace,
+        sparkFailures: takeSparkFailures(),
       })
     );
     return json(body, 502);

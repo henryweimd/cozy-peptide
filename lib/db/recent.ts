@@ -87,6 +87,7 @@ export interface RunDetail extends RecentRun {
   agentTools: unknown;
   stageTrace: unknown;
   specificity: unknown;
+  sparkFailures: unknown;
   structurePdb: string | null;
   structurePlddt: number | null;
   structurePredictedAt: string | null;
@@ -111,6 +112,7 @@ function parseDetail(value: unknown): RunDetail | null {
     agentTools: record["agent_tools"] ?? null,
     stageTrace: record["stage_trace"] ?? null,
     specificity: record["specificity"] ?? null,
+    sparkFailures: record["spark_failures"] ?? null,
     structurePdb: asString(record["structure_pdb"]),
     structurePlddt: asNumber(record["structure_plddt"]),
     structurePredictedAt: asString(record["structure_predicted_at"]),

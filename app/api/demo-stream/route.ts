@@ -32,6 +32,10 @@ import {
   narrativeInputFromRecord,
 } from "../../../lib/research/report-cache";
 import { guardCustomTarget } from "../../../lib/target-guard";
+import {
+  runWithRequestId,
+  takeSparkFailures,
+} from "../../../lib/spark-trace";
 
 /**
  * Pre-generates the brief narrative after the response, so opening
@@ -162,6 +166,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const startedAt = Date.now();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      await runWithRequestId(async () => {
       const send = (event: string, data: unknown): void => {
         controller.enqueue(
           encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
@@ -224,6 +229,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ok: true,
           payload,
           stageTrace,
+        sparkFailures: takeSparkFailures(),
         });
         const runId = await recordRun(record);
         if (runId !== null) send("run", { runId });
@@ -249,6 +255,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               payload: body,
               errorMessage: error.message,
               stageTrace,
+        sparkFailures: takeSparkFailures(),
             })
           );
         } else {
@@ -270,12 +277,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               payload: body,
               errorMessage: message,
               stageTrace,
+        sparkFailures: takeSparkFailures(),
             })
           );
         }
       } finally {
         controller.close();
       }
+      }).result;
     },
   });
 

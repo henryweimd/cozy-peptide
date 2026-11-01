@@ -25,6 +25,10 @@ import {
   narrativeInputFromRecord,
 } from "../../../lib/research/report-cache";
 import {
+  runWithRequestId,
+  takeSparkFailures,
+} from "../../../lib/spark-trace";
+import {
   buildNeurosymbolicPayload,
   refinementCycles,
 } from "../../../lib/neurosymbolic-payload";
@@ -71,6 +75,11 @@ export async function OPTIONS(): Promise<NextResponse> {
  * same outcome plus `research_provenance` either way.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const { result } = runWithRequestId(() => handlePost(request));
+  return result;
+}
+
+async function handlePost(request: NextRequest): Promise<NextResponse> {
   const serverToken = process.env.API_BEARER_TOKEN;
   if (serverToken === undefined || serverToken.length === 0) {
     return json(
@@ -247,6 +256,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ok: true,
       payload,
       stageTrace,
+      sparkFailures: takeSparkFailures(),
     });
     const runId = await recordRun(record);
     scheduleNarrative(runId, record);
@@ -275,6 +285,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           payload: body,
           errorMessage: error.message,
           stageTrace,
+          sparkFailures: takeSparkFailures(),
         })
       );
       return json(body, 502);
@@ -294,6 +305,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         payload: body,
         errorMessage: message,
         stageTrace,
+        sparkFailures: takeSparkFailures(),
       })
     );
     return json(body, 502);
@@ -312,6 +324,7 @@ function streamGeneration(
   const startedAt = Date.now();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      await runWithRequestId(async () => {
       const send = (event: string, data: unknown): void => {
         controller.enqueue(
           encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
@@ -382,6 +395,7 @@ function streamGeneration(
           ok: true,
           payload,
           stageTrace,
+          sparkFailures: takeSparkFailures(),
         });
         const runId = await recordRun(record);
         if (runId !== null) send("run", { runId });
@@ -418,6 +432,7 @@ function streamGeneration(
               payload: body,
               errorMessage: error.message,
               stageTrace,
+              sparkFailures: takeSparkFailures(),
             })
           );
         } else {
@@ -445,12 +460,14 @@ function streamGeneration(
               payload: body,
               errorMessage: message,
               stageTrace,
+              sparkFailures: takeSparkFailures(),
             })
           );
         }
       } finally {
         controller.close();
       }
+      }).result;
     },
   });
 

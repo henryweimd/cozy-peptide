@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { updateRunNarrative } from "@/lib/db/recent";
+import { runWithRequestId } from "@/lib/spark-trace";
 import { reportToDocx } from "@/lib/research/report-docx";
 import {
   parseReportRequest,
@@ -40,7 +41,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 400 }
     );
   }
-  const resolved = await resolveReport(parsed);
+  const { result: resolvedPromise } = runWithRequestId(() =>
+    resolveReport(parsed)
+  );
+  const resolved = await resolvedPromise;
   if ("error" in resolved) {
     return NextResponse.json(
       { success: false, error: resolved.error },

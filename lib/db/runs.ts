@@ -7,6 +7,7 @@
  */
 
 import { saveCitations, type StoredCitation } from "./citations";
+import type { SparkFailure } from "../spark-trace";
 
 export type RunSource = "api" | "api-stream" | "demo" | "demo-stream";
 
@@ -46,6 +47,7 @@ export interface RunRecord {
   agent_tools?: unknown | null;
   stage_trace?: unknown | null;
   specificity?: unknown | null;
+  spark_failures?: SparkFailure[] | null;
 }
 
 export interface SaveResult {
@@ -92,6 +94,8 @@ export function buildRunRecord(input: {
   errorMessage?: string;
   /** Collected SSE-equivalent stage events; null when untraced. */
   stageTrace?: unknown[] | null;
+  /** Failed outbound Spark calls with full payloads, if any. */
+  sparkFailures?: SparkFailure[] | null;
 }): RunRecord {
   const body = isRecord(input.payload) ? input.payload : {};
   const candidate = isRecord(body["candidate"]) ? body["candidate"] : null;
@@ -133,11 +137,16 @@ export function buildRunRecord(input: {
         ? input.stageTrace.slice(0, 100)
         : null,
     specificity: isRecord(body["specificity"]) ? body["specificity"] : null,
+    spark_failures:
+      input.sparkFailures !== undefined && input.sparkFailures !== null
+        ? input.sparkFailures
+        : null,
   };
 }
 
 /**
- * Whether the newest ledger columns (stage_trace, specificity) exist.
+ * Whether the newest ledger columns (stage_trace, specificity,
+ * spark_failures) exist.
  * Probed lazily: a 400 on the full insert retries stripped, and the
  * outcome sticks for the process lifetime so pre-migration ledgers
  * don't pay for a doomed first attempt on every save.
@@ -149,11 +158,17 @@ export function resetTraceColumnProbe(): void {
   traceColumnsSupported = null;
 }
 
+const NEWEST_COLUMNS = new Set([
+  "stage_trace",
+  "specificity",
+  "spark_failures",
+]);
+
 function stripTraceColumns(record: RunRecord): Record<string, unknown> {
   const asMap = record as unknown as Record<string, unknown>;
   const rest: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(asMap)) {
-    if (key === "stage_trace" || key === "specificity") continue;
+    if (NEWEST_COLUMNS.has(key)) continue;
     rest[key] = value;
   }
   return rest;
