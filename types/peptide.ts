@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 /**
- * Incoming client request for a gut-delivered peptide. Defaults to the
- * flagship knottin modality; callers may request simpler disulfide or
- * linear scaffolds instead.
+ * Incoming client request for a gut-delivered peptide. Omit `modality`
+ * and `host` for the automatic choice: the scaffold and chassis most
+ * likely to work for the objective, with the reasons recorded in the
+ * response. Explicit values override either independently.
  */
 export const PeptideRequestSchema = z.object({
   target: z.string().min(1).max(500),
@@ -12,7 +13,25 @@ export const PeptideRequestSchema = z.object({
     .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
     .optional(),
   modality: z
-    .enum(["knottin-6c", "disulfide-4c", "disulfide-2c", "linear"])
+    .enum([
+      "auto",
+      "knottin-6c",
+      "cyclotide-6c",
+      "disulfide-4c",
+      "hairpin-2c",
+      "disulfide-2c",
+      "helical",
+      "linear",
+    ])
+    .optional(),
+  host: z
+    .enum([
+      "auto",
+      "sboulardii",
+      "ecoli-nissle",
+      "lactococcus-lactis",
+      "bacillus-subtilis",
+    ])
     .optional(),
   model: z
     .string()
@@ -197,6 +216,8 @@ export const VerificationReportSchema = z.object({
   isomerization_clean: z.boolean().optional(),
   acid_clean: z.boolean().optional(),
   complexity_ok: z.boolean().optional(),
+  helix_moment_ok: z.boolean().optional(),
+  c_terminus_ok: z.boolean().optional(),
   ick_topology_ok: z.boolean(),
   passed: z.boolean(),
   failure_modes: z.array(z.string()),
@@ -271,7 +292,9 @@ export const SynthesisDifficultySchema = z.object({
 export type SynthesisDifficulty = z.infer<typeof SynthesisDifficultySchema>;
 
 /**
- * Lab-handoff production artifacts for engineered S. boulardii secretion.
+ * Lab-handoff production artifacts for engineered LBP secretion. The
+ * yeast cassette fields are the original core; the host block extends
+ * the same manifest to bacterial chassis without breaking old readers.
  */
 export const LabHandoffManifestSchema = z.object({
   mature_fasta: z.string(),
@@ -291,6 +314,12 @@ export const LabHandoffManifestSchema = z.object({
   secretion_leader: z.string(),
   synthesis_difficulty: SynthesisDifficultySchema.optional(),
   order_csv: z.string().optional(),
+  /** Registered chassis id (see lib/hosts). */
+  host: z.string().optional(),
+  host_display: z.string().optional(),
+  codon_basis: z.enum(["native", "provisional"]).optional(),
+  /** CRO-readable host plan: secretion, folding, containment. */
+  host_plan: z.record(z.string(), z.any()).optional(),
 });
 export type LabHandoffManifest = z.infer<typeof LabHandoffManifestSchema>;
 

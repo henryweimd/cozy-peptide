@@ -17,6 +17,11 @@ export interface RunRequestParams {
   mechanism?: string;
   charge_target?: number;
   modality?: string;
+  modality_requested?: string;
+  modality_reason?: string;
+  host?: string;
+  host_requested?: string;
+  host_reason?: string;
   model?: string;
   research?: boolean;
 }
@@ -47,6 +52,8 @@ export interface RunRecord {
   agent_tools?: unknown | null;
   stage_trace?: unknown | null;
   specificity?: unknown | null;
+  chassis?: unknown | null;
+  biocontainment?: unknown | null;
   spark_failures?: SparkFailure[] | null;
 }
 
@@ -137,6 +144,10 @@ export function buildRunRecord(input: {
         ? input.stageTrace.slice(0, 100)
         : null,
     specificity: isRecord(body["specificity"]) ? body["specificity"] : null,
+    chassis: isRecord(body["chassis"]) ? body["chassis"] : null,
+    biocontainment: isRecord(body["biocontainment"])
+      ? body["biocontainment"]
+      : null,
     spark_failures:
       input.sparkFailures !== undefined && input.sparkFailures !== null
         ? input.sparkFailures
@@ -146,7 +157,7 @@ export function buildRunRecord(input: {
 
 /**
  * Whether the newest ledger columns (stage_trace, specificity,
- * spark_failures) exist.
+ * chassis, biocontainment, spark_failures) exist.
  * Probed lazily: a 400 on the full insert retries stripped, and the
  * outcome sticks for the process lifetime so pre-migration ledgers
  * don't pay for a doomed first attempt on every save.
@@ -161,6 +172,8 @@ export function resetTraceColumnProbe(): void {
 const NEWEST_COLUMNS = new Set([
   "stage_trace",
   "specificity",
+  "chassis",
+  "biocontainment",
   "spark_failures",
 ]);
 

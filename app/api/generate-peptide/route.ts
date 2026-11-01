@@ -15,6 +15,9 @@ import {
 } from "../../../lib/meta-spark";
 import { buildLabHandoff } from "../../../lib/lab-handoff";
 import type { Modality } from "../../../lib/modality";
+import { hostLabel, type HostId } from "../../../lib/hosts";
+import { resolveDesignChoices } from "../../../lib/design-choices";
+import type { DesignChoiceContext } from "../../../lib/neurosymbolic-payload";
 import {
   buildRunRecord,
   recordRun,
@@ -124,10 +127,18 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { target, mechanism, charge_target, modality, model, research } =
+  const { target, mechanism, charge_target, modality, host, model, research } =
     parsed.data;
   const chargeTarget = charge_target ?? 4;
-  const designModality = modality ?? "knottin-6c";
+  const resolved = resolveDesignChoices(
+    target,
+    mechanism,
+    modality === "auto" ? undefined : modality,
+    host === "auto" ? undefined : host
+  );
+  const designModality = resolved.modality;
+  const designHost = resolved.host;
+  const designChoices = resolved.choices;
   const designModel = model ?? META_SPARK_MODEL;
   const researchEnabled = research ?? true;
   const screeningText = `${target}\n${mechanism ?? ""}`.trim();
@@ -145,7 +156,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             "Unprocessable target: gut-secreted peptides cannot plausibly treat distant organs.",
           details: {
             diagnostic: safety.reason,
-            modality: "gut-delivered peptides, 8-36 amino acids",
+            modality: "gut-delivered peptides, 8-37 amino acids",
           },
         },
         422
@@ -159,7 +170,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
             "Unprocessable target: catalytic enzymes are outside the short-peptide modalities.",
           details: {
             diagnostic: safety.reason,
-            modality: "gut-delivered peptides, 8-36 amino acids",
+            modality: "gut-delivered peptides, 8-37 amino acids",
             guidance: CATALYTIC_ENZYME_GUIDANCE,
             suggested_alternative:
               "Source the enzyme fold from a natural homolog (UniProt/BLAST) and express it directly.",
@@ -187,9 +198,12 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       target,
       chargeTarget,
       designModality,
+      designHost,
+      designChoices,
       designModel,
       mechanism,
-      researchEnabled
+      researchEnabled,
+      resolved.params
     );
   }
 
@@ -198,7 +212,7 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
     target,
     mechanism,
     charge_target: chargeTarget,
-    modality: designModality,
+    ...resolved.params,
     model: designModel,
     research: researchEnabled,
   };
@@ -224,18 +238,28 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       },
       {
         modality: designModality,
+        host: designHost,
         mechanism,
         model: designModel,
         research: { enabled: researchEnabled },
       }
     );
     stageTrace.push({
-      stage: "handoff",
+      stage: "containment",
       turn: refinementCycles(refinementHistory),
-      message: "Compiling yeast secretion cassette…",
+      message: "Screening biocontainment and plasmid stability…",
       elapsedMs: Date.now() - startedAt,
     });
-    const manifest = buildLabHandoff(candidate, designModality);
+    stageTrace.push({
+      stage: "handoff",
+      turn: refinementCycles(refinementHistory),
+      message:
+        designHost === "sboulardii"
+          ? "Compiling yeast secretion cassette…"
+          : `Compiling ${hostLabel(designHost)} expression fragment…`,
+      elapsedMs: Date.now() - startedAt,
+    });
+    const manifest = buildLabHandoff(candidate, designModality, designHost);
     const payload = buildNeurosymbolicPayload(
       target,
       chargeTarget,
@@ -247,7 +271,9 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       agentTools,
       targetClass,
       designModel,
-      researchProvenance
+      researchProvenance,
+      undefined,
+      designChoices
     );
     const record = buildRunRecord({
       source: "api",
@@ -316,9 +342,19 @@ function streamGeneration(
   target: string,
   chargeTarget: number,
   modality: Modality,
+  host: HostId,
+  choices: DesignChoiceContext,
   model: string,
   mechanism: string | undefined,
-  researchEnabled: boolean
+  researchEnabled: boolean,
+  choiceParams: {
+    modality: Modality;
+    modality_requested: Modality | "auto";
+    modality_reason?: string;
+    host: HostId;
+    host_requested: HostId | "auto";
+    host_reason?: string;
+  }
 ): NextResponse {
   const encoder = new TextEncoder();
   const startedAt = Date.now();
@@ -355,18 +391,28 @@ function streamGeneration(
             }),
           {
             modality,
+            host,
             mechanism,
             model,
             research: { enabled: researchEnabled },
           }
         );
         sendStage({
-          stage: "handoff",
+          stage: "containment",
           turn: refinementCycles(refinementHistory),
-          message: "Compiling yeast secretion cassette…",
+          message: "Screening biocontainment and plasmid stability…",
           elapsedMs: Date.now() - startedAt,
         });
-        const manifest = buildLabHandoff(candidate, modality);
+        sendStage({
+          stage: "handoff",
+          turn: refinementCycles(refinementHistory),
+          message:
+            host === "sboulardii"
+              ? "Compiling yeast secretion cassette…"
+              : `Compiling ${hostLabel(host)} expression fragment…`,
+          elapsedMs: Date.now() - startedAt,
+        });
+        const manifest = buildLabHandoff(candidate, modality, host);
         const payload = buildNeurosymbolicPayload(
           target,
           chargeTarget,
@@ -378,7 +424,9 @@ function streamGeneration(
           agentTools,
           targetClass,
           model,
-          researchProvenance
+          researchProvenance,
+          undefined,
+          choices
         );
         send("result", payload);
         const record = buildRunRecord({
@@ -387,7 +435,7 @@ function streamGeneration(
             target,
             mechanism,
             charge_target: chargeTarget,
-            modality,
+            ...choiceParams,
             model,
             research: researchEnabled,
           },
@@ -423,7 +471,7 @@ function streamGeneration(
                 target,
                 mechanism,
                 charge_target: chargeTarget,
-                modality,
+                ...choiceParams,
                 model,
                 research: researchEnabled,
               },
@@ -451,7 +499,7 @@ function streamGeneration(
                 target,
                 mechanism,
                 charge_target: chargeTarget,
-                modality,
+                ...choiceParams,
                 model,
                 research: researchEnabled,
               },

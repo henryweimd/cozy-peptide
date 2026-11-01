@@ -18,6 +18,8 @@ import {
   generateVerifiedPeptide,
 } from "../../../lib/meta-spark";
 import { buildLabHandoff } from "../../../lib/lab-handoff";
+import { hostLabel } from "../../../lib/hosts";
+import { resolveDesignChoices } from "../../../lib/design-choices";
 import {
   buildNeurosymbolicPayload,
   refinementCycles,
@@ -148,13 +150,19 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
   recordDemoCall(ip);
 
   const startedAt = Date.now();
+  // The landing demo takes only a target: Auto picks the scaffold and
+  // chassis most likely to work for it.
+  const resolved = resolveDesignChoices(target, undefined, undefined, undefined);
+  const designModality = resolved.modality;
+  const designHost = resolved.host;
+  const designChoices = resolved.choices;
   const runParams = {
     target,
     ...(requestedTarget !== undefined
       ? { requested_target: requestedTarget }
       : {}),
     charge_target: DEMO_CHARGE_TARGET,
-    modality: "knottin-6c",
+    ...resolved.params,
     research: true,
   };
   // Plain responses skip SSE but keep the same ledger trace.
@@ -178,16 +186,27 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         });
       },
       {
+        modality: designModality,
+        host: designHost,
         research: { enabled: true },
       }
     );
     stageTrace.push({
-      stage: "handoff",
+      stage: "containment",
       turn: refinementCycles(refinementHistory),
-      message: "Compiling yeast secretion cassette…",
+      message: "Screening biocontainment and plasmid stability…",
       elapsedMs: Date.now() - startedAt,
     });
-    const manifest = buildLabHandoff(candidate);
+    stageTrace.push({
+      stage: "handoff",
+      turn: refinementCycles(refinementHistory),
+      message:
+        designHost === "sboulardii"
+          ? "Compiling yeast secretion cassette…"
+          : `Compiling ${hostLabel(designHost)} expression fragment…`,
+      elapsedMs: Date.now() - startedAt,
+    });
+    const manifest = buildLabHandoff(candidate, designModality, designHost);
     const payload = buildNeurosymbolicPayload(
       target,
       DEMO_CHARGE_TARGET,
@@ -195,12 +214,13 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
       audit,
       refinementHistory,
       manifest,
-      "knottin-6c",
+      designModality,
       agentTools,
       targetClass,
       undefined,
       research,
-      requestedTarget
+      requestedTarget,
+      designChoices
     );
     const record = buildRunRecord({
       source: "demo",

@@ -1,3 +1,5 @@
+import { HOST_SPECS, type HostSpec } from "./hosts";
+
 /**
  * S. cerevisiae / S. boulardii codon table.
  * Synonyms are ordered with the preferred (most frequent) codon first.
@@ -133,6 +135,130 @@ export const E_COLI_CODON_FREQUENCIES: Record<string, number> = {
   GCT: 15.3, GCC: 25.5, GCA: 20.3, GCG: 33.7,
   GAT: 32.2, GAC: 19.1, GAA: 39.1, GAG: 17.8,
   GGT: 24.7, GGC: 29.6, GGA: 7.9, GGG: 11.2,
+};
+
+/**
+ * B. subtilis 168 codon table for LBP-chassis coding sequences. Synonyms
+ * are ordered with the preferred (most frequent) codon first, counted
+ * genome-wide from 4,236 RefSeq CDS (GCF_000009045.1);
+ * counted 2026-11-01 from the matching _cds_from_genomic.fna RefSeq file; generated, never hand-transcribed.
+ */
+export const BSUBTILIS_CODON_TABLE: Record<string, string[]> = {
+  F: ["TTT", "TTC"],
+  L: ["CTG", "CTT", "TTA", "TTG", "CTC", "CTA"],
+  I: ["ATT", "ATC", "ATA"],
+  M: ["ATG"],
+  V: ["GTT", "GTG", "GTC", "GTA"],
+  S: ["TCA", "AGC", "TCT", "TCC", "AGT", "TCG"],
+  P: ["CCG", "CCT", "CCA", "CCC"],
+  T: ["ACA", "ACG", "ACT", "ACC"],
+  A: ["GCA", "GCG", "GCT", "GCC"],
+  Y: ["TAT", "TAC"],
+  H: ["CAT", "CAC"],
+  Q: ["CAA", "CAG"],
+  N: ["AAT", "AAC"],
+  K: ["AAA", "AAG"],
+  D: ["GAT", "GAC"],
+  E: ["GAA", "GAG"],
+  C: ["TGC", "TGT"],
+  W: ["TGG"],
+  R: ["AGA", "CGC", "CGT", "CGG", "CGA", "AGG"],
+  G: ["GGC", "GGA", "GGT", "GGG"],
+};
+
+/** Rare B. subtilis 168 codons (under 10% of synonymous use) excluded from optimized coding sequences. */
+export const BSUBTILIS_RARE_CODONS: ReadonlySet<string> = new Set([
+  "AGG",
+  "CCC",
+  "CGA",
+  "CTA",
+]);
+
+/**
+ * B. subtilis 168 codon usage frequencies per thousand, counted from the
+ * same RefSeq CDS set; derives relative adaptiveness weights for CAI.
+ */
+export const BSUBTILIS_CODON_FREQUENCIES: Record<string, number> = {
+  TTT: 30.7, TTC: 14.1, TTA: 19.2, TTG: 15.4,
+  TCT: 12.8, TCC: 8.0, TCA: 14.8, TCG: 6.3,
+  TAT: 22.7, TAC: 12.0, TGT: 3.6, TGC: 4.3, TGG: 10.3,
+  CTT: 23.1, CTC: 10.9, CTA: 4.9, CTG: 23.2,
+  CCT: 10.5, CCC: 3.2, CCA: 7.0, CCG: 15.9,
+  CAT: 15.2, CAC: 7.4, CAA: 19.6, CAG: 18.6,
+  CGT: 7.4, CGC: 8.4, CGA: 4.0, CGG: 6.4,
+  ATT: 37.1, ATC: 27.0, ATA: 9.4, ATG: 27.0,
+  ACT: 8.7, ACC: 8.6, ACA: 22.3, ACG: 14.5,
+  AAT: 22.3, AAC: 17.1, AAA: 49.4, AAG: 21.0,
+  AGT: 6.6, AGC: 14.1, AGA: 10.7, AGG: 3.8,
+  GTT: 19.2, GTC: 17.3, GTA: 13.3, GTG: 17.7,
+  GCT: 18.9, GCC: 15.9, GCA: 21.6, GCG: 20.1,
+  GAT: 33.1, GAC: 18.6, GAA: 49.2, GAG: 23.2,
+  GGT: 12.7, GGC: 23.4, GGA: 21.7, GGG: 11.2,
+};
+
+/**
+ * L. lactis Il1403 codon table for LBP-chassis coding sequences. Synonyms
+ * are ordered with the preferred (most frequent) codon first, counted
+ * genome-wide from 2,328 RefSeq CDS (GCF_000006865.1);
+ * counted 2026-11-01 from the matching _cds_from_genomic.fna RefSeq file; generated, never hand-transcribed.
+ */
+export const LLACTIS_CODON_TABLE: Record<string, string[]> = {
+  F: ["TTT", "TTC"],
+  L: ["TTA", "CTT", "TTG", "CTA", "CTC", "CTG"],
+  I: ["ATT", "ATC", "ATA"],
+  M: ["ATG"],
+  V: ["GTT", "GTA", "GTC", "GTG"],
+  S: ["TCA", "TCT", "AGT", "AGC", "TCG", "TCC"],
+  P: ["CCA", "CCT", "CCG", "CCC"],
+  T: ["ACA", "ACT", "ACC", "ACG"],
+  A: ["GCT", "GCA", "GCC", "GCG"],
+  Y: ["TAT", "TAC"],
+  H: ["CAT", "CAC"],
+  Q: ["CAA", "CAG"],
+  N: ["AAT", "AAC"],
+  K: ["AAA", "AAG"],
+  D: ["GAT", "GAC"],
+  E: ["GAA", "GAG"],
+  C: ["TGT", "TGC"],
+  W: ["TGG"],
+  R: ["CGT", "AGA", "CGA", "CGC", "CGG", "AGG"],
+  G: ["GGA", "GGT", "GGC", "GGG"],
+};
+
+/** Rare L. lactis Il1403 codons (under 10% of synonymous use) excluded from optimized coding sequences. */
+export const LLACTIS_RARE_CODONS: ReadonlySet<string> = new Set([
+  "AGC",
+  "AGG",
+  "CCC",
+  "CCG",
+  "CGG",
+  "CTA",
+  "CTC",
+  "CTG",
+  "TCC",
+  "TCG",
+]);
+
+/**
+ * L. lactis Il1403 codon usage frequencies per thousand, counted from the
+ * same RefSeq CDS set; derives relative adaptiveness weights for CAI.
+ */
+export const LLACTIS_CODON_FREQUENCIES: Record<string, number> = {
+  TTT: 36.0, TTC: 11.5, TTA: 32.4, TTG: 20.9,
+  TCT: 16.9, TCC: 2.9, TCA: 22.2, TCG: 3.5,
+  TAT: 27.5, TAC: 7.6, TGT: 3.6, TGC: 1.1, TGG: 10.1,
+  CTT: 25.6, CTC: 7.5, CTA: 7.5, CTG: 5.4,
+  CCT: 11.6, CCC: 2.4, CCA: 15.4, CCG: 2.7,
+  CAT: 13.4, CAC: 4.5, CAA: 31.0, CAG: 5.9,
+  CGT: 14.9, CGC: 4.0, CGA: 5.4, CGG: 2.2,
+  ATT: 53.3, ATC: 15.0, ATA: 8.7, ATG: 24.9,
+  ACT: 21.1, ACC: 6.6, ACA: 22.7, ACG: 6.3,
+  AAT: 41.0, AAC: 10.6, AAA: 61.7, AAG: 12.4,
+  AGT: 14.6, AGC: 5.7, AGA: 8.3, AGG: 1.5,
+  GTT: 33.0, GTC: 11.1, GTA: 13.0, GTG: 8.5,
+  GCT: 30.8, GCC: 10.6, GCA: 23.8, GCG: 7.7,
+  GAT: 38.4, GAC: 13.8, GAA: 57.6, GAG: 11.7,
+  GGT: 24.8, GGC: 8.1, GGA: 24.8, GGG: 7.8,
 };
 
 const MAX_SILENCING_ITERATIONS = 500;
@@ -305,6 +431,69 @@ export function computeEcoliCAI(dna: string, proteinSeq: string): number {
     ECOLI_CODON_TABLE,
     E_COLI_CODON_FREQUENCIES
   );
+}
+
+export function computeBsubtilisCAI(dna: string, proteinSeq: string): number {
+  return computeCaiWithTables(
+    "computeBsubtilisCAI",
+    dna,
+    proteinSeq,
+    BSUBTILIS_CODON_TABLE,
+    BSUBTILIS_CODON_FREQUENCIES
+  );
+}
+
+export function computeLlactisCAI(dna: string, proteinSeq: string): number {
+  return computeCaiWithTables(
+    "computeLlactisCAI",
+    dna,
+    proteinSeq,
+    LLACTIS_CODON_TABLE,
+    LLACTIS_CODON_FREQUENCIES
+  );
+}
+
+/** CAI against the registered host's own usage table. */
+export function computeHostCAI(
+  host: string,
+  dna: string,
+  proteinSeq: string
+): number {
+  if (host === "bacillus-subtilis") {
+    return computeBsubtilisCAI(dna, proteinSeq);
+  }
+  if (host === "lactococcus-lactis") {
+    return computeLlactisCAI(dna, proteinSeq);
+  }
+  if (host === "sboulardii") return computeCAI(dna, proteinSeq);
+  return computeEcoliCAI(dna, proteinSeq);
+}
+
+/** Codon table, rare set, and frequencies for a bacterial host. */
+export function tablesForBacterialHost(host: string): {
+  table: Record<string, string[]>;
+  rare: ReadonlySet<string>;
+  frequencies: Record<string, number>;
+} {
+  if (host === "bacillus-subtilis") {
+    return {
+      table: BSUBTILIS_CODON_TABLE,
+      rare: BSUBTILIS_RARE_CODONS,
+      frequencies: BSUBTILIS_CODON_FREQUENCIES,
+    };
+  }
+  if (host === "lactococcus-lactis") {
+    return {
+      table: LLACTIS_CODON_TABLE,
+      rare: LLACTIS_RARE_CODONS,
+      frequencies: LLACTIS_CODON_FREQUENCIES,
+    };
+  }
+  return {
+    table: ECOLI_CODON_TABLE,
+    rare: ECOLI_RARE_CODONS,
+    frequencies: E_COLI_CODON_FREQUENCIES,
+  };
 }
 
 export interface CodonOptimizationResult {
@@ -622,4 +811,45 @@ export function optimizeForEcoli(proteinSeq: string): PayloadCdsResult {
     gcMin: ECOLI_GC_CDS_MIN,
     gcMax: ECOLI_GC_CDS_MAX,
   });
+}
+
+export interface HostCdsResult extends PayloadCdsResult {
+  /** Native host table, or E. coli-table provisional (see hosts.ts). */
+  basis: "native" | "provisional";
+}
+
+/**
+ * Codon-optimizes a peptide CDS for any registered chassis, each on
+ * its own usage table (Kazusa for yeast and E. coli, RefSeq-derived
+ * for Lactococcus and Bacillus), GC-tuned into the host window.
+ * Client-safe (pure computation).
+ */
+export function optimizeCdsForHostId(
+  host: string,
+  proteinSeq: string
+): HostCdsResult {
+  if (host === "sboulardii") {
+    return { ...optimizePayloadCds(proteinSeq), basis: "native" as const };
+  }
+  if (host === "ecoli-nissle") {
+    return { ...optimizeForEcoli(proteinSeq), basis: "native" as const };
+  }
+  const spec: HostSpec | undefined = (
+    HOST_SPECS as Record<string, HostSpec | undefined>
+  )[host];
+  if (spec === undefined) {
+    throw new Error(`optimizeCdsForHostId: unknown host '${host}'.`);
+  }
+  const tables = tablesForBacterialHost(host);
+  return {
+    ...optimizeCdsForHost(proteinSeq, {
+      caller: `optimizeCdsForHost:${host}`,
+      table: tables.table,
+      rare: tables.rare,
+      frequencies: tables.frequencies,
+      gcMin: spec.gcMin,
+      gcMax: spec.gcMax,
+    }),
+    basis: "native" as const,
+  };
 }

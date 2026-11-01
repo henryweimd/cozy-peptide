@@ -2,33 +2,50 @@ import type { KnottinGrammarParse } from "../types/peptide";
 import { cysteineIndices, parseKnottinGrammar } from "./protein-grammar";
 
 /**
- * Design modalities: the compiler is no longer knottin-only. Every
- * modality shares the charge window, the bioprocess liability gates, and
- * the yeast secretion cassette; each carries its own length window and
- * disulfide-topology grammar.
+ * Design modalities: seven small-peptide scaffolds (all 37 aa or
+ * shorter), from the maximally constrained cyclic cystine knot down to
+ * a free linear chain. Every modality shares the charge window and the
+ * bioprocess liability gates; each carries its own length window,
+ * topology grammar, and hydropathy window.
  */
-export type Modality = "knottin-6c" | "disulfide-4c" | "disulfide-2c" | "linear";
+export type Modality =
+  | "knottin-6c"
+  | "cyclotide-6c"
+  | "disulfide-4c"
+  | "hairpin-2c"
+  | "disulfide-2c"
+  | "helical"
+  | "linear";
 
 export const DEFAULT_MODALITY: Modality = "knottin-6c";
 
 /**
  * Hands-off scaffold choice: the designer defaults to Auto, which
- * resolves to the knottin — the most disulfide-constrained and
- * protease-resilient scaffold, hence the safest default for a peptide
- * that must survive the gut. Power users can still pick explicitly.
+ * resolves per disease target via selectDefaultModality (see
+ * prompt-steering) — the scaffold most likely to work for the
+ * objective, not always the knottin. AUTO_MODALITY is the fallback
+ * when no target is known yet: the knottin, the most
+ * disulfide-constrained and protease-resilient scaffold, hence the
+ * safest blind default. Power users can still pick explicitly.
  */
 export const AUTO_MODALITY: Modality = DEFAULT_MODALITY;
 export const AUTO_MODALITY_REASON =
-  "Knottin 6C: most stable in the gut — the safest default";
+  "Auto matches the scaffold to your disease target (knottin when unsure)";
 
 export function modalityLabel(modality: Modality): string {
   switch (modality) {
     case "knottin-6c":
       return "Knottin 6C";
+    case "cyclotide-6c":
+      return "Cyclotide 6C";
     case "disulfide-4c":
       return "Disulfide 4C";
+    case "hairpin-2c":
+      return "Hairpin 2C";
     case "disulfide-2c":
       return "Disulfide 2C";
+    case "helical":
+      return "Helical";
     case "linear":
       return "Linear";
   }
@@ -36,8 +53,11 @@ export function modalityLabel(modality: Modality): string {
 
 export const MODALITIES: Modality[] = [
   "knottin-6c",
+  "cyclotide-6c",
   "disulfide-4c",
+  "hairpin-2c",
   "disulfide-2c",
+  "helical",
   "linear",
 ];
 
@@ -64,6 +84,14 @@ export interface ModalitySpec {
   cassetteFormat: string;
   /** Short payload noun for FASTA headers and manifests. */
   payloadNoun: string;
+  /**
+   * Minimum KD-scale hydrophobic moment (alpha helix, 100 deg/residue)
+   * when set: the sequence must be detectably amphipathic. Only the
+   * helical scaffold sets this.
+   */
+  momentMin?: number;
+  /** True when the mature peptide's backbone is head-to-tail cyclic. */
+  cyclic?: boolean;
 }
 
 export const MODALITY_SPECS: Record<Modality, ModalitySpec> = {
@@ -82,6 +110,22 @@ export const MODALITY_SPECS: Record<Modality, ModalitySpec> = {
     cassetteFormat: "MFalpha1-Kex2-Knottin-CYC1term",
     payloadNoun: "knottin",
   },
+  "cyclotide-6c": {
+    modality: "cyclotide-6c",
+    noun: "cyclotide",
+    minLength: 28,
+    maxLength: 37,
+    cysteines: 6,
+    minCysSpacing: 1,
+    gravyMin: -0.4,
+    gravyMax: 0.1,
+    responseId: "engineered_cyclotide_peptide",
+    idPrefix: "SB-CYC-",
+    topologyLabel: "C1-C4, C2-C5, C3-C6 CCK (cyclic)",
+    cassetteFormat: "MFalpha1-Intein-Cyclotide-CYC1term",
+    payloadNoun: "cyclotide",
+    cyclic: true,
+  },
   "disulfide-4c": {
     modality: "disulfide-4c",
     noun: "4-cysteine disulfide peptide",
@@ -95,6 +139,21 @@ export const MODALITY_SPECS: Record<Modality, ModalitySpec> = {
     idPrefix: "SB-SS4-",
     topologyLabel: "4-Cys double-disulfide",
     cassetteFormat: "MFalpha1-Kex2-SS4Peptide-CYC1term",
+    payloadNoun: "peptide",
+  },
+  "hairpin-2c": {
+    modality: "hairpin-2c",
+    noun: "beta-hairpin peptide",
+    minLength: 12,
+    maxLength: 20,
+    cysteines: 2,
+    minCysSpacing: 6,
+    gravyMin: -1.0,
+    gravyMax: 0.2,
+    responseId: "engineered_hairpin_peptide_2c",
+    idPrefix: "SB-HRP-",
+    topologyLabel: "2-Cys beta-hairpin",
+    cassetteFormat: "MFalpha1-Kex2-HairpinPeptide-CYC1term",
     payloadNoun: "peptide",
   },
   "disulfide-2c": {
@@ -111,6 +170,22 @@ export const MODALITY_SPECS: Record<Modality, ModalitySpec> = {
     topologyLabel: "2-Cys single-disulfide",
     cassetteFormat: "MFalpha1-Kex2-SS2Peptide-CYC1term",
     payloadNoun: "peptide",
+  },
+  helical: {
+    modality: "helical",
+    noun: "helical peptide",
+    minLength: 12,
+    maxLength: 26,
+    cysteines: 0,
+    minCysSpacing: 0,
+    gravyMin: -0.8,
+    gravyMax: 0.4,
+    responseId: "engineered_helical_peptide",
+    idPrefix: "SB-HEL-",
+    topologyLabel: "linear amphipathic helix",
+    cassetteFormat: "MFalpha1-Kex2-HelicalPeptide-CYC1term",
+    payloadNoun: "peptide",
+    momentMin: 1.2,
   },
   linear: {
     modality: "linear",
@@ -194,26 +269,43 @@ function parseDisulfideGrammar(
 }
 
 /**
- * Grammar dispatch: knottins keep the canonical ICK loop envelopes;
- * every other modality parses against its own disulfide grammar.
+ * Grammar dispatch: knottins keep the canonical ICK loop envelopes, and
+ * cyclotides share them — the cyclic cystine knot pairs C1-C4, C2-C5,
+ * C3-C6 exactly like the ICK, differing only in the head-to-tail
+ * backbone ligation, which is a manufacturing step, not a sequence
+ * rule. Every other modality parses against its own disulfide grammar.
  */
 export function parseModalityGrammar(
   sequence: string,
   modality: Modality
 ): KnottinGrammarParse {
   if (modality === "knottin-6c") return parseKnottinGrammar(sequence);
+  if (modality === "cyclotide-6c") {
+    const parsed = parseKnottinGrammar(sequence);
+    return {
+      valid: parsed.valid,
+      loops: parsed.loops,
+      syntaxErrors: parsed.syntaxErrors.map((error) =>
+        error.replace(
+          "C1-C4, C2-C5, C3-C6 ICK",
+          "C1-C4, C2-C5, C3-C6 CCK (cyclic)"
+        )
+      ),
+    };
+  }
   return parseDisulfideGrammar(sequence, specForModality(modality));
 }
 
 /**
- * Loop segments for the candidate payload: knottins report L1-L5; other
- * modalities report their inter-cysteine segments (empty for linears).
+ * Loop segments for the candidate payload: knottins and cyclotides
+ * report L1-L5; other modalities report their inter-cysteine segments
+ * (empty for linears).
  */
 export function loopSegmentsForModality(
   grammar: KnottinGrammarParse,
   modality: Modality
 ): string[] {
-  if (modality === "knottin-6c") {
+  if (modality === "knottin-6c" || modality === "cyclotide-6c") {
     return [
       grammar.loops["L1"] ?? "",
       grammar.loops["L2"] ?? "",

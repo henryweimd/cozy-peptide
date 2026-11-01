@@ -48,6 +48,16 @@ const RESPONSE_EXAMPLE = `{
     "safety_index": 88.37,
     "liabilities_cleared": ["Trypsin", "Pepsin", "Chymotrypsin", "..."]
   },
+  "chassis": {
+    "host": "sboulardii",
+    "reason": "S. boulardii: oxidative ER folding for 6-cysteine scaffolds",
+    "compatibility": [{ "host_display": "S. boulardii", "score": 100, "...": "..." }]
+  },
+  "biocontainment": {
+    "auxotrophy": ["ura3", "..."],
+    "kill_switches": ["inducible toxin–antitoxin module", "..."],
+    "plasmid_stability": { "verdict": "stable" }
+  },
   "lab_handoff": {
     "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",
     "secretion_leader": "MF-alpha-1 (85 aa) + Kex2 (KR)",
@@ -101,6 +111,11 @@ const PROCESS_STEPS: Array<{
     title: "Review blindly",
     body: "Spark predicts the target without seeing it; a mismatch fails the design as off-target.",
     meta: true,
+  },
+  {
+    title: "Contain the chassis",
+    body: "Kill-switch, auxotrophy, and plasmid-stability screens run for the chosen chassis before any DNA is compiled.",
+    meta: false,
   },
   {
     title: "Fold the winner",
@@ -220,9 +235,26 @@ export default function Home() {
                   <td data-label="Type">string</td>
                   <td data-label="Required">no</td>
                   <td data-label="Description">
-                    Scaffold: <code>knottin-6c</code> (default),{" "}
-                    <code>disulfide-4c</code>, <code>disulfide-2c</code>,
-                    or <code>linear</code>.
+                    Scaffold: <code>auto</code> (default — best fit for
+                    the target), <code>knottin-6c</code>,{" "}
+                    <code>cyclotide-6c</code>, <code>disulfide-4c</code>,{" "}
+                    <code>hairpin-2c</code>, <code>disulfide-2c</code>,{" "}
+                    <code>helical</code>, or <code>linear</code>.
+                  </td>
+                </tr>
+                <tr>
+                  <td data-label="Field">
+                    <code>host</code>
+                  </td>
+                  <td data-label="Type">string</td>
+                  <td data-label="Required">no</td>
+                  <td data-label="Description">
+                    Chassis: <code>auto</code> (default — best fit for
+                    the scaffold), <code>sboulardii</code>,{" "}
+                    <code>ecoli-nissle</code>,{" "}
+                    <code>lactococcus-lactis</code>, or{" "}
+                    <code>bacillus-subtilis</code>. All oral,
+                    capsule-compatible.
                   </td>
                 </tr>
                 <tr>
@@ -255,10 +287,12 @@ export default function Home() {
               Pass <code>?stream=1</code> (or{" "}
               <code>Accept: text/event-stream</code>) for server-sent{" "}
               <code>stage</code> events (research, propose, verify,
-              repair, handoff) followed by a final <code>result</code>{" "}
-              or <code>error</code> event. Every response also carries{" "}
-              <code>research_provenance</code> with the literature
-              brief, citations, and per-source timings.
+              repair, containment, handoff) followed by a final{" "}
+              <code>result</code> or <code>error</code> event. Every
+              response also carries <code>research_provenance</code>{" "}
+              with the literature brief, citations, and per-source
+              timings, plus <code>chassis</code> compatibility and a{" "}
+              <code>biocontainment</code> plan.
             </p>
 
             <h3>Response (200, truncated)</h3>
@@ -343,7 +377,18 @@ export default function Home() {
             </p>
             <p className={styles.authline}>
               Public capability listing: every design modality with its
-              length, cysteine, and hydropathy rules. No token needed.
+              length, cysteine, and hydropathy rules, plus which
+              objectives each scaffold is the Auto default for. No
+              token needed.
+            </p>
+            <p className={styles.endpoint}>
+              <span className={styles.method}>GET</span>
+              <code>/api/hosts</code>
+            </p>
+            <p className={styles.authline}>
+              Public capability listing: every LBP chassis with its
+              secretion system, containment layers, codon basis, and
+              build partners. No token needed.
             </p>
           </div>
         </section>
@@ -509,7 +554,7 @@ export default function Home() {
           <div className="container">
             <div className={styles.headblock}>
               <h2 id="pipeline">A request, from prompt to DNA</h2>
-              <p className="lead">Six stages, one verified sequence.</p>
+              <p className="lead">Seven stages, one verified sequence.</p>
             </div>
             <div className={styles.pinned}>
               <div className={styles.pinboard} aria-hidden="true">
@@ -518,6 +563,7 @@ export default function Home() {
                 <span className={styles.pinplate}>Propose</span>
                 <span className={styles.pinplate}>Verify</span>
                 <span className={styles.pinplate}>Repair</span>
+                <span className={styles.pinplate}>Contain</span>
                 <span className={styles.pinplate}>Hand off</span>
               </div>
               <ol className={styles.panels}>
@@ -526,8 +572,9 @@ export default function Home() {
                   <p>
                     <code>POST /api/generate-peptide</code> takes a
                     therapeutic target, an optional mechanism, an optional
-                    charge target (1 to 4), and an optional modality:
-                    knottin, disulfide, or linear.
+                    charge target (1 to 4), an optional scaffold, and an
+                    optional chassis — both auto-picked from seven
+                    scaffolds and four oral hosts when omitted.
                   </p>
                 </li>
                 <li>
@@ -568,17 +615,28 @@ export default function Home() {
                     independently confirm the target, and flag
                     predictions pointing outside the gut. The full trace
                     ships in the response, alongside agentic tool stubs
-                    for binding, structure, and off-target review.
+                    for binding, structure, off-target review, and the
+                    roadmap capabilities.
+                  </p>
+                </li>
+                <li>
+                  <h3>Contain</h3>
+                  <p>
+                    The accepted design is scored for chassis
+                    compatibility — secretion, expression burden,
+                    proteolytic processing — and screened for
+                    biocontainment: kill switches, auxotrophy, and
+                    plasmid stability for the chosen host.
                   </p>
                 </li>
                 <li>
                   <h3>Hand off</h3>
                   <p>
-                    Verified peptides compile to a yeast cassette: 85-aa
-                    MFα1 leader with the SLDKR Kex2 junction, yeast codon
-                    optimization, 40-bp Gibson arms, and a synthesis order
-                    manifest, everything needed to install the miniature
-                    gut factory.
+                    Verified peptides compile for the chosen chassis: a
+                    yeast cassette or a bacterial expression fragment
+                    with host-optimized codons, a synthesis order
+                    manifest, and the DNA vendors and CRO build partners
+                    that take it from fragment to dosed strain.
                   </p>
                 </li>
               </ol>
@@ -618,15 +676,24 @@ export default function Home() {
             </div>
             <div className={styles.bioProse}>
               <p>
-                The chassis is <em>Saccharomyces boulardii</em>, a yeast
-                with GRAS status and decades of safe clinical use
-                worldwide. It thrives at body temperature, survives the
-                trip through the gut, and never moves in: it clears
+                The default chassis is <em>Saccharomyces boulardii</em>,
+                a yeast with GRAS status and decades of safe clinical
+                use worldwide. It thrives at body temperature, survives
+                the trip through the gut, and never moves in: it clears
                 within days of the last dose, so stopping the dose stops
                 the exposure. Being a eukaryote, not a bacterium, it has
                 no plasmids to trade with gut bacteria, and the
                 therapeutic cassette sits on its chromosome, not on a
                 mobile element.
+              </p>
+              <p>
+                Every design compiles for one of four oral chassis —{" "}
+                <em>S. boulardii</em>, <em>E. coli</em> Nissle,{" "}
+                <em>L. lactis</em>, or <em>B. subtilis</em> spores —
+                each with its own containment plan. Before any DNA is
+                compiled, the pipeline screens the design for
+                biocontainment: kill switches, auxotrophy, and plasmid
+                stability for the chosen host.
               </p>
             </div>
             <table className={styles.paperTable}>
@@ -657,6 +724,31 @@ export default function Home() {
                   <td>
                     Engineered auxotrophy: the yeast only grows where it
                     is fed, with CRISPR kill switches as backup.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Kill switches</th>
+                  <td>
+                    Every chassis carries an inducible die-off circuit —
+                    tetracycline-gated toxin in yeast, deadman circuits
+                    in Nissle — planned per design, before any DNA
+                    ships.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Auxotrophy</th>
+                  <td>
+                    Dosed strains can&apos;t feed themselves: ura3 yeast,
+                    dapA/thyA Nissle, thyA Lactococcus — die-off without
+                    supplement.
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">Plasmid-stability screen</th>
+                  <td>
+                    Every design&apos;s DNA is pre-screened for repeats
+                    and slip sites that select for deletion mutants;
+                    fragile constructs route to the chromosome.
                   </td>
                 </tr>
                 <tr>

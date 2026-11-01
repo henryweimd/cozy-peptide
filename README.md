@@ -99,11 +99,13 @@ section below is a full tab there.
 **cozy-peptide wraps Muse Spark.** A raw model proposes; most proposals
 would fail in a real body. Around the model sits a compiler that proves
 each design — structure, safety, therapeutic promise — before anything
-touches a cell. Four scaffold modalities, from the flagship 6-cysteine
-knottin down to simple linear peptides:
+touches a cell. Seven small-peptide scaffolds, from the flagship
+6-cysteine knottin down to simple linear peptides — Auto picks the best
+fit for each disease — compiled for one of four oral chassis (yeast,
+Nissle, Lactococcus, or Bacillus spores):
 
 ```text
-name the disease → [ cozy-peptide [ compiler [ Muse Spark ] ] ] → yeast cassette
+name the disease → [ cozy-peptide [ compiler [ Muse Spark ] ] ] → chassis DNA
 ```
 
 **Biology for everyone.** Chatbots predict the next word; Muse Spark
@@ -162,22 +164,26 @@ therapeutic use.*
 ```mermaid
 flowchart LR
     A["🎯 Disease target + charge"] --> R["Literature research brief"]
-    R --> B["Muse Spark 1.3 proposes knottins"]
+    R --> B["Muse Spark 1.3 proposes peptides"]
     B --> C{"Symbolic compiler audit"}
     C -->|"fail: diagnostics"| D["Repair loop"]
     D --> B
     C -->|"pass"| S["Blinded specificity review"]
-    S --> E["Lab handoff: yeast cassette + DNA order"]
+    S --> N["Biocontainment screen"]
+    N --> E["Lab handoff: chassis DNA + order"]
     S -.-> F["3D structure: ESMFold + 3Dmol.js viewer"]
 ```
 
 1. **Ingestion** — `POST /api/generate-peptide` accepts a therapeutic `target`,
    optional `mechanism`, optional integer `charge_target` (1, 2, 3, or 4),
-   optional `modality` (`knottin-6c` default, `disulfide-4c`,
-   `disulfide-2c`, or `linear`), and optional `model` (a Meta model id,
-   default `muse-spark-1.3-contributor`; `muse-wonder-1.0` also known),
-   and optional `research` boolean (default true; false skips straight
-   to the static brief).
+   optional `modality` (`auto` default — the best scaffold for the
+   objective — or one of `knottin-6c`, `cyclotide-6c`, `disulfide-4c`,
+   `hairpin-2c`, `disulfide-2c`, `helical`, `linear`), optional `host`
+   (`auto` default, or one of `sboulardii`, `ecoli-nissle`,
+   `lactococcus-lactis`, `bacillus-subtilis`), and optional `model` (a
+   Meta model id, default `muse-spark-1.3-contributor`;
+   `muse-wonder-1.0` also known), and optional `research` boolean
+   (default true; false skips straight to the static brief).
 2. **System prompt steering** (`lib/prompt-steering.ts`) — the system infers
    the therapeutic target class (bacterial colonization, toxin blockade,
    barrier repair, inflammation, pain/motility, metabolic, general) and
@@ -192,17 +198,19 @@ flowchart LR
    avoid list that sharpen the brief; any research fault keeps the
    static brief untouched.
 3. **Meta Spark 1.3 sequence proposal** (`lib/meta-spark.ts`) — the Contributor
-   API proposes peptide *secretion payloads* for continuous *S. boulardii*
-   expression (MFalpha1 pre-pro leader) under the modality grammar
-   (knottins: `C1-C4, C2-C5, C3-C6 ICK` topology with canonical loop
-   envelopes, anchored by few-shot natural knottins EETI-II and MCoTI-II
-   for cysteine pacing).
+   API proposes peptide *secretion payloads* for the chosen chassis
+   (yeast MFalpha1, PelB-to-periplasm, SPusp45, or Bacillus Sec framing)
+   under the modality grammar (knottins: `C1-C4, C2-C5, C3-C6 ICK`
+   topology with canonical loop envelopes, anchored by few-shot natural
+   knottins EETI-II and MCoTI-II for cysteine pacing).
 4. **Deterministic Symbolic Compiler** (`lib/symbolic-auditor.ts`,
    `lib/protein-grammar.ts`, `lib/modality.ts`) — each proposal is audited for:
    - Modality topology: knottin 28-36 aa with **6-Cys parity** and canonical
      **ICK loop envelopes** (L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10);
-     4-Cys 20-36 aa, 2-Cys 12-30 aa with disulfide loop floors; linear
-     8-30 aa cysteine-free
+     cyclotide 28-37 aa sharing the envelopes plus a cyclic backbone;
+     4-Cys 20-36 aa; hairpin 12-20 aa with a 6+ turn loop; 2-Cys 12-30 aa
+     with disulfide loop floors; helical 12-26 aa clearing a hydrophobic-moment
+     floor; linear 8-30 aa cysteine-free
    - **Net charge** exactly matching the requested target, inside the
      **+1…+4 window at pH 7.4**
    - **GRAVY** hydropathy inside the modality-calibrated window, plus Boman,
@@ -211,7 +219,8 @@ flowchart LR
    - **Bioprocess liability filtering** — zero Kex2 sites (`KR|RR|KK|RK`,
      `PR`), zero N-glycosylation sequons (`N[^P][ST]`), zero exposed
      chymotrypsin sites (`[FYW][^P][KR]`), a clean post-Kex2 N-terminus
-     (never P/F/Y/W), hydrophobic runs capped at 3 over `[VILMFW]`, at most
+     (never P/F/Y/W) plus a ligation-clean C-terminus for cyclotides
+     (never P), hydrophobic runs capped at 3 over `[VILMFW]`, at most
      one methionine (oxidation), zero NG deamidation / DG isomerization /
      DP acid-labile hotspots, and no low-complexity dominance (single
      residue at most 40%)
@@ -237,25 +246,42 @@ flowchart LR
    fail like any high-risk flag, and every verdict carries a
    gut-plausibility score. Mismatches trigger revision; the verdict ships
    in the response.
-7. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
-   candidates are compiled for *S. boulardii* (ATCC MYA-796) with:
-   - A ready-to-clone **`cloning_payload`** cassette:
-     `MFalpha1-Kex2-Knottin-CYC1term` — 255-nt MFalpha1 5′ flank with the
-     Kex2 junction, GC-tuned payload CDS (38-45% GC, rare codons avoided),
-     dual stop codons, and the 250-bp CYC1 terminator, verified free of
-     BsaI/BsmBI/EcoRI/NotI/XhoI for direct plasmid assembly
-   - A Gibson-flanked **gBlock manifest** (85-aa MFalpha-1 pre-pro leader,
-     40-bp pESC/pPic9 homology arms) with CAI/GC reporting, mature/precursor
-     FASTA, and a DNA synthesis order form
-   - A **synthesis-difficulty report** (homopolymer runs, GC-extreme
-     windows, repeat flags, 0-100 score) and a vendor-ready **order CSV**
-     for Twist/IDT-style uploads — built for synbio and CRO handoff
-8. **Agentic tool stubs** (`lib/agent-tools.ts`) — every accepted candidate
-   runs through the tool registry (`binding-affinity`, `structure-fold`,
-   `off-target-panel`), reported as `agent_tools` in the response. All
-   three are honest `not-configured` stubs today: the seam is ready for
-   docking, folding, and panel backends, and wiring one means replacing a
-   single `invoke` implementation.
+7. **Chassis compatibility and biocontainment** (`lib/chassis-compat.ts`,
+   `lib/biocontainment.ts`, `lib/hosts.ts`) — the accepted design is
+   scored for every registered chassis (secretion and folding, expression
+   burden, proteolytic processing), and the chosen host gets a
+   biocontainment plan: auxotrophy and kill-switch layers, an integration
+   recommendation, plus sequence-derived plasmid-stability and
+   payload-toxicity pre-screens. Shipped as `chassis` and
+   `biocontainment` in the response.
+8. **Lab handoff** (`lib/lab-handoff.ts`, `lib/codon-optimizer.ts`) — verified
+   candidates are compiled for the chosen chassis:
+   - Yeast (*S. boulardii* ATCC MYA-796): a ready-to-clone
+     **`cloning_payload`** cassette (`MFalpha1-Kex2-Knottin-CYC1term` —
+     255-nt MFalpha1 5′ flank with the Kex2 junction, GC-tuned payload CDS
+     at 38-45% GC with rare codons avoided, dual stop codons, and the
+     250-bp CYC1 terminator, verified free of BsaI/BsmBI/EcoRI/NotI/XhoI
+     for direct plasmid assembly) and a Gibson-flanked **gBlock manifest**
+     (85-aa MFalpha-1 pre-pro leader, 40-bp pESC/pPic9 homology arms)
+   - Bacterial hosts (Nissle, *L. lactis*, *B. subtilis*): a
+     leader-plus-payload **expression fragment** with host-optimized codons
+     (native tables for all four: Kazusa for yeast and *E. coli*,
+     RefSeq-derived for *Lactococcus* and *Bacillus*) and a per-host
+     integration strategy
+   - Every handoff carries CAI/GC reporting, mature/precursor FASTA, a
+     **synthesis-difficulty report** (homopolymer runs, GC-extreme windows,
+     repeat flags, 0-100 score), a vendor-ready **order CSV**, and the
+     **order-and-build partner directory** (DNA synthesis vendors plus
+     CRO/CDMO builders with microbial and LBP experience)
+9. **Agentic tool stubs** (`lib/agent-tools.ts`, `lib/roadmap.ts`) — every
+   accepted candidate runs through the tool registry (`binding-affinity`,
+   `structure-fold`, `off-target-panel`, plus the roadmap stubs
+   `wetlab-feedback`, `potency-prediction`, `gut-safety-panel`), reported
+   as `agent_tools` in the response. All six are honest `not-configured`
+   stubs today: the seam is ready for backends, and wiring one means
+   replacing a single `invoke` implementation. The roadmap three also
+   render in the web app as "Future functionality" with how-achieved
+   notes.
 
 ## 🛡️ Block toxins and enzymes before generation
 
@@ -273,7 +299,7 @@ flowchart LR
 - **Catalytic-enzyme refusal** — enzyme targets (lactase, polymerase, kinase,
   protease, catalytic triads/pockets, enzyme replacement, and related terms)
   or requests implying folds **>45 aa** are refused with `422 Unprocessable`,
-  since catalytic pockets require large globular folds outside the 8-36 aa
+  since catalytic pockets require large globular folds outside the 8-37 aa
   short-peptide modalities. The response suggests sourcing a natural homolog
   instead.
 
@@ -292,19 +318,22 @@ curl -X POST http://localhost:3000/api/generate-peptide \
     "target": "Clostridioides difficile colonization in the gut",
     "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
     "charge_target": 4,
-    "modality": "knottin-6c",
+    "modality": "auto",
+    "host": "auto",
     "model": "muse-spark-1.3-contributor"
   }'
 ```
 
-Sample payload:
+Sample payload (`auto` picks the best scaffold and chassis for the
+objective and records why; explicit ids override either):
 
 ```json
 {
   "target": "Clostridioides difficile colonization in the gut",
   "mechanism": "Cationic knottin that disrupts vegetative cell membranes while remaining stable to gut proteases",
   "charge_target": 4,
-  "modality": "knottin-6c",
+  "modality": "auto",
+  "host": "auto",
   "model": "muse-spark-1.3-contributor"
 }
 ```
@@ -366,6 +395,21 @@ Sample JSON response (truncated):
     "predicted_targets": ["C. difficile TcdA receptor", "..."],
     "off_targets": []
   },
+  "modality_selection": {
+    "requested": "auto",
+    "resolved": "hairpin-2c",
+    "reason": "Hairpin 2C: a compact cationic wedge for anionic bacterial surfaces"
+  },
+  "chassis": {
+    "host": "ecoli-nissle",
+    "reason": "E. coli Nissle: gut-adapted persister for colonization targets",
+    "compatibility": [{ "host_display": "E. coli Nissle", "score": 96, "...": "..." }]
+  },
+  "biocontainment": {
+    "auxotrophy": ["dapA (diaminopimelate)", "..."],
+    "kill_switches": ["deadman/passcode circuit tied to a gut-absent signal", "..."],
+    "plasmid_stability": { "verdict": "stable" }
+  },
   "lab_handoff": {
     "yeast_chassis": "Saccharomyces boulardii (ATCC MYA-796)",
     "secretion_leader": "MF-alpha-1 (85 aa) + Kex2 (KR)",
@@ -386,21 +430,27 @@ Sample JSON response (truncated):
 | `502` | Generation failure; no verifiable candidate produced. |
 
 Pass `?stream=1` (or `Accept: text/event-stream`) for server-sent
-`stage` events — research, propose, verify, repair, handoff — followed
-by a final `result` or `error` event, so callers can drive progress UI
-and see which stage failed. Every 200 response also carries
-`research_provenance`: the literature brief, citations, and
-per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
+`stage` events — research, propose, verify, repair, containment,
+handoff — followed by a final `result` or `error` event, so callers
+can drive progress UI and see which stage failed. Every 200 response
+also carries `research_provenance`: the literature brief, citations,
+and per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 
 ### More endpoints
 
 - **`POST /api/audit-peptide`** (Bearer [REDACTED] — audit a caller-supplied
-  sequence with no model calls: `{sequence, charge_target?, modality?}`
-  returns grammar validity, the full violation list, therapeutic/safety
-  indices, the verification report, and machine-readable failure modes.
-  Built for CRO pre-screening of candidate peptides.
+  sequence with no model calls: `{sequence, charge_target?, modality?,
+  host?}` returns grammar validity, the full violation list,
+  therapeutic/safety indices, the verification report, machine-readable
+  failure modes, chassis compatibility across all hosts, and a
+  biocontainment plan. Built for CRO pre-screening of candidate
+  peptides.
 - **`GET /api/modalities`** (public, no token) — lists the compiler's design
-  modalities with length windows, cysteine rules, and hydropathy windows.
+  modalities with length windows, cysteine rules, hydropathy windows,
+  and which objectives each scaffold is the Auto default for.
+- **`GET /api/hosts`** (public, no token) — lists the LBP chassis with
+  secretion systems, containment layers, codon basis, and the
+  build partners relevant to each host.
 - **`GET /api/recent-peptides?limit=&offset=`** (public) — newest
   successful runs with candidate, indices, and research status;
   powers the landing strip and the design page's runs table.
@@ -447,14 +497,15 @@ refuses prompt injection, markup, off-topic prompts, obscenity,
 gibberish, non-medical text, and distant-organ targets, then revises
 survivors (cleanup plus shorthand expansion like "c diff" →
 "Clostridioides difficile"); the response carries the interpreted
-target when revision applied. Scaffold and charge default to the best
-choice for the objective, with expert overrides behind disclosures.
+target when revision applied. Scaffold, chassis, and charge default to
+the best choice for the objective, with expert overrides behind
+disclosures.
 One design per minute per visitor (server-enforced cooldown), so the
 shared demo stays responsive and the upstream budget stays intact.
 While a design runs, the page streams live pipeline telemetry —
 research with retrieved paper titles, the Muse Spark brief-build
 announcement, proposal, grammar and audit verdicts per candidate,
-repair cycles, and handoff — over `POST /api/demo-stream` (or
+repair cycles, biocontainment, and handoff — over `POST /api/demo-stream` (or
 `POST /api/generate-peptide?stream=1` with a bearer token).
 
 ## 🔬 Live 3D structure prediction (ESMFold & 3Dmol.js)

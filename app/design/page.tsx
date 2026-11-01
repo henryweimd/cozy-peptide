@@ -4,12 +4,16 @@ import { Suspense } from "react";
 import styles from "../page.module.css";
 import SiteNav from "../site-nav";
 import Designer from "./designer";
+import { providersByKind } from "../../lib/providers";
 
 export const metadata: Metadata = {
   title: "Design a peptide — cozy-peptide",
   description:
     "Name a gut condition: AI-drafted, compiler-verified peptides with 3D structure and lab-ready DNA orders.",
 };
+
+const SYNTHESIS_PROVIDERS = providersByKind("synthesis");
+const CRO_PROVIDERS = providersByKind("cro-cdmo");
 
 export default function DesignPage() {
   return (
@@ -66,68 +70,38 @@ export default function DesignPage() {
             <h3>Custom DNA synthesis</h3>
             <p>
               Order the DNA order CSV and gBlock FASTA from any
-              synthesis house. All six build custom double-stranded
+              synthesis house. Each builds custom double-stranded
               fragments and sequence-verified genes from pasted
-              sequence:
+              sequence, and re-optimizes codons for your chassis:
             </p>
             <ul className={styles.providerlist}>
-              <li>
-                <a href="https://www.twistbioscience.com">
-                  Twist Bioscience
-                </a>,{" "}silicon-platform gene synthesis and oligo pools.
-              </li>
-              <li>
-                <a href="https://www.idtdna.com">
-                  Integrated DNA Technologies (IDT)
-                </a>,{" "}gBlocks gene fragments and custom gene synthesis.
-              </li>
-              <li>
-                <a href="https://www.genscript.com">GenScript</a>,
-                custom gene synthesis with cloning into your vector.
-              </li>
-              <li>
-                <a href="https://www.azenta.com">Azenta (GENEWIZ)</a>,{" "}gene synthesis plus Sanger and NGS verification.
-              </li>
-              <li>
-                <a href="https://www.eurofinsgenomics.com">
-                  Eurofins Genomics
-                </a>,{" "}gene synthesis and oligonucleotides, EU and US labs.
-              </li>
-              <li>
-                <a href="https://www.camenabio.com">
-                  Camena Bioscience
-                </a>,{" "}enzymatic gene synthesis for long, complex
-                constructs.
-              </li>
+              {SYNTHESIS_PROVIDERS.map((provider) => (
+                <li key={provider.name}>
+                  <a href={provider.url} target="_blank" rel="noreferrer">
+                    {provider.name}
+                  </a>
+                  , {provider.relevance}
+                </li>
+              ))}
             </ul>
             <h3>Engineered LBP development and manufacturing</h3>
             <p>
               Turning the construct into an engineered live
               biotherapeutic (strain engineering, process
               development, and GMP manufacturing) needs a
-              microbiome-capable partner:
+              microbiome-capable partner — several run dedicated
+              live-biotherapeutic platforms across yeast, E. coli,
+              Lactococcus, and Bacillus hosts:
             </p>
             <ul className={styles.providerlist}>
-              <li>
-                <a href="https://www.ginkgo.bio">Ginkgo Bioworks</a>,{" "}foundry strain engineering, including Saccharomyces
-                yeast chassis development.
-              </li>
-              <li>
-                <a href="https://lallemand-health-solutions.com">
-                  Lallemand Health Solutions
-                </a>,{" "}probiotic yeast manufacturer producing
-                Saccharomyces boulardii under GMP.
-              </li>
-              <li>
-                <a href="https://listlabs.com">List Labs</a>,
-                microbial CDMO with cGMP live biotherapeutic
-                manufacturing for early clinical supply.
-              </li>
-              <li>
-                <a href="https://www.wacker.com">Wacker Biotech</a>,
-                microbial CDMO with a dedicated LBP development and
-                GMP manufacturing platform.
-              </li>
+              {CRO_PROVIDERS.map((provider) => (
+                <li key={provider.name}>
+                  <a href={provider.url} target="_blank" rel="noreferrer">
+                    {provider.name}
+                  </a>
+                  , {provider.relevance}
+                </li>
+              ))}
             </ul>
             <p className={styles.providernote}>
               Independent providers, listed for orientation, not

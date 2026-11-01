@@ -1,13 +1,15 @@
 import type { Modality } from "./modality";
 import type { AgentToolResult } from "../types/peptide";
+import { ROADMAP_STUBS } from "./roadmap";
 
 /**
  * Agentic tool stubs: the pipeline's seam for invoking external models
  * and systems (binding prediction, structure folding, off-target
- * panels). Each tool is a stub today — registered, described, and
- * callable through one dispatcher, but returning `not-configured`
- * until a real backend is wired. Adding a backend means replacing one
- * `invoke` implementation; callers and the response shape stay put.
+ * panels, plus the roadmap capabilities). Each tool is a stub today —
+ * registered, described, and callable through one dispatcher, but
+ * returning `not-configured` until a real backend is wired. Adding a
+ * backend means replacing one `invoke` implementation; callers and the
+ * response shape stay put.
  */
 
 export interface AgentToolInput {
@@ -92,11 +94,28 @@ const offTargetPanelTool: AgentTool = {
   },
 };
 
+/**
+ * Roadmap tools: wet-lab feedback, potency prediction, and the gut
+ * safety panel, built from the shared roadmap registry so the API
+ * detail and the web app's "Future functionality" cards can never
+ * disagree about what each capability will do.
+ */
+const roadmapTools: AgentTool[] = ROADMAP_STUBS.map((stub) => ({
+  name: stub.id,
+  description: `${stub.title}: ${stub.summary} Stub: no backend configured.`,
+  invoke: async (input) => {
+    const startedAt = Date.now();
+    void input;
+    return stubResult(stub.id, `${stub.how} Stub: no backend configured.`, startedAt);
+  },
+}));
+
 /** Tool registry, in run order. Append new tools here. */
 export const AGENT_TOOLS: AgentTool[] = [
   bindingAffinityTool,
   structureFoldTool,
   offTargetPanelTool,
+  ...roadmapTools,
 ];
 
 export function agentToolNames(): string[] {

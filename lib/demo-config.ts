@@ -17,8 +17,8 @@ export interface DemoPreset {
 
 /**
  * Pre-screened gut conditions for the public demo. Each target passes the
- * biosecurity filter and suits the knottin modality; the demo API route
- * rejects anything outside this allowlist.
+ * biosecurity filter and suits the auto-selected scaffold; the demo API
+ * route rejects anything outside this allowlist.
  */
 export const DEMO_PRESETS: DemoPreset[] = [
   {

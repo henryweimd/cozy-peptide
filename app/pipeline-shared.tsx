@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import styles from "./page.module.css";
-import { optimizeForEcoli } from "../lib/codon-optimizer";
+import { optimizeCdsForHostId } from "../lib/codon-optimizer";
+import { hostLabel } from "../lib/hosts";
+import { providersForHost } from "../lib/providers";
+import type { HostId } from "../lib/hosts";
+import { FUTURE_BADGE, ROADMAP_STUBS } from "../lib/roadmap";
 
 /**
  * Shared pipeline UI vocabulary for the landing demo and the full
@@ -17,6 +21,7 @@ export type StageName =
   | "verify"
   | "repair"
   | "synthesize"
+  | "containment"
   | "handoff";
 
 export interface StageEvent {
@@ -55,6 +60,42 @@ export interface PipelinePayload {
   target?: string;
   requested_target?: string;
   modality?: string;
+  modality_id?: string;
+  modality_selection?: {
+    requested: string;
+    resolved: string;
+    reason?: string;
+  };
+  chassis?: {
+    host: string;
+    host_display: string;
+    requested?: string;
+    reason?: string;
+    compatibility: Array<{
+      host: string;
+      host_display: string;
+      score: number;
+      verdict: string;
+      summary: string;
+      secretion: string[];
+      burden: string[];
+      processing: string[];
+    }>;
+  };
+  biocontainment?: {
+    host: string;
+    host_display: string;
+    auxotrophy: string[];
+    kill_switches: string[];
+    integration: string;
+    plasmid_stability: {
+      verdict: string;
+      flags: string[];
+      mitigations: string[];
+    };
+    payload_toxicity: { risk: string; notes: string[] };
+    notes: string[];
+  };
   neurosymbolic_provenance?: {
     proposer_model?: string;
     compiler_refinement_cycles: number;
@@ -106,6 +147,9 @@ export interface PipelinePayload {
     dna_gblock?: string;
     gblock_manifest?: string;
     order_csv?: string;
+    host?: string;
+    host_display?: string;
+    codon_basis?: string;
     restriction_scrub: { status: string };
     synthesis_order: {
       sequence_name: string;
@@ -155,7 +199,12 @@ export const STAGES: StageDef[] = [
     title: "Synthesis backstop",
     sub: "Deterministic grammar sampler",
   },
-  { name: "handoff", title: "Lab handoff", sub: "Yeast cassette and DNA order" },
+  {
+    name: "containment",
+    title: "Biocontainment",
+    sub: "Kill switches, auxotrophy, plasmid check",
+  },
+  { name: "handoff", title: "Lab handoff", sub: "Chassis DNA and order" },
 ];
 
 export type StageState =
@@ -510,8 +559,8 @@ function codonSpaced(dna: string): string {
 
 /**
  * The moment a design lands: the novel peptide sequence at display
- * size plus the E. coli-optimized coding sequence that carries it
- * into an LBP chassis. The sequence fits one line via container
+ * size plus the host-optimized coding sequence that carries it into
+ * the chosen LBP chassis. The sequence fits one line via container
  * query units (wrapping fallback where unsupported); the CDS is
  * computed locally, so it never waits on a model.
  */
@@ -521,20 +570,22 @@ export function DesignedPeptideHero({
   constructId,
   topology,
   interpreted,
+  hostId,
 }: {
   sequence: string;
   heading?: string;
   constructId?: string;
   topology?: string;
   interpreted?: string;
+  hostId?: string;
 }): React.ReactElement {
   const cds = useMemo(() => {
     try {
-      return optimizeForEcoli(sequence);
+      return optimizeCdsForHostId(hostId ?? "ecoli-nissle", sequence);
     } catch {
       return null;
     }
-  }, [sequence]);
+  }, [sequence, hostId]);
   // Mono advance runs ~0.62em, so this size fits the whole sequence
   // on one hero line; the class clamp caps it at display size.
   const fit = sequence.length > 0 ? 100 / (0.62 * sequence.length) : 10;
@@ -572,9 +623,12 @@ export function DesignedPeptideHero({
           <h4>LBP-ready DNA</h4>
           <p>
             The coding sequence for this peptide, optimized for{" "}
-            <i>E. coli</i>, the workhorse LBP chassis, with a TAA
-            stop. Clone it downstream of your vector&apos;s ATG start
-            codon and the LBP transcribes it into the peptide above.
+            <i>{hostId !== undefined ? hostLabel(hostId as HostId) : "E. coli"}</i>
+            , with a TAA stop. Clone it downstream of your
+            vector&apos;s ATG start codon and the LBP transcribes it
+            into the peptide above.
+            {cds.basis === "provisional" &&
+              " Provisional codons — the synthesis vendor re-optimizes natively, free."}
           </p>
           <p className={styles.herodnastats}>
             <span>{transfer.length} nt</span>
@@ -785,6 +839,157 @@ export function HandoffDownloads({
         Full result (.json)
       </button>
     </div>
+  );
+}
+
+/**
+ * Roadmap stubs: the platform's named-but-unbuilt capabilities as a
+ * plain stacked list — never cards. Each carries the "Future
+ * functionality" badge, a one-line summary, and a tooltip plus an
+ * inline "how" line describing how it will be achieved.
+ */
+export function FutureStubs(): React.ReactElement {
+  return (
+    <ul className={styles.futurelist} aria-label="Planned capabilities">
+      {ROADMAP_STUBS.map((stub) => (
+        <li key={stub.id} title={stub.how}>
+          <span className={styles.futurebadge}>{FUTURE_BADGE}</span>{" "}
+          <strong>{stub.title}</strong>
+          <span className={styles.futuresummary}> — {stub.summary}</span>
+          <span className={styles.futurehow}>How: {stub.how}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Chassis-compatibility ranking: every registered host scored for the
+ * accepted sequence, best first. The summary column carries the full
+ * secretion/burden/processing notes as a tooltip; the chosen host is
+ * marked in the Host column.
+ */
+export function ChassisTable({
+  chassis,
+}: {
+  chassis: NonNullable<PipelinePayload["chassis"]>;
+}): React.ReactElement {
+  return (
+    <table className={styles.apitable}>
+      <thead>
+        <tr>
+          <th>Host</th>
+          <th>Score</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        {chassis.compatibility.map((entry) => (
+          <tr key={entry.host}>
+            <td data-label="Host">
+              {entry.host_display}
+              {entry.host === chassis.host && " ✓"}
+            </td>
+            <td data-label="Score">
+              {entry.score} ({entry.verdict})
+            </td>
+            <td
+              data-label="Why"
+              title={[
+                ...entry.secretion,
+                ...entry.burden,
+                ...entry.processing,
+              ].join(" ")}
+            >
+              {entry.summary}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/**
+ * Biocontainment summary: the chosen host's auxotrophy, kill switches,
+ * integration posture, and the sequence-derived plasmid/toxicity
+ * pre-screens.
+ */
+export function ContainmentSummary({
+  biocontainment,
+}: {
+  biocontainment: NonNullable<PipelinePayload["biocontainment"]>;
+}): React.ReactElement {
+  return (
+    <>
+      <dl className={styles.metrics}>
+        <div>
+          <dt>Host</dt>
+          <dd>{biocontainment.host_display}</dd>
+        </div>
+        <div>
+          <dt>Plasmid</dt>
+          <dd>{biocontainment.plasmid_stability.verdict}</dd>
+        </div>
+        <div>
+          <dt>Payload risk</dt>
+          <dd>{biocontainment.payload_toxicity.risk}</dd>
+        </div>
+      </dl>
+      <ul className={styles.trace}>
+        {biocontainment.auxotrophy.map((layer) => (
+          <li key={layer}>auxotrophy: {layer}</li>
+        ))}
+        {biocontainment.kill_switches.map((layer) => (
+          <li key={layer}>kill switch: {layer}</li>
+        ))}
+        <li>integration: {biocontainment.integration}</li>
+        {biocontainment.plasmid_stability.flags.map((flag) => (
+          <li key={flag}>plasmid flag: {flag}</li>
+        ))}
+        {biocontainment.notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * Order-and-build partner directory: DNA synthesis vendors first, then
+ * CRO/CDMO partners with microbial and live-biotherapeutic experience,
+ * filtered to the chosen host. External links open new tabs.
+ */
+export function ProviderDirectory({
+  host,
+}: {
+  host: string;
+}): React.ReactElement {
+  const providers = providersForHost(host as HostId);
+  const synthesis = providers.filter(
+    (provider) => provider.kind === "synthesis"
+  );
+  const cro = providers.filter((provider) => provider.kind === "cro-cdmo");
+  const group = (label: string, entries: typeof providers): React.ReactElement => (
+    <>
+      <p className={styles.providergroup}>{label}</p>
+      <ul className={styles.providerlist}>
+        {entries.map((provider) => (
+          <li key={provider.name}>
+            <a href={provider.url} target="_blank" rel="noreferrer">
+              {provider.name}
+            </a>
+            <span> — {provider.relevance}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+  return (
+    <>
+      {group("DNA synthesis", synthesis)}
+      {group("CRO / CDMO build partners", cro)}
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 import type { RefinementTurn } from "../types/peptide";
 import type { Modality } from "./modality";
-import { specForModality } from "./modality";
+import { DEFAULT_MODALITY, specForModality } from "./modality";
 import type { ResearchBrief } from "./research/brief";
 
 /**
@@ -152,6 +152,68 @@ const CLASS_BRIEFS: Record<TargetClass, string> = {
 };
 
 /**
+ * Best-scaffold default per therapeutic objective. Auto doesn't mean
+ * "always the knottin" — it means the scaffold whose strengths match
+ * the job: hairpins engage anionic bacterial surfaces, cyclotides
+ * outlast protease-rich mucosa, helical scaffolds mimic gut-axis
+ * peptide hormones, and the knottin's rigid loops occlude binding
+ * interfaces. Unknown objectives fall back to the knottin, the
+ * safest blind default.
+ */
+export const DEFAULT_MODALITY_BY_CLASS: Record<
+  TargetClass,
+  { modality: Modality; reason: string }
+> = {
+  "bacterial-colonization": {
+    modality: "hairpin-2c",
+    reason:
+      "Hairpin 2C: a compact cationic wedge for anionic bacterial surfaces",
+  },
+  "toxin-blockade": {
+    modality: "knottin-6c",
+    reason:
+      "Knottin 6C: rigid loops to occlude a toxin's receptor-binding surface",
+  },
+  "barrier-repair": {
+    modality: "cyclotide-6c",
+    reason:
+      "Cyclotide 6C: the cyclic backbone outlasts protease-rich mucosa",
+  },
+  inflammation: {
+    modality: "cyclotide-6c",
+    reason:
+      "Cyclotide 6C: maximum stability where inflamed tissue runs protease-hot",
+  },
+  "pain-motility": {
+    modality: "knottin-6c",
+    reason:
+      "Knottin 6C: compact, stable receptor engagement for enteric signaling",
+  },
+  metabolic: {
+    modality: "helical",
+    reason:
+      "Helical: gut-axis hormones are alpha-helices, so the mimic is too",
+  },
+  general: {
+    modality: DEFAULT_MODALITY,
+    reason:
+      "Knottin 6C: most stable in the gut — the safest default when unsure",
+  },
+};
+
+/**
+ * Resolves the Auto scaffold for a target class: the modality most
+ * likely to work for the objective set, plus the one-line reason shown
+ * in the UI and recorded in the run ledger.
+ */
+export function selectDefaultModality(targetClass: TargetClass): {
+  modality: Modality;
+  reason: string;
+} {
+  return DEFAULT_MODALITY_BY_CLASS[targetClass];
+}
+
+/**
  * Safety-first instruction block injected into every proposal prompt.
  * Kept free of human-harm example terms: the upstream API rejects such
  * prompts with content-policy violations, so the preamble steers by
@@ -266,12 +328,7 @@ export function constraintBlockForModality(
     ];
   }
   const spec = specForModality(modality);
-  const cysLine =
-    spec.cysteines === 0
-      ? "Linear topology: no cysteines at all (unpaired thiols oxidize and dimerize); total length 8-30 amino acids."
-      : `Disulfide topology: exactly ${spec.cysteines} cysteines with at least ${spec.minCysSpacing} residues between consecutive cysteines; total length ${spec.minLength}-${spec.maxLength} amino acids.`;
-  return [
-    cysLine,
+  const shared = [
     "Zero Kex2 internal cleavage: no KR, RR, PR, or KK motifs anywhere (they fragment during Golgi processing); also no RK dibasic.",
     "Zero N-linked glycosylation: no N[^P][ST] sequon (yeast hyper-mannosylation would occlude binding loops).",
     "Clean N-terminal processing: residue 1 (immediately downstream of the Kex2 cleavage boundary) must be small and unhindered (A, S, G, or C) — never P, F, Y, or W.",
@@ -279,6 +336,31 @@ export function constraintBlockForModality(
     "No exposed chymotrypsin consensus sites ([FYW][^P][KR]).",
     "No deamidation (NG), isomerization (DG), or acid-labile (DP) hotspots; at most one methionine (oxidation risk).",
   ];
+  if (modality === "cyclotide-6c") {
+    return [
+      "Cyclotide cysteine topology: C-X(3,7)-C-X(3,6)-C-X(1,4)-C-X(2,6)-C-X(4,10)-C (exactly 6 cysteines, C1-C4 / C2-C5 / C3-C6); total length 28-37 amino acids.",
+      "Backbone cyclization: the linear precursor's N- and C-termini are ligated after expression (split-intein or sortase), so keep both termini small and unhindered — residue 1 in {A, S, G, C} as usual, and the C-terminal residue never proline.",
+      ...shared,
+    ];
+  }
+  if (modality === "hairpin-2c") {
+    return [
+      "Beta-hairpin topology: exactly 2 cysteines with at least 6 residues between them, pinning two antiparallel strands; total length 12-20 amino acids. Place a short turn (2-4 residues, favoring G, S, N, T) near the middle of the inter-cysteine loop.",
+      ...shared,
+    ];
+  }
+  if (modality === "helical") {
+    return [
+      "Helical topology: no cysteines at all (unpaired thiols oxidize and dimerize); total length 12-26 amino acids.",
+      "Amphipathic alpha-helix: cluster hydrophobic residues (A, V, I, L, M, F) on one helical face with a 3-4 residue periodicity and cationic/polar residues on the opposite face, so the KD-scale hydrophobic moment clears 1.20; avoid proline (helix breaker).",
+      ...shared,
+    ];
+  }
+  const cysLine =
+    spec.cysteines === 0
+      ? "Linear topology: no cysteines at all (unpaired thiols oxidize and dimerize); total length 8-30 amino acids."
+      : `Disulfide topology: exactly ${spec.cysteines} cysteines with at least ${spec.minCysSpacing} residues between consecutive cysteines; total length ${spec.minLength}-${spec.maxLength} amino acids.`;
+  return [cysLine, ...shared];
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   MAX_METHIONINES,
   auditFailureModes,
   auditPeptideCandidate,
+  computeHydrophobicMoment,
   grammarFailureModes,
 } from "./symbolic-auditor";
 import {
@@ -25,6 +26,7 @@ import {
   parseModalityGrammar,
   specForModality,
 } from "./modality";
+import { DEFAULT_HOST, type HostId } from "./hosts";
 import {
   type TargetClass,
   buildRepairSteering,
@@ -102,6 +104,36 @@ function scaffoldLines(): string[] {
 }
 
 /**
+ * Secretion framing for the chosen chassis. Yeast is the conservative
+ * home case; bacterial hosts name their secretion route. The
+ * bioprocess gates stay shared and conservative across chassis (a
+ * design clean for yeast Golgi is clean for bacterial Sec too), so
+ * only the framing — never the gates — varies by host.
+ */
+export function secretionFraming(host: HostId): string {
+  switch (host) {
+    case "ecoli-nissle":
+      return "for Sec-to-periplasm secretion by Escherichia coli Nissle 1917 (PelB leader, Dsb oxidation)";
+    case "lactococcus-lactis":
+      return "for Sec secretion by Lactococcus lactis (SPusp45 leader)";
+    case "bacillus-subtilis":
+      return "for Sec secretion by Bacillus subtilis (WB800 protease-deficient background)";
+    case "sboulardii":
+    default:
+      return "for continuous secretion by engineered yeast (Saccharomyces boulardii via the MFalpha1 pre-pro leader)";
+  }
+}
+
+/**
+ * Shared-gates portability note, appended for bacterial hosts so the
+ * proposer understands why yeast Golgi liabilities are still excluded.
+ */
+function sharedGatesNote(host: HostId): string | null {
+  if (host === "sboulardii") return null;
+  return "Conservative shared gates: yeast Golgi liabilities (Kex2, glycosylation) are excluded as well, keeping the design portable across chassis.";
+}
+
+/**
  * Structured prompt instructing Meta Spark 1.3 to propose 3-5 peptide
  * secretion payloads for a design modality, defaulting to the canonical
  * ICK knottin topology with MFalpha1 bioprocess constraints. An optional
@@ -113,21 +145,26 @@ export function buildKnottinPrompt(
   chargeTarget: number,
   steering?: string,
   modality: Modality = "knottin-6c",
-  model: string = META_SPARK_MODEL
+  model: string = META_SPARK_MODEL,
+  host: HostId = DEFAULT_HOST
 ): string {
   const spec = specForModality(modality);
   const persona = shortLabelForModel(model);
+  const framing =
+    host === "sboulardii" ? null : secretionFraming(host);
   const lines = [
     `You are ${persona}, a protein-design contributor for therapeutic gut-delivered ${modality === "knottin-6c" ? "knottins" : `${spec.noun}s`}.`,
     `Target: ${target}.`,
     modality === "knottin-6c"
-      ? "Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) optimized specifically as 6-cysteine knottin payloads (ICK topology C1-C4 / C2-C5 / C3-C6) for continuous secretion by engineered yeast (Saccharomyces boulardii via the MFalpha1 pre-pro leader)."
-      : `Propose 3-5 candidate ${spec.noun} sequences (single-letter amino acid code) for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
+      ? `Propose 3-5 candidate knottin peptide sequences (single-letter amino acid code) optimized specifically as 6-cysteine knottin payloads (ICK topology C1-C4 / C2-C5 / C3-C6) ${framing ?? "for continuous secretion by engineered yeast (Saccharomyces boulardii via the MFalpha1 pre-pro leader)"}.`
+      : `Propose 3-5 candidate ${spec.noun} sequences (single-letter amino acid code) ${framing ?? "for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader"}.`,
     "Every candidate MUST satisfy all of the following hard constraints:",
     ...constraintBlockForModality(modality, chargeTarget).map(
       (rule, index) => `${index + 1}. ${rule}`
     ),
   ];
+  const gatesNote = sharedGatesNote(host);
+  if (gatesNote !== null) lines.push(gatesNote);
   if (modality === "knottin-6c") {
     lines.push(
       "Gut-stable, non-toxic, non-antimicrobial design; no toxin or translocation-domain content.",
@@ -158,15 +195,20 @@ export function buildSemanticProposePrompt(
   chargeTarget: number,
   steering?: string,
   modality: Modality = "knottin-6c",
-  model: string = META_SPARK_MODEL
+  model: string = META_SPARK_MODEL,
+  host: HostId = DEFAULT_HOST
 ): string {
   const spec = specForModality(modality);
   const persona = shortLabelForModel(model);
+  const framing =
+    host === "sboulardii"
+      ? "optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader"
+      : `optimized ${secretionFraming(host)}`;
   const lines =
     modality === "knottin-6c"
       ? [
           `You are ${persona}, a semantic evolutionary orator for therapeutic micro-proteins.`,
-          `Clinical gut target: ${target}. Adapt knottin secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
+          `Clinical gut target: ${target}. Adapt knottin secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, ${framing}.`,
           "Express exactly 3 candidate knottins in the loop grammar L0-C1-L1-C2-L2-C3-L3-C4-L4-C5-L5-C6-L6 with ICK pairing C1-C4, C2-C5, C3-C6.",
           "Hard syntactic and bioprocess constraints for every candidate:",
           `1. Canonical ICK loop envelopes: L1 3-7, L2 3-6, L3 1-4, L4 2-6, L5 4-10; total 28-36 aa; sequence starts and ends with cysteine.`,
@@ -181,13 +223,15 @@ export function buildSemanticProposePrompt(
         ]
       : [
           `You are ${persona}, a semantic evolutionary orator for therapeutic micro-proteins.`,
-          `Clinical gut target: ${target}. Adapt ${spec.noun} secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, optimized for continuous secretion by Saccharomyces boulardii via the MFalpha1 pre-pro leader.`,
+          `Clinical gut target: ${target}. Adapt ${spec.noun} secretion payloads to this target as evolution would: propose sequence tokens grounded in semantic context, functional fitness, and mucosal resilience, ${framing}.`,
           `Express exactly 3 candidate ${spec.noun}s.`,
           "Hard syntactic and bioprocess constraints for every candidate:",
           ...constraintBlockForModality(modality, chargeTarget).map(
             (rule, index) => `${index + 1}. ${rule}`
           ),
         ];
+  const gatesNote = sharedGatesNote(host);
+  if (gatesNote !== null) lines.push(gatesNote);
   if (steering !== undefined && steering.length > 0) {
     lines.push(`System steering: ${steering}`);
   }
@@ -233,6 +277,16 @@ export function buildRepairPrompt(
   }
   if (steering !== undefined && steering.length > 0) {
     lines.push(steering);
+  }
+  if (modality === "helical") {
+    lines.push(
+      `Helical amphipathicity: cluster hydrophobics on one helical face so the KD-scale hydrophobic moment clears ${(spec.momentMin ?? 1.2).toFixed(2)}; no proline (helix breaker).`
+    );
+  }
+  if (modality === "cyclotide-6c") {
+    lines.push(
+      "Cyclic termini: the C-terminal residue must not be proline (ligation junction)."
+    );
   }
   lines.push(
     modality === "knottin-6c"
@@ -375,17 +429,27 @@ export async function requestSparkCandidates(
 export async function callMetaSpark(
   target: string,
   chargeTarget: number,
-  options: { modality?: Modality; mechanism?: string; model?: string } = {}
+  options: {
+    modality?: Modality;
+    mechanism?: string;
+    model?: string;
+    host?: HostId;
+  } = {}
 ): Promise<string[]> {
   const modality = options.modality ?? DEFAULT_MODALITY;
   const model = options.model ?? DEFAULT_MODEL;
+  const host = options.host ?? DEFAULT_HOST;
   const spec = specForModality(modality);
   const { brief } = buildSteeringBrief(target, options.mechanism);
+  const systemLine =
+    host === "sboulardii"
+      ? `You design therapeutic gut-delivered ${spec.noun} secretion payloads for Saccharomyces boulardii (MFalpha1 pre-pro leader) under strict bioprocess constraints.`
+      : `You design therapeutic gut-delivered ${spec.noun} secretion payloads ${secretionFraming(host)} under strict bioprocess constraints.`;
   const candidates = await requestSparkCandidates(
     [
       {
         role: "system",
-        content: `You design therapeutic gut-delivered ${spec.noun} secretion payloads for Saccharomyces boulardii (MFalpha1 pre-pro leader) under strict bioprocess constraints.`,
+        content: systemLine,
       },
       {
         role: "user",
@@ -394,7 +458,8 @@ export async function callMetaSpark(
           chargeTarget,
           brief,
           modality,
-          model
+          model,
+          host
         ),
       },
     ],
@@ -537,6 +602,7 @@ export type PipelineStage =
   | "verify"
   | "repair"
   | "synthesize"
+  | "containment"
   | "handoff";
 
 export interface PipelineEvent {
@@ -723,6 +789,8 @@ export interface GenerationOptions {
   modality?: Modality;
   mechanism?: string;
   model?: string;
+  /** Chassis the design is framed for (secretion route in prompts). */
+  host?: HostId;
   /**
    * Literature research stage. Disabled by default so the library keeps
    * its existing contract; API routes enable it explicitly. Any research
@@ -771,6 +839,7 @@ export async function generateVerifiedPeptide(
   const apiAvailable = apiKey !== undefined && apiKey.length > 0;
   const modality = options.modality ?? DEFAULT_MODALITY;
   const model = options.model ?? DEFAULT_MODEL;
+  const host = options.host ?? DEFAULT_HOST;
   const modelLabel = shortLabelForModel(model);
   const spec = specForModality(modality);
   const { targetClass, brief: staticBrief } = buildSteeringBrief(
@@ -954,7 +1023,8 @@ export async function generateVerifiedPeptide(
         chargeTarget,
         steeringBrief,
         modality,
-        model
+        model,
+        host
       ),
     },
   ];
@@ -1096,7 +1166,34 @@ function randInt(rand: () => number, min: number, max: number): number {
 /** Neutral filler alphabet: no C (framework only), no charged residues. */
 const NEUTRAL_FILLER = "AFGHILNPQSTVWY";
 
+/** Hydrophobic-biased filler for helical-face positions. */
+const HELICAL_FACE_FILLER = "AILMFV";
+
+/** Polar-biased filler for the solvent-exposed helical face. */
+const HELICAL_POLAR_FILLER = "GHNQST";
+
 const BASIC_RESIDUES = new Set(["K", "R"]);
+
+/** Face-biased sampling directive for amphipathic helices. */
+export interface HelicalFaceBias {
+  face: Set<number>;
+  momentMin: number;
+}
+
+/**
+ * Helical-wheel face: positions whose 100-degree wheel angle points at
+ * the hydrophobic side (cosine above 0.25). The sampler fills these
+ * hydrophobically and the rest polar, seeding amphipathicity that the
+ * moment-repair pass below then polishes.
+ */
+export function helicalFacePositions(total: number): Set<number> {
+  const face = new Set<number>();
+  const step = (100 * Math.PI) / 180;
+  for (let i = 0; i < total; i += 1) {
+    if (Math.cos(i * step) > 0.25) face.add(i);
+  }
+  return face;
+}
 const AROMATIC_CHYMO = new Set(["F", "Y", "W"]);
 
 function fitsNeighbors(seq: string[], index: number, aa: string): boolean {
@@ -1133,10 +1230,11 @@ function fitsNeighbors(seq: string[], index: number, aa: string): boolean {
 function pickFiller(
   rand: () => number,
   prev: string,
-  prevprev: string
+  prevprev: string,
+  alphabet: string = NEUTRAL_FILLER
 ): string {
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    const aa = NEUTRAL_FILLER[Math.floor(rand() * NEUTRAL_FILLER.length)] ?? "A";
+    const aa = alphabet[Math.floor(rand() * alphabet.length)] ?? "A";
     if (prevprev === "N" && prev !== "P" && (aa === "S" || aa === "T")) continue;
     return aa;
   }
@@ -1261,13 +1359,16 @@ function sampleDisulfidePositions(
  * Shared sequence fill: places chargeTarget non-adjacent K/R residues,
  * fills the rest with neutral residues, then repairs every motif
  * liability (sequons, PR, chymotrypsin, hotspots, runs, N-terminus).
- * Cysteine and positive slots are never rewritten by repairs.
+ * Cysteine and positive slots are never rewritten by repairs. With a
+ * helical face bias, positives prefer the polar face, fillers split by
+ * face, and a final moment-repair pass polishes amphipathicity.
  */
 function fillSequence(
   rand: () => number,
   total: number,
   cys: Set<number>,
-  chargeTarget: number
+  chargeTarget: number,
+  faceBias?: HelicalFaceBias
 ): string | null {
   // Choose chargeTarget positive (K/R) positions, never adjacent to
   // each other (no dibasic Kex2 pairs).
@@ -1280,6 +1381,14 @@ function fillSequence(
     const tmp = slots[i] ?? 0;
     slots[i] = slots[j] ?? 0;
     slots[j] = tmp;
+  }
+  if (faceBias !== undefined) {
+    // Cationics belong on the polar face; face slots are last resort.
+    slots.sort((a, b) => {
+      const fa = faceBias.face.has(a) ? 1 : 0;
+      const fb = faceBias.face.has(b) ? 1 : 0;
+      return fa - fb;
+    });
   }
   const positives = new Set<number>();
   for (const slot of slots) {
@@ -1300,7 +1409,13 @@ function fillSequence(
       out.push(out[i - 1] === "P" || rand() < 0.5 ? "K" : "R");
       continue;
     }
-    out.push(pickFiller(rand, out[i - 1] ?? "", out[i - 2] ?? ""));
+    const alphabet =
+      faceBias === undefined
+        ? NEUTRAL_FILLER
+        : faceBias.face.has(i)
+          ? HELICAL_FACE_FILLER
+          : HELICAL_POLAR_FILLER;
+    out.push(pickFiller(rand, out[i - 1] ?? "", out[i - 2] ?? "", alphabet));
   }
 
   // Break N-X-[ST] sequons (middle -> P when filler, else third -> polar).
@@ -1456,7 +1571,70 @@ function fillSequence(
     if (!swapped) return null;
   }
 
+  // Amphipathicity polish (helical sampling only): hill-climb the
+  // hydrophobic moment with guarded single swaps. Best effort — the
+  // caller still filters by the real audit.
+  if (faceBias !== undefined) {
+    for (let repair = 0; repair < 60; repair += 1) {
+      const current = computeHydrophobicMoment(out.join(""));
+      if (current >= faceBias.momentMin) break;
+      let improved = false;
+      for (let i = 0; i < out.length && !improved; i += 1) {
+        if (cys.has(i) || positives.has(i)) continue;
+        const candidates = faceBias.face.has(i)
+          ? ["I", "L", "F", "V", "M", "A"]
+          : ["S", "T", "N", "Q", "H", "G"];
+        for (const aa of candidates) {
+          if (aa === out[i] || !fitsMomentSwap(out, i, aa)) continue;
+          const incumbent = out[i] ?? "";
+          out[i] = aa;
+          if (computeHydrophobicMoment(out.join("")) > current) {
+            improved = true;
+            break;
+          }
+          out[i] = incumbent;
+        }
+      }
+      if (!improved) break;
+    }
+  }
+
   return out.join("");
+}
+
+/**
+ * Guards one moment-repair swap: motif neighbors plus the gates
+ * fitsNeighbors doesn't cover (N-terminus, NG/DG hotspots — DP is
+ * impossible since neither P nor D is ever offered — the methionine
+ * cap, and the 4+ hydrophobic run cap).
+ */
+function fitsMomentSwap(seq: string[], index: number, aa: string): boolean {
+  if (!fitsNeighbors(seq, index, aa)) return false;
+  if (index === 0 && BLOCKED_N_TERMINI.has(aa)) return false;
+  const prev = index > 0 ? (seq[index - 1] ?? "") : "";
+  const next = index + 1 < seq.length ? (seq[index + 1] ?? "") : "";
+  if (aa === "G" && (prev === "N" || prev === "D")) return false;
+  if (aa === "N" && next === "G") return false;
+  if (aa === "M") {
+    let mets = 0;
+    for (let k = 0; k < seq.length; k += 1) {
+      if (k !== index && seq[k] === "M") mets += 1;
+    }
+    if (mets >= MAX_METHIONINES) return false;
+  }
+  if (HYDROPHOBIC_RUN_SET.has(aa)) {
+    let run = 1;
+    for (let k = index - 1; k >= 0; k -= 1) {
+      if (!HYDROPHOBIC_RUN_SET.has(seq[k] ?? "")) break;
+      run += 1;
+    }
+    for (let k = index + 1; k < seq.length; k += 1) {
+      if (!HYDROPHOBIC_RUN_SET.has(seq[k] ?? "")) break;
+      run += 1;
+    }
+    if (run > 3) return false;
+  }
+  return true;
 }
 
 /**
@@ -1478,14 +1656,23 @@ export function sampleFallbackCandidates(
 
   for (let attempt = 0; attempt < 5000 && kept.length < count; attempt += 1) {
     let seq: string | null;
-    if (modality === "knottin-6c") {
+    if (modality === "knottin-6c" || modality === "cyclotide-6c") {
+      // Cyclotides share the knottin loop envelopes, so the knottin
+      // framework sampler seeds them too; the audit's C-terminal gate
+      // and the 28-37 window still filter.
       seq = sampleTopologySequence(rand, chargeTarget);
     } else {
       const frame = sampleDisulfidePositions(rand, spec);
-      seq =
-        frame === null
-          ? null
-          : fillSequence(rand, frame.total, frame.cys, chargeTarget);
+      if (frame === null) {
+        seq = null;
+      } else if (modality === "helical") {
+        seq = fillSequence(rand, frame.total, frame.cys, chargeTarget, {
+          face: helicalFacePositions(frame.total),
+          momentMin: spec.momentMin ?? 1.2,
+        });
+      } else {
+        seq = fillSequence(rand, frame.total, frame.cys, chargeTarget);
+      }
     }
     if (seq === null || seen.has(seq)) continue;
     seen.add(seq);

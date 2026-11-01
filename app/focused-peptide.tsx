@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 import {
+  ChassisTable,
+  ContainmentSummary,
   DesignedPeptideHero,
   EventLog,
   HandoffDownloads,
@@ -27,6 +29,7 @@ const STAGE_NAMES: StageName[] = [
   "verify",
   "repair",
   "synthesize",
+  "containment",
   "handoff",
 ];
 
@@ -188,6 +191,12 @@ export default function FocusedPeptide({
       : null;
   const specificityBlob =
     shown !== null ? asRecord(pick(shown, "specificity", "specificity")) : null;
+  const chassisBlob =
+    shown !== null ? asRecord(pick(shown, "chassis", "chassis")) : null;
+  const biocontainmentBlob =
+    shown !== null
+      ? asRecord(pick(shown, "biocontainment", "biocontainment"))
+      : null;
   const refinementTrace =
     shown !== null ? pick(shown, "refinementTrace", "refinement_trace") : null;
   const refinementTurns = Array.isArray(refinementTrace)
@@ -238,6 +247,17 @@ export default function FocusedPeptide({
             ? {
                 specificity:
                   specificityBlob as PipelinePayload["specificity"],
+              }
+            : {}),
+          ...(chassisBlob !== null
+            ? {
+                chassis: chassisBlob as PipelinePayload["chassis"],
+              }
+            : {}),
+          ...(biocontainmentBlob !== null
+            ? {
+                biocontainment:
+                  biocontainmentBlob as PipelinePayload["biocontainment"],
               }
             : {}),
           lab_handoff: handoffBlob as PipelinePayload["lab_handoff"],
@@ -327,7 +347,13 @@ export default function FocusedPeptide({
                 {typeof requestBlob["modality"] === "string" && (
                   <div>
                     <dt>Scaffold</dt>
-                    <dd>{requestBlob["modalilty"] as string}</dd>
+                    <dd>{requestBlob["modality"] as string}</dd>
+                  </div>
+                )}
+                {typeof requestBlob["host"] === "string" && (
+                  <div>
+                    <dt>Chassis</dt>
+                    <dd>{requestBlob["host"] as string}</dd>
                   </div>
                 )}
                 {typeof requestBlob["charge_target"] === "number" && (
@@ -367,6 +393,11 @@ export default function FocusedPeptide({
                 heading="Designed peptide"
                 constructId={candidateId ?? undefined}
                 topology={topology ?? undefined}
+                hostId={
+                  handoffBlob !== null
+                    ? (asString(handoffBlob["host"]) ?? undefined)
+                    : undefined
+                }
               />
               {grammar !== null && Object.keys(grammar).length > 0 && (
                 <ul className={styles.loopchips}>
@@ -462,6 +493,34 @@ export default function FocusedPeptide({
               <p className={styles.handoffline}>{specificityLine}</p>
             </>
           )}
+
+          {chassisBlob !== null &&
+            Array.isArray(chassisBlob["compatibility"]) && (
+              <>
+                <h4>Chassis compatibility</h4>
+                <ChassisTable
+                  chassis={
+                    chassisBlob as unknown as NonNullable<
+                      PipelinePayload["chassis"]
+                    >
+                  }
+                />
+              </>
+            )}
+
+          {biocontainmentBlob !== null &&
+            Array.isArray(biocontainmentBlob["auxotrophy"]) && (
+              <>
+                <h4>Biocontainment</h4>
+                <ContainmentSummary
+                  biocontainment={
+                    biocontainmentBlob as unknown as NonNullable<
+                      PipelinePayload["biocontainment"]
+                    >
+                  }
+                />
+              </>
+            )}
 
           {downloadResult !== null && (
             <>

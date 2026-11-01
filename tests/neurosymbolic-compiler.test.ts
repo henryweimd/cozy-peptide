@@ -476,8 +476,10 @@ test("route exposes the expanded candidate metadata", async () => {
   );
   assert.equal(res403.status, 403);
 
+  // Explicit knottin: this test pins the candidate metadata shape,
+  // while Auto would resolve inflammation to the cyclotide scaffold.
   const res = await POST(
-    req({ target: TARGET, charge_target: 4 }, "test-token")
+    req({ target: TARGET, charge_target: 4, modality: "knottin-6c" }, "test-token")
   );
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("Access-Control-Allow-Origin"), "*");
@@ -572,8 +574,10 @@ test("demo route serves presets with a per-IP cooldown", async () => {
   assert.equal(ok.status, 200);
   const okBody = (await ok.json()) as Record<string, unknown>;
   assert.equal(okBody["success"], true);
+  // C. difficile auto-resolves to the hairpin scaffold (12-20 aa).
+  assert.equal(okBody["modality_id"], "hairpin-2c");
   const candidate = okBody["candidate"] as Record<string, unknown>;
-  assert.ok((candidate["mature_sequence"] as string).length >= 28);
+  assert.ok((candidate["mature_sequence"] as string).length >= 12);
   assert.equal(
     (candidate["verification_report"] as Record<string, unknown>)["passed"],
     true

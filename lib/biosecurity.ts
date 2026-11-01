@@ -87,7 +87,7 @@ export const OFF_SITE_GUIDANCE =
 
 export const CATALYTIC_ENZYME_GUIDANCE =
   "Catalytic pockets require large globular folds sourced from natural " +
-  "homologs (UniProt), not short de novo peptides (8-36 aa). Gut-delivered " +
+  "homologs (UniProt), not short de novo peptides (8-37 aa). Gut-delivered " +
   "peptides are suited to binding, blockade, or local modulation of a " +
   "target, not to de novo catalysis. For enzyme function, express a natural " +
   "homolog identified via UniProt/BLAST instead of requesting a peptide.";
@@ -134,7 +134,7 @@ export function validateRequestSafety(
       safe: false,
       category: "catalytic-enzyme",
       reason:
-        `Requested length ${lengthHint} aa exceeds the short-peptide modalities (8-36 aa) and implies a catalytic enzyme fold. ` +
+        `Requested length ${lengthHint} aa exceeds the short-peptide modalities (8-37 aa) and implies a catalytic enzyme fold. ` +
         CATALYTIC_ENZYME_GUIDANCE,
     };
   }

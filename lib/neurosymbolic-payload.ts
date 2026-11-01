@@ -19,6 +19,9 @@ import { buildCloningPayload, constructTag } from "./lab-handoff";
 import type { TargetClass } from "./prompt-steering";
 import { META_SPARK_MODEL, displayNameForModel } from "./spark-config";
 import type { ResearchProvenance } from "./research/brief";
+import { DEFAULT_HOST, hostLabel, type HostId } from "./hosts";
+import { scoreAllHosts } from "./chassis-compat";
+import { planBiocontainment } from "./biocontainment";
 
 const LINGUISTIC_PARADIGM = "context_sensitive_loop_grammar";
 
@@ -47,6 +50,19 @@ export function refinementCycles(history: RefinementTurn[]): number {
 }
 
 /**
+ * Automatic-choice context: what the caller asked for (or left to the
+ * system) and why each default resolved the way it did. Recorded in
+ * the response and the ledger so Auto is never a mystery.
+ */
+export interface DesignChoiceContext {
+  modalityRequested?: Modality | "auto";
+  modalityReason?: string;
+  host?: HostId;
+  hostRequested?: HostId | "auto";
+  hostReason?: string;
+}
+
+/**
  * Builds the flat neurosymbolic HTTP 200 payload shared by the
  * authenticated API route and the public demo route.
  */
@@ -62,7 +78,8 @@ export function buildNeurosymbolicPayload(
   targetClass: TargetClass = "general",
   model: string = META_SPARK_MODEL,
   research?: ResearchProvenance,
-  requestedTarget?: string
+  requestedTarget?: string,
+  choices?: DesignChoiceContext
 ): ApiResponse {
   const grammar = parseModalityGrammar(candidate, modality);
   const spec = specForModality(modality);
@@ -77,6 +94,9 @@ export function buildNeurosymbolicPayload(
     warnings: [],
     reason: "Specificity review not run for this candidate",
   };
+  const host: HostId = choices?.host ?? DEFAULT_HOST;
+  const compatibility = scoreAllHosts(candidate, modality);
+  const containment = planBiocontainment(candidate, modality, host);
   return {
     success: true,
     target,
@@ -84,6 +104,49 @@ export function buildNeurosymbolicPayload(
       ? { requested_target: requestedTarget }
       : {}),
     modality: spec.responseId,
+    modality_id: spec.modality,
+    ...(choices?.modalityRequested !== undefined ||
+    choices?.modalityReason !== undefined
+      ? {
+          modality_selection: {
+            requested: choices?.modalityRequested ?? spec.modality,
+            resolved: spec.modality,
+            ...(choices?.modalityReason !== undefined
+              ? { reason: choices.modalityReason }
+              : {}),
+          },
+        }
+      : {}),
+    chassis: {
+      host,
+      host_display: hostLabel(host),
+      ...(choices?.hostRequested !== undefined
+        ? { requested: choices.hostRequested }
+        : {}),
+      ...(choices?.hostReason !== undefined
+        ? { reason: choices.hostReason }
+        : {}),
+      compatibility: compatibility.map((entry) => ({
+        host: entry.host,
+        host_display: entry.hostDisplay,
+        score: entry.score,
+        verdict: entry.verdict,
+        summary: entry.summary,
+        secretion: entry.secretion.notes,
+        burden: entry.burden.notes,
+        processing: entry.processing.notes,
+      })),
+    },
+    biocontainment: {
+      host: containment.host,
+      host_display: containment.hostDisplay,
+      auxotrophy: containment.auxotrophy,
+      kill_switches: containment.killSwitches,
+      integration: containment.integration,
+      plasmid_stability: containment.plasmidStability,
+      payload_toxicity: containment.payloadToxicity,
+      notes: containment.notes,
+    },
     specificity,
     agent_tools: agentTools,
     research_provenance:
@@ -132,7 +195,7 @@ export function buildNeurosymbolicPayload(
         gravy_score: audit.gravy_score,
         boman_index: audit.boman_index,
       },
-      cloning_payload: buildCloningPayload(candidate, modality),
+      cloning_payload: buildCloningPayload(candidate, modality, host),
       verification_report: buildVerificationReport(grammar, audit),
       mature_sequence: candidate,
       topology: spec.topologyLabel,
@@ -173,6 +236,14 @@ export function buildNeurosymbolicPayload(
       synthesis_order: manifest.synthesis_order,
       synthesis_difficulty: manifest.synthesis_difficulty,
       order_csv: manifest.order_csv,
+      host: manifest.host ?? host,
+      host_display: manifest.host_display ?? hostLabel(host),
+      ...(manifest.codon_basis !== undefined
+        ? { codon_basis: manifest.codon_basis }
+        : {}),
+      ...(manifest.host_plan !== undefined
+        ? { host_plan: manifest.host_plan }
+        : {}),
     },
   } as unknown as ApiResponse;
 }

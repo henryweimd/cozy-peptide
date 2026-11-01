@@ -7,14 +7,19 @@ import {
   RESTRICTION_SITES,
   computeCAI,
   computeGcContent,
+  computeHostCAI,
   countRestrictionSites,
   findFirstSiteHit,
   findRestrictionSite,
+  optimizeCdsForHostId,
   optimizeForSboulardii,
   optimizePayloadCds,
+  tablesForBacterialHost,
 } from "./codon-optimizer";
 import { computeFormalCharge, computeIsoelectricPoint } from "./symbolic-auditor";
 import { type Modality, specForModality } from "./modality";
+import { specForHost, type HostId } from "./hosts";
+import { planBiocontainment } from "./biocontainment";
 
 /**
  * 85-aa Saccharomyces cerevisiae MF-alpha-1 pre-pro secretion leader
@@ -285,19 +290,260 @@ export function constructTag(mature: string): string {
 }
 
 /**
+ * CRO-readable host plan embedded in every manifest: secretion,
+ * folding, proteases, colonization, containment, and plasmid posture
+ * for the chosen chassis, plus the sequence-derived containment
+ * pre-screens.
+ */
+function buildHostPlan(
+  mature: string,
+  modality: Modality,
+  host: HostId
+): Record<string, unknown> {
+  const hostSpec = specForHost(host);
+  const containment = planBiocontainment(mature, modality, host);
+  return {
+    host,
+    host_display: `${hostSpec.name} (${hostSpec.strain})`,
+    kind: hostSpec.kind,
+    delivery: hostSpec.delivery,
+    colonization: hostSpec.colonization,
+    colonization_note: hostSpec.colonizationNote,
+    secretion_system: hostSpec.secretion.system,
+    leader: hostSpec.secretion.leaderName,
+    leader_evidence: hostSpec.secretion.leaderEvidence,
+    leader_note: hostSpec.secretion.note,
+    folding: hostSpec.folding,
+    proteases: hostSpec.proteases,
+    auxotrophy: containment.auxotrophy,
+    kill_switches: containment.killSwitches,
+    integration: containment.integration,
+    plasmid_stability: containment.plasmidStability,
+    payload_toxicity: containment.payloadToxicity,
+    containment_notes: containment.notes,
+    codon_basis: hostSpec.codonBasis,
+    codon_note: hostSpec.codonNote,
+  };
+}
+
+/** Cyclization manufacturing note for cyclic scaffolds. */
+function cyclizationNote(modality: Modality): Record<string, string> {
+  if (specForModality(modality).cyclic !== true) return {};
+  return {
+    cyclization:
+      "Mature backbone is head-to-tail cyclic; the fragment encodes the linear precursor — ligation (split-intein/sortase) is a CRO manufacturing step.",
+  };
+}
+
+/**
+ * Bacterial expression fragment: leader CDS (when the registry vouches
+ * for the sequence) plus host-optimized payload CDS plus TAA. Vector
+ * homology arms are backbone-specific, so the CRO designs them from
+ * the destination vector — the manifest says so instead of printing
+ * arms for the wrong plasmid.
+ */
+export function buildBacterialHandoff(
+  matureSeq: string,
+  modality: Modality,
+  host: HostId
+): LabHandoffManifest {
+  const mature = matureSeq.trim().toUpperCase();
+  if (mature.length === 0) {
+    throw new Error("buildBacterialHandoff: empty mature sequence.");
+  }
+  const spec = specForModality(modality);
+  const hostSpec = specForHost(host);
+  const leader = hostSpec.secretion.leaderSequence;
+  const leaderCds =
+    leader === null ? "" : optimizeCdsForHostId(host, leader).dna;
+  const payload = optimizeCdsForHostId(host, mature);
+  const fragment = scrubBacterialFragment(
+    `${leaderCds}${payload.dna}TAA`,
+    leaderCds.length / 3,
+    leader ?? "",
+    mature,
+    host
+  );
+  const payloadRegion = fragment.slice(
+    leaderCds.length,
+    leaderCds.length + payload.dna.length
+  );
+  const precursor = leader === null ? mature : `${leader}${mature}`;
+  const gcContent = Math.round(gcFraction(fragment) * 10000) / 10000;
+  const gcPercent = Math.round(gcFraction(fragment) * 1000) / 10;
+  const cai = computeHostCAI(host, payloadRegion, mature);
+  const residualSite = findRestrictionSite(fragment);
+  const constructId = `${spec.idPrefix}${constructTag(mature)}`;
+  const strategies: Record<string, string> = {
+    "ecoli-nissle":
+      "Golden Gate or Gibson into a PelB periplasmic expression vector (pET/pTrc lineage); CRO finalizes overhangs",
+    "lactococcus-lactis":
+      "NICE-system integration (pNZ8148 lineage) via vendor-designed overhangs; confirm the SPusp45 junction by sequencing",
+    "bacillus-subtilis":
+      "amyE/thrC double-crossover integration in the WB800 background; CRO finalizes homology arms",
+  };
+  const vendorNotes: Record<string, string> = {
+    "ecoli-nissle":
+      "Compatible with Twist Bioscience and IDT fragment order forms; confirm the PelB junction by sequencing.",
+    "lactococcus-lactis":
+      "Native L. lactis codons; compatible with Twist/IDT fragment forms. Confirm the SPusp45 junction by sequencing.",
+    "bacillus-subtilis":
+      "Native B. subtilis codons; compatible with Twist/IDT fragment forms. Confirm the SacB junction by sequencing.",
+  };
+  const leaderTag =
+    host === "lactococcus-lactis"
+      ? "SPusp45_27aa"
+      : host === "bacillus-subtilis"
+        ? "SacB_29aa"
+        : "PelB_22aa_periplasm";
+  return {
+    mature_fasta: toFasta(
+      `mature_${spec.payloadNoun} length=${mature.length} charge=${computeFormalCharge(mature)}`,
+      mature
+    ),
+    precursor_fasta: toFasta(
+      leader === null
+        ? `mature_no_leader leader_designed_by_CRO length=${mature.length}`
+        : `${leaderTag} length=${precursor.length}`,
+      precursor
+    ),
+    dna_gblock: fragment,
+    gc_content: gcContent,
+    mw_da: computeMolecularWeight(mature),
+    pi: computeIsoelectricPoint(mature),
+    order_metadata: {
+      product: "gene fragment",
+      organism: hostSpec.name,
+      host,
+      host_strain: hostSpec.strain,
+      leader: hostSpec.secretion.leaderName,
+      leader_evidence: hostSpec.secretion.leaderEvidence,
+      leader_note: hostSpec.secretion.note,
+      mature_length: mature.length,
+      precursor_length: precursor.length,
+      payload_cds_length: payloadRegion.length,
+      fragment_length: fragment.length,
+      codon_basis: hostSpec.codonBasis,
+      codon_note: hostSpec.codonNote,
+      cai,
+      restriction_site_check: residualSite ?? "clean",
+      disulfide_topology:
+        modality === "knottin-6c" ? "C1-C4,C2-C5,C3-C6" : spec.topologyLabel,
+      mature_cys_count: countResidues(mature, "C"),
+      mature_formal_charge: computeFormalCharge(mature),
+      stop_codon_note:
+        "TAA appended; clone downstream of the vector ATG start codon.",
+      vector_arms_note:
+        "Vector homology arms are backbone-specific — designed by the CRO from the destination vector.",
+      ...cyclizationNote(modality),
+      generated_at: new Date().toISOString(),
+    },
+    cdna_sequence: payloadRegion,
+    gibson_5p_arm: "",
+    gibson_3p_arm: "",
+    cai,
+    restriction_scrub: {
+      status: residualSite === null ? "clean" : `residual site: ${residualSite}`,
+      sites_verified: [...RESTRICTION_SITES],
+    },
+    synthesis_order: {
+      sequence_name: constructId,
+      dna_length: fragment.length,
+      gc_percent: gcPercent,
+      volume: "500 ng lyophilized dsDNA fragment",
+      vector_integration_strategy:
+        strategies[host] ?? "CRO-designed vector integration",
+      vendor_notes: vendorNotes[host] ?? "Vendor re-optimizes codons natively.",
+    },
+    yeast_chassis: `${hostSpec.name} (${hostSpec.strain})`,
+    secretion_leader: hostSpec.secretion.leaderName,
+    synthesis_difficulty: assessSynthesisDifficulty(fragment),
+    order_csv: buildOrderCsv(constructId, fragment, payloadRegion),
+    host,
+    host_display: `${hostSpec.name} (${hostSpec.strain})`,
+    codon_basis: hostSpec.codonBasis,
+    host_plan: buildHostPlan(mature, modality, host),
+  };
+}
+
+/**
+ * Scrubs cloning sites spanning the leader/payload/TAA junctions of a
+ * bacterial fragment. Only host-table codons are tunable (the TAA
+ * stop is fixed), and swaps are always non-rare synonyms.
+ */
+function scrubBacterialFragment(
+  fragment: string,
+  leaderCodons: number,
+  leaderAa: string,
+  mature: string,
+  host: HostId
+): string {
+  const tables = tablesForBacterialHost(host);
+  const totalCodons = (fragment.length - 3) / 3;
+  const codons: string[] = [];
+  for (let i = 0; i < totalCodons; i += 1) {
+    codons.push(fragment.slice(i * 3, i * 3 + 3));
+  }
+  const stop = fragment.slice(totalCodons * 3);
+  for (let iter = 0; iter < 100; iter += 1) {
+    const full = codons.join("") + stop;
+    const hit = findFirstSiteHit(full);
+    if (hit === null) return full;
+    const firstCodon = Math.max(0, Math.floor(hit.index / 3));
+    const lastCodon = Math.min(
+      totalCodons - 1,
+      Math.floor((hit.index + hit.site.length - 1) / 3)
+    );
+    if (lastCodon < firstCodon) return full;
+    const before = countRestrictionSites(full);
+    let fixed = false;
+    for (let ci = firstCodon; ci <= lastCodon && !fixed; ci += 1) {
+      const aa =
+        ci < leaderCodons
+          ? (leaderAa[ci] ?? "")
+          : (mature[ci - leaderCodons] ?? "");
+      const ordered = [...(tables.table[aa] ?? [])].sort((x, y) => {
+        const xr = tables.rare.has(x) ? 1 : 0;
+        const yr = tables.rare.has(y) ? 1 : 0;
+        return xr - yr;
+      });
+      for (const candidate of ordered) {
+        if (candidate === codons[ci] || tables.rare.has(candidate)) {
+          continue;
+        }
+        const trial = [...codons];
+        trial[ci] = candidate;
+        if (countRestrictionSites(trial.join("") + stop) < before) {
+          codons[ci] = candidate;
+          fixed = true;
+          break;
+        }
+      }
+    }
+    if (!fixed) return full;
+  }
+  return codons.join("") + stop;
+}
+
+/**
  * Builds the translational yeast expression cassette for one mature
- * knottin: MF-alpha-1 pre-pro precursor with the SLDKR Kex2 junction,
+ * peptide: MF-alpha-1 pre-pro precursor with the SLDKR Kex2 junction,
  * yeast-optimized cDNA, gBlock flanked by pESC/pPic9 Gibson homology
  * arms, biophysics, restriction-scrub verification, and a vendor-ready
- * synthesis order payload.
+ * synthesis order payload. Bacterial hosts dispatch to the fragment
+ * builder above.
  */
 export function buildLabHandoff(
   matureSeq: string,
-  modality: Modality = "knottin-6c"
+  modality: Modality = "knottin-6c",
+  host: HostId = "sboulardii"
 ): LabHandoffManifest {
   const mature = matureSeq.trim().toUpperCase();
   if (mature.length === 0) {
     throw new Error("buildLabHandoff: empty mature sequence.");
+  }
+  if (host !== "sboulardii") {
+    return buildBacterialHandoff(mature, modality, host);
   }
   const spec = specForModality(modality);
 
@@ -347,6 +593,7 @@ export function buildLabHandoff(
       mature_formal_charge: computeFormalCharge(mature),
       stop_codon_note:
         "No in-frame stop codon appended; use the destination vector stop codon or add TAA during cloning.",
+      ...cyclizationNote(modality),
       generated_at: new Date().toISOString(),
     },
     cdna_sequence: cdna,
@@ -374,6 +621,10 @@ export function buildLabHandoff(
       dnaGblock,
       cdna
     ),
+    host,
+    host_display: `${specForHost(host).name} (${specForHost(host).strain})`,
+    codon_basis: "native",
+    host_plan: buildHostPlan(mature, modality, host),
   };
 }
 
@@ -428,18 +679,62 @@ function scrubPayloadJunctions(payloadCds: string, mature: string): string {
 }
 
 /**
- * Builds the ready-to-clone modular yeast expression cassette for one
- * mature knottin: MFalpha1 5' flank with the Kex2 junction, GC-tuned
- * payload CDS, dual stop codon, and the CYC1 terminator — verified free
- * of Golden Gate / cloning sites.
+ * Cassette-format labels for bacterial expression fragments. The
+ * terminator and vector arms are backbone-provided; the fragment is
+ * leader CDS (when vouched) plus payload CDS plus TAA.
+ */
+function bacterialCassetteFormat(host: HostId): string {
+  switch (host) {
+    case "ecoli-nissle":
+      return "PelB-Sec-Periplasm-TAA";
+    case "lactococcus-lactis":
+      return "SPusp45-Sec-Extracellular-TAA";
+    case "bacillus-subtilis":
+      return "SacB-Sec-Extracellular-TAA";
+    case "sboulardii":
+    default:
+      return "MFalpha1-Kex2-Payload-CYC1term";
+  }
+}
+
+/**
+ * Builds the ready-to-clone expression cassette for one mature
+ * peptide. Yeast gets the modular MFalpha1 5' flank with the Kex2
+ * junction, GC-tuned payload CDS, dual stop codon, and CYC1
+ * terminator; bacterial hosts get the leader-plus-payload fragment
+ * mapped onto the same schema (vector terminator and arms provided
+ * by the destination backbone).
  */
 export function buildCloningPayload(
   matureSeq: string,
-  modality: Modality = "knottin-6c"
+  modality: Modality = "knottin-6c",
+  host: HostId = "sboulardii"
 ): CloningPayload {
   const mature = matureSeq.trim().toUpperCase();
   if (mature.length === 0) {
     throw new Error("buildCloningPayload: empty mature sequence.");
+  }
+  if (host !== "sboulardii") {
+    const manifest = buildBacterialHandoff(mature, modality, host);
+    const hostSpec = specForHost(host);
+    const gcContent = computeGcContent(manifest.cdna_sequence);
+    return {
+      dna_sequence: manifest.cdna_sequence,
+      cassette_format: bacterialCassetteFormat(host),
+      leader_dna_5flank: manifest.dna_gblock.slice(
+        0,
+        manifest.dna_gblock.length - manifest.cdna_sequence.length - 3
+      ),
+      payload_cds: manifest.cdna_sequence,
+      stop_codon: "TAA",
+      terminator_3flank: "",
+      full_cassette_dna: manifest.dna_gblock,
+      gc_percent_cds: Math.round(gcContent * 1000) / 10,
+      gc_ok: gcContent >= hostSpec.gcMin && gcContent <= hostSpec.gcMax,
+      payload_cai: manifest.cai,
+      restriction_scrub: manifest.restriction_scrub,
+      rare_codons_avoided: [...tablesForBacterialHost(host).rare],
+    };
   }
 
   const payloadCds = scrubPayloadJunctions(optimizePayloadCds(mature).dna, mature);

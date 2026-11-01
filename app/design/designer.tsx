@@ -24,15 +24,31 @@ import { CUSTOM_TARGET_MAX_LENGTH } from "../../lib/target-guard";
 import {
   AUTO_MODALITY,
   AUTO_MODALITY_REASON,
+  MODALITIES as MODALITY_IDS,
+  isModality,
   modalityLabel,
 } from "../../lib/modality";
+import {
+  HOSTS,
+  hostLabel,
+  specForHost,
+} from "../../lib/hosts";
+import {
+  inferTargetClass,
+  selectDefaultModality,
+} from "../../lib/prompt-steering";
+import { selectDefaultHost } from "../../lib/chassis-compat";
 import type { PipelinePayload, StageEvent } from "../pipeline-shared";
 import ReportDialog, { type ReportSource } from "../report-dialog";
 import RecentRunsTable from "../recent-runs-table";
 import {
+  ChassisTable,
+  ContainmentSummary,
   DesignedPeptideHero,
   EventLog,
+  FutureStubs,
   HandoffDownloads,
+  ProviderDirectory,
   SparkStatusPill,
   StageDetail,
   formatCountdown,
@@ -44,12 +60,16 @@ import {
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
 const LOOP_ORDER = ["L1", "L2", "L3", "L4", "L5"];
 
-const MODALITIES = [
-  { value: "knottin-6c", label: "Knottin 6C" },
-  { value: "disulfide-4c", label: "Disulfide 4C" },
-  { value: "disulfide-2c", label: "Disulfide 2C" },
-  { value: "linear", label: "Linear" },
-] as const;
+const MODALITIES = MODALITY_IDS.map((value) => ({
+  value,
+  label: modalityLabel(value),
+}));
+
+const HOST_OPTIONS = HOSTS.map((value) => ({
+  value,
+  label: hostLabel(value),
+  blurb: specForHost(value).blurb,
+}));
 
 const CHARGES = [1, 2, 3, 4] as const;
 
@@ -85,12 +105,33 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const locked =
     initial.presetId !== undefined || initial.custom !== undefined;
   const [modality, setModality] = useState<string>("auto");
-  const resolvedModality = modality === "auto" ? AUTO_MODALITY : modality;
+  // Auto resolves against the currently selected target, so the
+  // scaffold and chassis follow the condition being designed for.
+  const targetText = customActive
+    ? custom.trim()
+    : (DEMO_PRESETS.find((entry) => entry.id === presetId)?.target ?? "");
+  const autoScaffold =
+    targetText.length > 0
+      ? selectDefaultModality(inferTargetClass(targetText))
+      : { modality: AUTO_MODALITY, reason: AUTO_MODALITY_REASON };
+  const resolvedModality =
+    modality === "auto" || !isModality(modality)
+      ? autoScaffold.modality
+      : modality;
   const scaffoldSummary =
     modality === "auto"
-      ? `Auto (${modalityLabel(AUTO_MODALITY)})`
+      ? `Auto (${modalityLabel(autoScaffold.modality)})`
       : (MODALITIES.find((entry) => entry.value === modality)?.label ??
         modality);
+  const [host, setHost] = useState<string>("auto");
+  const autoHost = selectDefaultHost(
+    targetText.length > 0 ? inferTargetClass(targetText) : "general",
+    resolvedModality
+  );
+  const hostSummary =
+    host === "auto"
+      ? `Auto (${hostLabel(autoHost.host)})`
+      : (HOST_OPTIONS.find((entry) => entry.value === host)?.label ?? host);
   const [charge, setCharge] = useState<number | "auto">("auto");
   const resolvedCharge = charge === "auto" ? DEMO_CHARGE_TARGET : charge;
   const chargeSummary =
@@ -198,7 +239,8 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         body: JSON.stringify({
           target,
           charge_target: resolvedCharge,
-          modality: resolvedModality,
+          modality,
+          host,
           research,
         }),
       });
@@ -269,6 +311,9 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const provenance = ok ? result?.neurosymbolic_provenance : undefined;
   const handoff = ok ? result?.lab_handoff : undefined;
   const specificity = ok ? result?.specificity : undefined;
+  const chassis = ok ? result?.chassis : undefined;
+  const biocontainment = ok ? result?.biocontainment : undefined;
+  const modalitySelection = ok ? result?.modality_selection : undefined;
   const showFeed = loading || events.length > 0;
   const finished = !loading && (result !== null || error !== null);
   const started =
@@ -378,7 +423,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           <details className={styles.optdetails}>
             <summary>Scaffold: {scaffoldSummary} (change)</summary>
             <p className={styles.note}>
-              {AUTO_MODALITY_REASON}. Pick one to override.
+              {autoScaffold.reason}. Pick one to override.
             </p>
             <div
               className={styles.cells}
@@ -397,6 +442,40 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                         : styles.cell
                     }
                     onClick={() => setModality(entry.value)}
+                  >
+                    {entry.label}
+                  </button>
+                )
+              )}
+            </div>
+          </details>
+        )}
+        {locked ? (
+          <p className={styles.note}>Chassis: {hostSummary}</p>
+        ) : (
+          <details className={styles.optdetails}>
+            <summary>Chassis: {hostSummary} (change)</summary>
+            <p className={styles.note}>
+              {autoHost.reason}. Pick one to override.
+            </p>
+            <div
+              className={styles.cells}
+              role="group"
+              aria-label="LBP chassis host"
+            >
+              {[{ value: "auto", label: "Auto", blurb: autoHost.reason }, ...HOST_OPTIONS].map(
+                (entry) => (
+                  <button
+                    key={entry.value}
+                    type="button"
+                    aria-pressed={host === entry.value}
+                    title={entry.blurb}
+                    className={
+                      host === entry.value
+                        ? `${styles.cell} ${styles.cellActive}`
+                        : styles.cell
+                    }
+                    onClick={() => setHost(entry.value)}
                   >
                     {entry.label}
                   </button>
@@ -542,7 +621,22 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                 ? result.target
                 : undefined
             }
+            hostId={handoff?.host}
           />
+
+          {(modalitySelection?.reason ?? chassis?.reason) !== undefined && (
+            <section aria-label="Automatic choices">
+              <h3>Auto choices</h3>
+              <ul className={styles.trace}>
+                {modalitySelection?.reason !== undefined && (
+                  <li>scaffold: {modalitySelection.reason}</li>
+                )}
+                {chassis?.reason !== undefined && (
+                  <li>chassis: {chassis.reason}</li>
+                )}
+              </ul>
+            </section>
+          )}
 
           {researchBrief !== undefined && (
             <section aria-label="Literature brief">
@@ -667,6 +761,25 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             </section>
           )}
 
+          {chassis !== undefined && (
+            <section aria-label="Chassis compatibility">
+              <h3>Chassis compatibility</h3>
+              <ChassisTable chassis={chassis} />
+            </section>
+          )}
+
+          {biocontainment !== undefined && (
+            <section aria-label="Biocontainment">
+              <h3>Biocontainment</h3>
+              <ContainmentSummary biocontainment={biocontainment} />
+            </section>
+          )}
+
+          <section aria-label="Coming next">
+            <h3>Coming next</h3>
+            <FutureStubs />
+          </section>
+
           {handoff !== undefined && result !== null && (
             <section aria-label="Lab handoff">
               <h3>Lab handoff</h3>
@@ -674,8 +787,15 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                 {handoff.synthesis_order.sequence_name},{" "}
                 {handoff.synthesis_order.dna_length} bp, CAI {handoff.cai},
                 scrub {handoff.restriction_scrub.status}
+                {handoff.host_display !== undefined &&
+                  `, ${handoff.host_display}`}
+                {handoff.codon_basis === "provisional" &&
+                  " (provisional codons — the vendor re-optimizes)"}
               </p>
               <HandoffDownloads result={result} />
+              {handoff.host !== undefined && (
+                <ProviderDirectory host={handoff.host} />
+              )}
             </section>
           )}
 

@@ -300,6 +300,31 @@ export function computeHydrophobicRunMax(sequence: string): number {
   return longest;
 }
 
+/**
+ * KD-scale hydrophobic moment for an ideal alpha helix (Eisenberg
+ * 1984 construction, 100 degrees per residue, Kyte-Doolittle
+ * hydropathy): the magnitude of the mean hydrophobicity vector.
+ * Random 18-mers center near 0.59 (99th percentile ~1.43) while
+ * magainin-2's amphipathic helix scores 1.46 — the 1.20 gate admits
+ * genuine amphipathicity with margin and rejects most random
+ * compositions. A proxy, not a folding proof — the ESMFold viewer
+ * confirms the helix post-hoc.
+ */
+export function computeHydrophobicMoment(sequence: string): number {
+  const seq = sequence.trim().toUpperCase();
+  if (seq.length === 0) return 0;
+  const step = (100 * Math.PI) / 180;
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < seq.length; i += 1) {
+    const h = KYTE_DOOLITTLE[seq[i] ?? ""] ?? 0;
+    x += h * Math.cos(i * step);
+    y += h * Math.sin(i * step);
+  }
+  const moment = Math.sqrt(x * x + y * y) / seq.length;
+  return Math.round(moment * 1000) / 1000;
+}
+
 /** Highest single-residue fraction (low-complexity readout). */
 export function computeMaxResidueFraction(sequence: string): number {
   const seq = sequence.trim().toUpperCase();
@@ -329,6 +354,8 @@ export function computeMaxResidueFraction(sequence: string): number {
  * - No N-glycosylation sequon N[^P][ST]
  * - No exposed chymotrypsin sites [FYW][^P][KR]
  * - Residue 1 (post-Kex2 N-terminus) is not P, F, Y, or W
+ * - Cyclotides also reject a C-terminal proline (ligation junction)
+ * - Helical scaffolds clear the hydrophobic-moment floor (1.20)
  * - No hydrophobic run of 4+ over [VILMFW]
  * - GRAVY strictly inside the modality window (knottin: [-0.40, +0.10])
  * - At most one methionine (oxidation risk)
@@ -412,6 +439,26 @@ export function auditPeptideCandidate(
     violations.push(
       `n_terminus: residue 1 is '${nTerm}' (immediately downstream of Kex2); P, F, Y, W block clean N-terminal processing`
     );
+  }
+
+  // Cyclic termini: the cyclotide precursor's ends are ligated after
+  // expression, so a C-terminal proline (rigid, ligation-hostile)
+  // fails the design alongside the shared N-terminal rule.
+  if (modality === "cyclotide-6c" && seq.endsWith("P")) {
+    violations.push(
+      "c_terminus: C-terminal proline blocks head-to-tail backbone ligation"
+    );
+  }
+
+  // Amphipathicity: helical scaffolds must concentrate hydrophobicity
+  // on one helical face (see computeHydrophobicMoment).
+  if (spec.momentMin !== undefined) {
+    const moment = computeHydrophobicMoment(seq);
+    if (moment < spec.momentMin) {
+      violations.push(
+        `helix_moment: hydrophobic moment ${moment.toFixed(3)} below the ${spec.momentMin.toFixed(2)} amphipathicity floor for ${spec.noun}`
+      );
+    }
   }
 
   const hydrophobicRunMax = computeHydrophobicRunMax(seq);
@@ -503,6 +550,10 @@ export function auditFailureModes(audit: SymbolicAuditResult): string[] {
       modes.add("CHYMOTRYPSIN_EXPOSED_SITE");
     } else if (violation.startsWith("n_terminus:")) {
       modes.add("N_TERMINUS_BLOCKED");
+    } else if (violation.startsWith("c_terminus:")) {
+      modes.add("C_TERMINUS_BLOCKED");
+    } else if (violation.startsWith("helix_moment:")) {
+      modes.add("HELIX_MOMENT_LOW");
     } else if (violation.startsWith("liability_aggregation:")) {
       modes.add("HYDROPHOBIC_RUN_TOO_LONG");
     } else if (violation.startsWith("gravy:")) {
@@ -572,6 +623,8 @@ export function buildVerificationReport(
     isomerization_clean: !has("liability_isomerization:"),
     acid_clean: !has("liability_acid_labile:"),
     complexity_ok: !has("liability_low_complexity:"),
+    helix_moment_ok: !has("helix_moment:"),
+    c_terminus_ok: !has("c_terminus:"),
     ick_topology_ok:
       grammar.valid && !has("length:") && !has("cysteines:"),
     passed: grammar.valid && audit.passed,

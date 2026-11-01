@@ -63,6 +63,30 @@ test("run record defaults trace and specificity to null", () => {
   });
   assert.equal(record.stage_trace, null);
   assert.equal(record.specificity, null);
+  assert.equal(record.chassis, null);
+  assert.equal(record.biocontainment, null);
+});
+
+test("run record extracts chassis and biocontainment", () => {
+  const chassis = {
+    host: "ecoli-nissle",
+    host_display: "E. coli Nissle",
+    compatibility: [{ host: "ecoli-nissle", score: 95 }],
+  };
+  const biocontainment = {
+    host: "ecoli-nissle",
+    auxotrophy: ["dapA (diaminopimelate)"],
+    kill_switches: ["deadman/passcode circuit"],
+  };
+  const record = buildRunRecord({
+    source: "api",
+    params: PARAMS,
+    elapsedMs: 100,
+    ok: true,
+    payload: { success: true, chassis, biocontainment },
+  });
+  assert.deepEqual(record.chassis, chassis);
+  assert.deepEqual(record.biocontainment, biocontainment);
 });
 
 test("run record extracts the specificity review", () => {
@@ -98,6 +122,8 @@ test("saveRun retries stripped when the trace columns are missing", async () => 
       payload: {
         success: true,
         specificity: { checked: true, pass: true, reason: "match" },
+        chassis: { host: "sboulardii" },
+        biocontainment: { host: "sboulardii" },
       },
       stageTrace: [{ stage: "handoff", turn: 1, message: "done" }],
     });
@@ -120,6 +146,9 @@ test("saveRun retries stripped when the trace columns are missing", async () => 
     assert.ok(bodies[0]?.includes("stage_trace"));
     assert.ok(!bodies[1]?.includes("stage_trace"));
     assert.ok(!bodies[1]?.includes("specificity"));
+    assert.ok(bodies[0]?.includes("biocontainment"));
+    assert.ok(!bodies[1]?.includes("chassis"));
+    assert.ok(!bodies[1]?.includes("biocontainment"));
 
     // The probe sticks: the next save skips the doomed first attempt.
     calls = 0;
@@ -190,6 +219,8 @@ test("run detail parses the stage trace and specificity", async () => {
               { stage: "handoff", turn: 2, message: "compiling" },
             ],
             specificity: { checked: true, pass: true, reason: "match" },
+            chassis: { host: "sboulardii", compatibility: [] },
+            biocontainment: { host: "sboulardii", auxotrophy: ["ura3"] },
           },
         ],
       }),
@@ -204,6 +235,11 @@ test("run detail parses the stage trace and specificity", async () => {
       checked: true,
       pass: true,
       reason: "match",
+    });
+    assert.deepEqual(run?.chassis, { host: "sboulardii", compatibility: [] });
+    assert.deepEqual(run?.biocontainment, {
+      host: "sboulardii",
+      auxotrophy: ["ura3"],
     });
   } finally {
     restoreEnv(saved);

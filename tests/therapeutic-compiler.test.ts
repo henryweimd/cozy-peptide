@@ -151,7 +151,7 @@ test("auditor enforces modality length and cysteine windows", () => {
   // Every modality spec carries a sane window.
   for (const modality of MODALITIES) {
     const spec = specForModality(modality);
-    assert.ok(spec.minLength >= 8 && spec.maxLength <= 36);
+    assert.ok(spec.minLength >= 8 && spec.maxLength <= 37);
     assert.ok(spec.gravyMin < spec.gravyMax);
   }
 });
@@ -311,7 +311,11 @@ test("route serves every modality with indices and handoff", async () => {
     },
   ] as const;
   for (const { modality, responseId, idPrefix, cys } of cases) {
-    const res = await POST(req({ target: TARGET, charge_target: 2, modality }));
+    // Explicit yeast chassis: this test pins modality coverage, while
+    // Auto would route these simple scaffolds to Lactococcus.
+    const res = await POST(
+      req({ target: TARGET, charge_target: 2, modality, host: "sboulardii" })
+    );
     assert.equal(res.status, 200, modality);
     const body = (await res.json()) as Record<string, unknown>;
     assert.equal(body["modality"], responseId);
@@ -429,15 +433,18 @@ test("agent tool stubs report honestly and never throw", async () => {
     "binding-affinity",
     "structure-fold",
     "off-target-panel",
+    "wetlab-feedback",
+    "potency-prediction",
+    "gut-safety-panel",
   ]);
-  assert.equal(AGENT_TOOLS.length, 3);
+  assert.equal(AGENT_TOOLS.length, 6);
   const results = await runAgentTools({
     candidate: "ACDEFGHIKLMN",
     target: TARGET,
     modality: "linear",
     charge_target: 2,
   });
-  assert.equal(results.length, 3);
+  assert.equal(results.length, 6);
   for (const result of results) {
     assert.equal(AgentToolResultSchema.safeParse(result).success, true);
     assert.equal(result.status, "not-configured");
@@ -456,10 +463,17 @@ test("route payload carries agent tool results", async () => {
   assert.equal(res.status, 200);
   const body = (await res.json()) as Record<string, unknown>;
   const tools = body["agent_tools"] as Array<Record<string, unknown>>;
-  assert.equal(tools.length, 3);
+  assert.equal(tools.length, 6);
   assert.deepEqual(
     tools.map((entry) => entry["tool"]),
-    ["binding-affinity", "structure-fold", "off-target-panel"]
+    [
+      "binding-affinity",
+      "structure-fold",
+      "off-target-panel",
+      "wetlab-feedback",
+      "potency-prediction",
+      "gut-safety-panel",
+    ]
   );
 });
 
@@ -564,10 +578,14 @@ test("modalities route lists compiler capabilities", async () => {
   assert.equal(res.status, 200);
   const body = (await res.json()) as Record<string, unknown>;
   const data = body["data"] as Array<Record<string, unknown>>;
-  assert.equal(data.length, 4);
+  assert.equal(data.length, 7);
   assert.equal(data[0]?.["modality"], "knottin-6c");
   assert.equal(data[0]?.["response_id"], "engineered_knottin_microprotein");
-  assert.equal(data[3]?.["modality"], "linear");
+  assert.equal(data[1]?.["modality"], "cyclotide-6c");
+  assert.equal(data[1]?.["cyclic"], true);
+  const helical = data.find((entry) => entry["modality"] === "helical");
+  assert.equal(helical?.["moment_min"], 1.2);
+  assert.equal(data[6]?.["modality"], "linear");
 });
 
 test("route provenance carries the target class", async () => {

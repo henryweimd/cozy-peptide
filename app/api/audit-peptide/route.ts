@@ -13,6 +13,9 @@ import {
   grammarFailureModes,
 } from "../../../lib/symbolic-auditor";
 import { assessCandidate } from "../../../lib/therapeutic-index";
+import { DEFAULT_HOST, hostLabel, type HostId } from "../../../lib/hosts";
+import { scoreAllHosts } from "../../../lib/chassis-compat";
+import { planBiocontainment } from "../../../lib/biocontainment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +33,23 @@ const AuditRequestSchema = z.object({
     .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
     .optional(),
   modality: z
-    .enum(["knottin-6c", "disulfide-4c", "disulfide-2c", "linear"])
+    .enum([
+      "knottin-6c",
+      "cyclotide-6c",
+      "disulfide-4c",
+      "hairpin-2c",
+      "disulfide-2c",
+      "helical",
+      "linear",
+    ])
+    .optional(),
+  host: z
+    .enum([
+      "sboulardii",
+      "ecoli-nissle",
+      "lactococcus-lactis",
+      "bacillus-subtilis",
+    ])
     .optional(),
 });
 
@@ -44,8 +63,9 @@ export async function OPTIONS(): Promise<NextResponse> {
 
 /**
  * Deterministic audit for a caller-supplied sequence: runs the same
- * grammar, symbolic audit, and therapeutic/safety scoring as generation,
- * with no model calls. Powers CRO pre-screening of candidate peptides.
+ * grammar, symbolic audit, therapeutic/safety scoring, chassis
+ * compatibility, and biocontainment planning as generation, with no
+ * model calls. Powers CRO pre-screening of candidate peptides.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const serverToken = process.env.API_BEARER_TOKEN;
@@ -95,10 +115,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const sequence = parsed.data.sequence.trim().toUpperCase();
   const chargeTarget = parsed.data.charge_target ?? 4;
   const modality: Modality = parsed.data.modality ?? DEFAULT_MODALITY;
+  const host: HostId = parsed.data.host ?? DEFAULT_HOST;
   const grammar = parseModalityGrammar(sequence, modality);
   const audit = auditPeptideCandidate(sequence, chargeTarget, modality);
   const assessment = assessCandidate(sequence, modality, chargeTarget);
   const report = buildVerificationReport(grammar, audit);
+  const compatibility = scoreAllHosts(sequence, modality);
+  const containment = planBiocontainment(sequence, modality, host);
   return json(
     {
       success: true,
@@ -118,6 +141,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           ...grammarFailureModes(grammar),
           ...auditFailureModes(audit),
         ],
+        chassis: {
+          host,
+          host_display: hostLabel(host),
+          compatibility: compatibility.map((entry) => ({
+            host: entry.host,
+            host_display: entry.hostDisplay,
+            score: entry.score,
+            verdict: entry.verdict,
+            summary: entry.summary,
+            secretion: entry.secretion.notes,
+            burden: entry.burden.notes,
+            processing: entry.processing.notes,
+          })),
+        },
+        biocontainment: {
+          host: containment.host,
+          host_display: containment.hostDisplay,
+          auxotrophy: containment.auxotrophy,
+          kill_switches: containment.killSwitches,
+          integration: containment.integration,
+          plasmid_stability: containment.plasmidStability,
+          payload_toxicity: containment.payloadToxicity,
+          notes: containment.notes,
+        },
       },
     },
     200

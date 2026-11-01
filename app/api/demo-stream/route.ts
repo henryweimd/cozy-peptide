@@ -18,6 +18,8 @@ import {
   generateVerifiedPeptide,
 } from "../../../lib/meta-spark";
 import { buildLabHandoff } from "../../../lib/lab-handoff";
+import { hostLabel } from "../../../lib/hosts";
+import { resolveDesignChoices } from "../../../lib/design-choices";
 import {
   buildNeurosymbolicPayload,
   refinementCycles,
@@ -70,7 +72,25 @@ const DemoStreamRequestSchema = z.object({
     .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
     .optional(),
   modality: z
-    .enum(["knottin-6c", "disulfide-4c", "disulfide-2c", "linear"])
+    .enum([
+      "auto",
+      "knottin-6c",
+      "cyclotide-6c",
+      "disulfide-4c",
+      "hairpin-2c",
+      "disulfide-2c",
+      "helical",
+      "linear",
+    ])
+    .optional(),
+  host: z
+    .enum([
+      "auto",
+      "sboulardii",
+      "ecoli-nissle",
+      "lactococcus-lactis",
+      "bacillus-subtilis",
+    ])
     .optional(),
   research: z.boolean().optional(),
 });
@@ -104,7 +124,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const rawTarget = parsed.data.target.trim();
   const chargeTarget = parsed.data.charge_target ?? DEMO_CHARGE_TARGET;
-  const designModality = parsed.data.modality ?? "knottin-6c";
   const researchEnabled = parsed.data.research ?? true;
   let target = rawTarget;
   let requestedTarget: string | undefined;
@@ -123,13 +142,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     target = verdict.target;
     if (verdict.revised) requestedTarget = rawTarget;
   }
+  const resolved = resolveDesignChoices(
+    target,
+    undefined,
+    parsed.data.modality === "auto" ? undefined : parsed.data.modality,
+    parsed.data.host === "auto" ? undefined : parsed.data.host
+  );
+  const designModality = resolved.modality;
+  const designHost = resolved.host;
+  const designChoices = resolved.choices;
   const runParams = {
     target,
     ...(requestedTarget !== undefined
       ? { requested_target: requestedTarget }
       : {}),
     charge_target: chargeTarget,
-    modality: designModality,
+    ...resolved.params,
     research: researchEnabled,
   };
 
@@ -197,16 +225,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }),
           {
             modality: designModality,
+            host: designHost,
             research: { enabled: researchEnabled },
           }
         );
         sendStage({
-          stage: "handoff",
+          stage: "containment",
           turn: refinementCycles(refinementHistory),
-          message: "Compiling yeast secretion cassette…",
+          message: "Screening biocontainment and plasmid stability…",
           elapsedMs: Date.now() - startedAt,
         });
-        const manifest = buildLabHandoff(candidate, designModality);
+        sendStage({
+          stage: "handoff",
+          turn: refinementCycles(refinementHistory),
+          message:
+            designHost === "sboulardii"
+              ? "Compiling yeast secretion cassette…"
+              : `Compiling ${hostLabel(designHost)} expression fragment…`,
+          elapsedMs: Date.now() - startedAt,
+        });
+        const manifest = buildLabHandoff(candidate, designModality, designHost);
         const payload = buildNeurosymbolicPayload(
           target,
           chargeTarget,
@@ -219,7 +257,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           targetClass,
           undefined,
           research,
-          requestedTarget
+          requestedTarget,
+          designChoices
         );
         send("result", payload);
         const record = buildRunRecord({
