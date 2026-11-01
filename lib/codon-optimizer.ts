@@ -49,6 +49,49 @@ export const GC_CDS_MIN = 0.38;
 export const GC_CDS_MAX = 0.45;
 
 /**
+ * E. coli K-12 codon table for LBP-chassis coding sequences (Nissle
+ * 1917-type hosts). Synonyms are ordered with the preferred (most
+ * frequent) codon first, per Kazusa usage data.
+ */
+export const ECOLI_CODON_TABLE: Record<string, string[]> = {
+  F: ["TTT", "TTC"],
+  L: ["CTG", "TTA", "TTG", "CTC", "CTT", "CTA"],
+  I: ["ATT", "ATC", "ATA"],
+  M: ["ATG"],
+  V: ["GTG", "GTT", "GTC", "GTA"],
+  S: ["AGC", "TCG", "AGT", "TCC", "TCT", "TCA"],
+  P: ["CCG", "CCA", "CCT", "CCC"],
+  T: ["ACC", "ACG", "ACT", "ACA"],
+  A: ["GCG", "GCC", "GCA", "GCT"],
+  Y: ["TAT", "TAC"],
+  H: ["CAT", "CAC"],
+  Q: ["CAG", "CAA"],
+  N: ["AAC", "AAT"],
+  K: ["AAA", "AAG"],
+  D: ["GAT", "GAC"],
+  E: ["GAA", "GAG"],
+  C: ["TGC", "TGT"],
+  W: ["TGG"],
+  R: ["CGC", "CGT", "CGG", "CGA", "AGA", "AGG"],
+  G: ["GGC", "GGT", "GGG", "GGA"],
+};
+
+/** Rare E. coli codons excluded from optimized coding sequences. */
+export const ECOLI_RARE_CODONS: ReadonlySet<string> = new Set([
+  "AGG",
+  "AGA",
+  "CGA",
+  "CGG",
+  "ATA",
+  "CTA",
+  "CCC",
+]);
+
+/** GC window for E. coli coding sequences (genome average ~51%). */
+export const ECOLI_GC_CDS_MIN = 0.45;
+export const ECOLI_GC_CDS_MAX = 0.6;
+
+/**
  * S. cerevisiae codon usage frequencies per thousand (Kazusa), used to
  * derive relative adaptiveness weights for the codon adaptation index.
  */
@@ -68,6 +111,28 @@ export const S_CEREVISIAE_CODON_FREQUENCIES: Record<string, number> = {
   GCT: 21.2, GCC: 12.6, GCA: 16.2, GCG: 6.2,
   GAT: 32.3, GAC: 20.2, GAA: 45.6, GAG: 19.2,
   GGT: 23.9, GGC: 9.8, GGA: 10.9, GGG: 6.0,
+};
+
+/**
+ * E. coli K-12 codon usage frequencies per thousand (Kazusa), used to
+ * derive relative adaptiveness weights for the LBP-chassis CAI.
+ */
+export const E_COLI_CODON_FREQUENCIES: Record<string, number> = {
+  TTT: 22.3, TTC: 16.6, TTA: 13.6, TTG: 13.0,
+  TCT: 8.5, TCC: 8.6, TCA: 7.2, TCG: 8.9,
+  TAT: 16.3, TAC: 12.2, TGT: 5.0, TGC: 6.4, TGG: 15.3,
+  CTT: 11.0, CTC: 11.1, CTA: 3.9, CTG: 52.6,
+  CCT: 7.0, CCC: 5.5, CCA: 8.4, CCG: 23.3,
+  CAT: 12.5, CAC: 9.7, CAA: 15.1, CAG: 28.7,
+  CGT: 21.0, CGC: 22.0, CGA: 3.6, CGG: 5.4,
+  ATT: 30.1, ATC: 24.6, ATA: 4.3, ATG: 27.7,
+  ACT: 8.9, ACC: 23.4, ACA: 7.1, ACG: 14.3,
+  AAT: 17.7, AAC: 21.4, AAA: 33.2, AAG: 10.2,
+  AGT: 8.8, AGC: 15.2, AGA: 2.8, AGG: 1.6,
+  GTT: 18.4, GTC: 14.3, GTA: 10.9, GTG: 25.5,
+  GCT: 15.3, GCC: 25.5, GCA: 20.3, GCG: 33.7,
+  GAT: 32.2, GAC: 19.1, GAA: 39.1, GAG: 17.8,
+  GGT: 24.7, GGC: 29.6, GGA: 7.9, GGG: 11.2,
 };
 
 const MAX_SILENCING_ITERATIONS = 500;
@@ -128,7 +193,12 @@ export function findFirstSiteHit(dna: string): RestrictionSiteHit | null {
  * The DNA is in-frame from position 0, so codons overlapping a site window
  * are identified arithmetically and swapped until the site is gone.
  */
-function silenceRestrictionSites(dna: string, proteinSeq: string): string {
+function silenceRestrictionSites(
+  dna: string,
+  proteinSeq: string,
+  table: Record<string, string[]> = CODON_TABLE,
+  rare: ReadonlySet<string> = RARE_CODONS
+): string {
   let codons: string[] = [];
   for (let i = 0; i < proteinSeq.length; i += 1) {
     codons.push(dna.slice(i * 3, i * 3 + 3));
@@ -147,11 +217,11 @@ function silenceRestrictionSites(dna: string, proteinSeq: string): string {
     for (let ci = firstCodon; ci <= lastCodon && !fixed; ci += 1) {
       const aa = proteinSeq[ci];
       if (aa === undefined) continue;
-      const synonyms = CODON_TABLE[aa] ?? [];
-      // Prefer non-rare synonyms so silencing never introduces CGG/CGA/CUG.
+      const synonyms = table[aa] ?? [];
+      // Prefer non-rare synonyms so silencing never introduces rare codons.
       const ordered = [...synonyms].sort((x, y) => {
-        const xr = RARE_CODONS.has(x) ? 1 : 0;
-        const yr = RARE_CODONS.has(y) ? 1 : 0;
+        const xr = rare.has(x) ? 1 : 0;
+        const yr = rare.has(y) ? 1 : 0;
         return xr - yr;
       });
       for (const candidate of ordered) {
@@ -178,33 +248,63 @@ function silenceRestrictionSites(dna: string, proteinSeq: string): string {
  * across an in-frame coding sequence. Values above 0.85 indicate strong
  * yeast expression suitability.
  */
-export function computeCAI(dna: string, proteinSeq: string): number {
+function computeCaiWithTables(
+  caller: string,
+  dna: string,
+  proteinSeq: string,
+  table: Record<string, string[]>,
+  frequencies: Record<string, number>
+): number {
   const coding = dna.trim().toUpperCase();
   const protein = proteinSeq.trim().toUpperCase();
   if (coding.length === 0 || coding.length !== protein.length * 3) {
     throw new Error(
-      "computeCAI: DNA must be in-frame triplets matching the protein length."
+      `${caller}: DNA must be in-frame triplets matching the protein length.`
     );
   }
   let logSum = 0;
   for (let i = 0; i < protein.length; i += 1) {
     const aa = protein[i] ?? "";
     const codon = coding.slice(i * 3, i * 3 + 3);
-    const synonyms = CODON_TABLE[aa] ?? [];
+    const synonyms = table[aa] ?? [];
     let maxFreq = 0;
     for (const syn of synonyms) {
-      const freq = S_CEREVISIAE_CODON_FREQUENCIES[syn] ?? 0;
+      const freq = frequencies[syn] ?? 0;
       if (freq > maxFreq) maxFreq = freq;
     }
-    const freq = S_CEREVISIAE_CODON_FREQUENCIES[codon] ?? 0;
+    const freq = frequencies[codon] ?? 0;
     if (maxFreq <= 0 || freq <= 0) {
       throw new Error(
-        `computeCAI: no usage frequency for codon '${codon}' (${aa}).`
+        `${caller}: no usage frequency for codon '${codon}' (${aa}).`
       );
     }
     logSum += Math.log(freq / maxFreq);
   }
   return Math.round(Math.exp(logSum / protein.length) * 10000) / 10000;
+}
+
+export function computeCAI(dna: string, proteinSeq: string): number {
+  return computeCaiWithTables(
+    "computeCAI",
+    dna,
+    proteinSeq,
+    CODON_TABLE,
+    S_CEREVISIAE_CODON_FREQUENCIES
+  );
+}
+
+/**
+ * Codon adaptation index against E. coli K-12 usage. Values above
+ * 0.85 indicate strong bacterial expression suitability.
+ */
+export function computeEcoliCAI(dna: string, proteinSeq: string): number {
+  return computeCaiWithTables(
+    "computeEcoliCAI",
+    dna,
+    proteinSeq,
+    ECOLI_CODON_TABLE,
+    E_COLI_CODON_FREQUENCIES
+  );
 }
 
 export interface CodonOptimizationResult {
@@ -257,14 +357,19 @@ function gcCount(codon: string): number {
  * Relative adaptiveness of a codon: its usage frequency over the
  * synonymous maximum (Sharp & Li 1987 weight).
  */
-function codonAdaptiveness(aa: string, codon: string): number {
-  const synonyms = CODON_TABLE[aa] ?? [];
+function codonAdaptiveness(
+  aa: string,
+  codon: string,
+  table: Record<string, string[]> = CODON_TABLE,
+  frequencies: Record<string, number> = S_CEREVISIAE_CODON_FREQUENCIES
+): number {
+  const synonyms = table[aa] ?? [];
   let maxFreq = 0;
   for (const syn of synonyms) {
-    const freq = S_CEREVISIAE_CODON_FREQUENCIES[syn] ?? 0;
+    const freq = frequencies[syn] ?? 0;
     if (freq > maxFreq) maxFreq = freq;
   }
-  const freq = S_CEREVISIAE_CODON_FREQUENCIES[codon] ?? 0;
+  const freq = frequencies[codon] ?? 0;
   if (maxFreq <= 0 || freq <= 0) return 0;
   return freq / maxFreq;
 }
@@ -281,14 +386,19 @@ function splitCodons(dna: string): string[] {
  * Replaces rare codons (CGG, CGA, CUG) with the preferred non-rare
  * synonym that keeps the sequence free of cloning sites.
  */
-function removeRareCodons(codons: string[], proteinSeq: string): string[] {
+function removeRareCodons(
+  codons: string[],
+  proteinSeq: string,
+  table: Record<string, string[]> = CODON_TABLE,
+  rare: ReadonlySet<string> = RARE_CODONS
+): string[] {
   const out = [...codons];
   for (let i = 0; i < out.length; i += 1) {
     const current = out[i] ?? "";
-    if (!RARE_CODONS.has(current)) continue;
+    if (!rare.has(current)) continue;
     const aa = proteinSeq[i] ?? "";
-    const synonyms = (CODON_TABLE[aa] ?? []).filter(
-      (syn) => syn !== current && !RARE_CODONS.has(syn)
+    const synonyms = (table[aa] ?? []).filter(
+      (syn) => syn !== current && !rare.has(syn)
     );
     let placed = false;
     for (const candidate of synonyms) {
@@ -316,12 +426,20 @@ function removeRareCodons(codons: string[], proteinSeq: string): string[] {
  * little as possible. Deterministic: ties break by codon index, then
  * table order.
  */
-function tuneGcContent(codons: string[], proteinSeq: string): string[] {
+function tuneGcContent(
+  codons: string[],
+  proteinSeq: string,
+  table: Record<string, string[]> = CODON_TABLE,
+  rare: ReadonlySet<string> = RARE_CODONS,
+  frequencies: Record<string, number> = S_CEREVISIAE_CODON_FREQUENCIES,
+  gcMin: number = GC_CDS_MIN,
+  gcMax: number = GC_CDS_MAX
+): string[] {
   const out = [...codons];
   for (let iter = 0; iter < 500; iter += 1) {
     const gc = computeGcContent(out.join(""));
-    const raising = gc < GC_CDS_MIN;
-    const lowering = gc > GC_CDS_MAX;
+    const raising = gc < gcMin;
+    const lowering = gc > gcMax;
     if (!raising && !lowering) return out;
 
     let bestIndex = -1;
@@ -331,15 +449,15 @@ function tuneGcContent(codons: string[], proteinSeq: string): string[] {
       const current = out[i] ?? "";
       const currentGc = gcCount(current);
       const aa = proteinSeq[i] ?? "";
-      for (const candidate of CODON_TABLE[aa] ?? []) {
-        if (candidate === current || RARE_CODONS.has(candidate)) continue;
+      for (const candidate of table[aa] ?? []) {
+        if (candidate === current || rare.has(candidate)) continue;
         const candidateGc = gcCount(candidate);
         if (raising && candidateGc <= currentGc) continue;
         if (lowering && candidateGc >= currentGc) continue;
         const trial = [...out];
         trial[i] = candidate;
         if (findRestrictionSite(trial.join("")) !== null) continue;
-        const score = codonAdaptiveness(aa, candidate);
+        const score = codonAdaptiveness(aa, candidate, table, frequencies);
         if (score > bestScore) {
           bestScore = score;
           bestIndex = i;
@@ -388,29 +506,36 @@ export interface PayloadCdsResult {
   cai: number;
 }
 
-/**
- * Codon-optimizes one knottin payload CDS for S. cerevisiae /
- * S. boulardii: preferred codons, cloning-site silencing, rare-codon
- * (CGG/CGA/CUG) avoidance, and GC tuned into [38%, 45%].
- */
-export function optimizePayloadCds(proteinSeq: string): PayloadCdsResult {
+interface CdsHost {
+  caller: string;
+  table: Record<string, string[]>;
+  rare: ReadonlySet<string>;
+  frequencies: Record<string, number>;
+  gcMin: number;
+  gcMax: number;
+}
+
+function optimizeCdsForHost(
+  proteinSeq: string,
+  host: CdsHost
+): PayloadCdsResult {
   const seq = proteinSeq.trim().toUpperCase();
   if (seq.length === 0) {
-    throw new Error("optimizePayloadCds: empty protein sequence.");
+    throw new Error(`${host.caller}: empty protein sequence.`);
   }
 
   let dna = "";
   for (const aa of seq) {
-    const synonyms = CODON_TABLE[aa];
+    const synonyms = host.table[aa];
     if (synonyms === undefined || synonyms.length === 0) {
       throw new Error(
-        `optimizePayloadCds: unsupported residue '${aa}'. Only the 20 canonical amino acids are allowed.`
+        `${host.caller}: unsupported residue '${aa}'. Only the 20 canonical amino acids are allowed.`
       );
     }
     const preferred = synonyms[0];
     if (preferred === undefined) {
       throw new Error(
-        `optimizePayloadCds: no codon available for residue '${aa}'.`
+        `${host.caller}: no codon available for residue '${aa}'.`
       );
     }
     dna += preferred;
@@ -419,16 +544,34 @@ export function optimizePayloadCds(proteinSeq: string): PayloadCdsResult {
   // Alternate silencing and rare-codon removal until both hold.
   let codons = splitCodons(dna);
   for (let round = 0; round < 10; round += 1) {
-    const silenced = silenceRestrictionSites(codons.join(""), seq);
-    codons = removeRareCodons(splitCodons(silenced), seq);
+    const silenced = silenceRestrictionSites(
+      codons.join(""),
+      seq,
+      host.table,
+      host.rare
+    );
+    codons = removeRareCodons(
+      splitCodons(silenced),
+      seq,
+      host.table,
+      host.rare
+    );
     if (
       findRestrictionSite(codons.join("")) === null &&
-      codons.every((codon) => !RARE_CODONS.has(codon))
+      codons.every((codon) => !host.rare.has(codon))
     ) {
       break;
     }
   }
-  codons = tuneGcContent(codons, seq);
+  codons = tuneGcContent(
+    codons,
+    seq,
+    host.table,
+    host.rare,
+    host.frequencies,
+    host.gcMin,
+    host.gcMax
+  );
 
   const finalDna = codons.join("");
   const gcContent = computeGcContent(finalDna);
@@ -436,7 +579,47 @@ export function optimizePayloadCds(proteinSeq: string): PayloadCdsResult {
     dna: finalDna,
     gcContent,
     gcPercent: Math.round(gcContent * 1000) / 10,
-    gcOk: gcContent >= GC_CDS_MIN && gcContent <= GC_CDS_MAX,
-    cai: computeCAI(finalDna, seq),
+    gcOk: gcContent >= host.gcMin && gcContent <= host.gcMax,
+    cai: computeCaiWithTables(
+      host.caller,
+      finalDna,
+      seq,
+      host.table,
+      host.frequencies
+    ),
   };
+}
+
+/**
+ * Codon-optimizes one knottin payload CDS for S. cerevisiae /
+ * S. boulardii: preferred codons, cloning-site silencing, rare-codon
+ * (CGG/CGA/CUG) avoidance, and GC tuned into [38%, 45%].
+ */
+export function optimizePayloadCds(proteinSeq: string): PayloadCdsResult {
+  return optimizeCdsForHost(proteinSeq, {
+    caller: "optimizePayloadCds",
+    table: CODON_TABLE,
+    rare: RARE_CODONS,
+    frequencies: S_CEREVISIAE_CODON_FREQUENCIES,
+    gcMin: GC_CDS_MIN,
+    gcMax: GC_CDS_MAX,
+  });
+}
+
+/**
+ * Codon-optimizes a peptide CDS for transfer into a bacterial LBP
+ * chassis (E. coli Nissle 1917-type hosts): preferred E. coli codons,
+ * cloning-site silencing, rare-codon avoidance, GC tuned into
+ * [45%, 60%]. Deterministic — no model call — so the LBP-ready DNA is
+ * always available alongside the designed sequence.
+ */
+export function optimizeForEcoli(proteinSeq: string): PayloadCdsResult {
+  return optimizeCdsForHost(proteinSeq, {
+    caller: "optimizeForEcoli",
+    table: ECOLI_CODON_TABLE,
+    rare: ECOLI_RARE_CODONS,
+    frequencies: E_COLI_CODON_FREQUENCIES,
+    gcMin: ECOLI_GC_CDS_MIN,
+    gcMax: ECOLI_GC_CDS_MAX,
+  });
 }
