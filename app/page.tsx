@@ -154,6 +154,12 @@ export default function Home() {
                 probiotics can make it where it&apos;s needed.
               </p>
               <div className={styles.heroactions}>
+                <a
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  href="/design?tour=1"
+                >
+                  Design your first peptide with Pep
+                </a>
                 <a className={styles.btn} href="#api">
                   Read the API call
                 </a>

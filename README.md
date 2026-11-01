@@ -480,8 +480,9 @@ design call to action):
   timeline and event log, the designed peptide hero (large sequence
   plus LBP-ready DNA), 3D structure with lab handoff downloads, the
   **Recent designs** ledger table (ten at a time with a pager; any
-  row reopens the full pipeline output), and the service-provider
-  directory.
+  row reopens the full pipeline output), the service-provider
+  directory, and Pep, a floating guide that tours the page, explains
+  each section in lay terms, and can follow a live run step by step.
 - **`/biology`** — Bio & Business, merged with the former LBP
   guide: what LBPs are (garden model, colonization resistance, the
   *C. difficile* proof), the two FDA-approved products, the
@@ -494,9 +495,9 @@ design call to action):
   bars, plus a worldwide therapeutic markets table with LBP approach,
   payload angle, and host plus body site per row, figures hyperlinked
   to new-tab sources), build costs from DNA to GMP by company stage
-  with a log-scale cost strip and the AI-dividend and rational-design
-  case, the one-person-biotech thesis, and the
-  factory-at-every-body-site vision with new-tab sources.
+  with the AI-dividend and rational-design case, the one-person-biotech
+  thesis, and the factory-at-every-body-site vision with new-tab
+  sources.
 
 Pick one of thirteen preset gut conditions from the grid — or choose
 Other and describe your own condition in free text. Custom input

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import styles from "../page.module.css";
 import FocusedPeptide from "../focused-peptide";
 import SectionIcon from "../section-icons";
+import DesignGuide from "./guide";
 import {
   parseDesignParams,
   type DesignParams,
@@ -658,7 +659,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           )}
 
           {researchBrief !== undefined && (
-            <section aria-label="Literature brief">
+            <section aria-label="Literature brief" id="result-brief">
               <h3>
                 <SectionIcon name="document" />
                 Literature brief
@@ -780,7 +781,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           )}
 
           {specificity !== undefined && (
-            <section aria-label="Specificity review">
+            <section aria-label="Specificity review" id="result-safety">
               <h3>
                 <SectionIcon name="target" />
                 Specificity review
@@ -872,6 +873,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
       <div id="recent-runs">
         <RecentRunsTable onSelect={(id) => setFocusRunId(id)} />
       </div>
+      <DesignGuide loading={loading} ok={ok} />
     </div>
   );
 }
