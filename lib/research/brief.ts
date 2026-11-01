@@ -12,6 +12,11 @@ import {
   type EvidenceResult,
   type FetchImpl,
 } from "./evidence";
+import {
+  loadStoredBrief,
+  saveStoredBrief,
+  type StoredResearchBrief,
+} from "./brief-store";
 
 /**
  * Literature research agents. All agents converge on the single objective
@@ -68,6 +73,22 @@ export interface ResearchRunOptions {
   /** Injected synthesis call for tests; defaults to the Spark API. */
   synthesizeImpl?: (prompt: string, timeoutMs: number) => Promise<string | null>;
   onEvent?: (event: PipelineEvent) => void;
+  /** Skip the in-memory and stored briefs; always retrieve live. */
+  forceFresh?: boolean;
+  /** Injected brief store for tests; defaults to Supabase. */
+  briefStore?: {
+    load: (targetKey: string) => Promise<StoredResearchBrief | null>;
+    save: (
+      targetKey: string,
+      input: {
+        targetDisplay: string;
+        status: string;
+        brief: ResearchBrief | null;
+        evidence: EvidenceItem[];
+        model: string;
+      }
+    ) => Promise<{ saved: boolean; error?: string }>;
+  };
 }
 
 /** Hard wall-clock cap for the whole research stage. */
@@ -83,6 +104,8 @@ export const RESEARCH_SYNTHESIS_TEMPERATURE = 0.2;
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 200;
+/** Stored briefs refresh weekly: instant reuse, live literature. */
+export const STORED_BRIEF_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Status-log titles stay short so the event log stays scannable. */
 const TITLE_LOG_MAX = 110;
 
@@ -195,6 +218,19 @@ async function rankMechanisms(
       error: error instanceof Error ? error.message : "unknown",
     };
   }
+}
+
+/** Rebuilds per-source counts for reused evidence (latency unknown). */
+function sourcesFromEvidence(evidence: EvidenceItem[]): ResearchSourceReport[] {
+  const counts = new Map<string, number>();
+  for (const item of evidence) {
+    counts.set(item.source, (counts.get(item.source) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([name, count]) => ({
+    name,
+    count,
+    latencyMs: 0,
+  }));
 }
 
 /**
@@ -387,21 +423,169 @@ export async function runResearchBrief(
   try {
     if (budgetMs <= 0) return fail("Research budget disabled");
     const key = researchCacheKey(target, mechanism);
-    const cached = readCache(key);
-    if (cached !== null) {
+    const store = options.briefStore ?? {
+      load: loadStoredBrief,
+      save: saveStoredBrief,
+    };
+    const persist = (
+      status: string,
+      brief: ResearchBrief | null,
+      evidence: EvidenceItem[]
+    ): void => {
+      // Best-effort refresh of the stored library; never blocks the run.
+      void store
+        .save(key, {
+          targetDisplay: target.trim().slice(0, 300),
+          status,
+          brief,
+          evidence,
+          model,
+        })
+        .then(
+          () => undefined,
+          () => undefined
+        );
+    };
+    // One log line per paper so the status panel shows what actually
+    // came back, not just counts.
+    const announceEvidence = (items: EvidenceItem[]): void => {
+      for (const item of items) {
+        const year =
+          item.year !== undefined && item.year.length > 0
+            ? ` (${item.year})`
+            : "";
+        emit(
+          `Found in ${sourceLabel(item.source)}${year}: "${shortTitle(item.title)}"`
+        );
+      }
+    };
+
+    // Shared tail: safety screen plus one synthesis call over stored
+    // or freshly retrieved evidence. Failures keep the evidence so
+    // the store and the brief reader still have papers to show.
+    const synthesizeFromEvidence = async (
+      items: EvidenceItem[],
+      reports: ResearchSourceReport[]
+    ): Promise<ResearchProvenance> => {
+      const safetySeeds = screenEvidenceSafety(items);
+      if (safetySeeds.length > 0) {
+        emit(
+          `Safety screen flagged ${safetySeeds.length} passage(s) for the avoid list`
+        );
+      }
+      const synthesisBudget = budgetMs - (Date.now() - startedAt);
+      if (synthesisBudget < 3000) {
+        persist("fallback", null, items);
+        return fail("Research budget exhausted before synthesis", {
+          evidence: items,
+          sources: reports,
+        });
+      }
+      const prompt = buildResearchSynthesisPrompt(
+        target,
+        mechanism,
+        items,
+        safetySeeds
+      );
       emit(
-        `Literature brief reused from cache${briefHighlights(cached.brief)}`
+        `Synthesizing ${items.length} paper(s) into a design brief with ${shortLabelForModel(model)}…`
+      );
+      const synthesize = options.synthesizeImpl;
+      const text =
+        synthesize !== undefined
+          ? await synthesize(prompt, synthesisBudget)
+          : await defaultSynthesize(prompt, synthesisBudget, model);
+      if (text === null || text.trim().length === 0) {
+        persist("fallback", null, items);
+        return fail("Synthesis returned no completion", {
+          evidence: items,
+          sources: reports,
+        });
+      }
+      const brief = parseResearchSynthesis(text, items.length);
+      if (brief === null) {
+        persist("fallback", null, items);
+        return fail("Synthesis converged on no usable target", {
+          evidence: items,
+          sources: reports,
+        });
+      }
+      writeCache(key, brief, items);
+      persist("ok", brief, items);
+      emit(
+        `Literature brief converged: ${brief.targets.length} target(s), ` +
+          `${brief.mechanisms.length} mechanism(s), ${brief.avoid.length} avoid(s)` +
+          briefHighlights(brief)
       );
       settled = true;
       return {
         status: "ok",
         latencyMs: Date.now() - startedAt,
-        evidenceCount: cached.brief.evidenceCount,
-        cached: true,
-        sources: [],
-        brief: cached.brief,
-        evidence: cached.evidence,
+        evidenceCount: items.length,
+        cached: false,
+        sources: reports,
+        brief,
+        evidence: items,
       };
+    };
+
+    if (options.forceFresh !== true) {
+      const cached = readCache(key);
+      if (cached !== null) {
+        emit(
+          `Literature brief reused from cache${briefHighlights(cached.brief)}`
+        );
+        settled = true;
+        return {
+          status: "ok",
+          latencyMs: Date.now() - startedAt,
+          evidenceCount: cached.brief.evidenceCount,
+          cached: true,
+          sources: [],
+          brief: cached.brief,
+          evidence: cached.evidence,
+        };
+      }
+      // Stored library: a full brief returns instantly; stored
+      // evidence skips retrieval while synthesis still runs live, so
+      // the prompt always gets the freshest convergence available.
+      let stored: StoredResearchBrief | null = null;
+      try {
+        stored = await store.load(key);
+      } catch {
+        stored = null;
+      }
+      if (
+        stored !== null &&
+        Date.now() - stored.retrievedAt < STORED_BRIEF_TTL_MS
+      ) {
+        if (stored.brief !== null) {
+          emit(
+            `Literature brief reused from the stored library${briefHighlights(stored.brief)}`
+          );
+          writeCache(key, stored.brief, stored.evidence);
+          settled = true;
+          return {
+            status: "ok",
+            latencyMs: Date.now() - startedAt,
+            evidenceCount: stored.evidence.length,
+            cached: true,
+            sources: sourcesFromEvidence(stored.evidence),
+            brief: stored.brief,
+            evidence: stored.evidence,
+          };
+        }
+        if (stored.evidence.length > 0) {
+          emit(
+            `Reusing ${stored.evidence.length} stored paper(s) — synthesizing fresh…`
+          );
+          announceEvidence(stored.evidence);
+          return await synthesizeFromEvidence(
+            stored.evidence,
+            sourcesFromEvidence(stored.evidence)
+          );
+        }
+      }
     }
 
     emit(
@@ -438,75 +622,13 @@ export async function runResearchBrief(
         `, Europe PMC ${europepmc.items.length} paper(s)` +
         (europepmc.error !== undefined ? ` (${europepmc.error})` : "")
     );
-    // One log line per retrieved paper so the status panel shows
-    // what actually came back, not just counts.
-    for (const item of evidence) {
-      const year =
-        item.year !== undefined && item.year.length > 0
-          ? ` (${item.year})`
-          : "";
-      emit(
-        `Found in ${sourceLabel(item.source)}${year}: "${shortTitle(item.title)}"`
-      );
-    }
+    announceEvidence(evidence);
     if (evidence.length === 0) {
       return fail("No literature evidence retrieved", { sources });
     }
-
-    const safetySeeds = screenEvidenceSafety(evidence);
-    if (safetySeeds.length > 0) {
-      emit(
-        `Safety screen flagged ${safetySeeds.length} passage(s) for the avoid list`
-      );
-    }
-    const synthesisBudget = remaining();
-    if (synthesisBudget < 3000) {
-      return fail("Research budget exhausted before synthesis", {
-        evidence,
-        sources,
-      });
-    }
-    const prompt = buildResearchSynthesisPrompt(
-      target,
-      mechanism,
-      evidence,
-      safetySeeds
-    );
-    emit(
-      `Synthesizing ${evidence.length} paper(s) into a design brief with ${shortLabelForModel(model)}…`
-    );
-    const synthesize = options.synthesizeImpl;
-    const text =
-      synthesize !== undefined
-        ? await synthesize(prompt, synthesisBudget)
-        : await defaultSynthesize(prompt, synthesisBudget, model);
-    if (text === null || text.trim().length === 0) {
-      return fail("Synthesis returned no completion", { evidence, sources });
-    }
-    const brief = parseResearchSynthesis(text, evidence.length);
-    if (brief === null) {
-      return fail("Synthesis converged on no usable target", {
-        evidence,
-        sources,
-      });
-    }
-    writeCache(key, brief, evidence);
-    emit(
-      `Literature brief converged: ${brief.targets.length} target(s), ` +
-        `${brief.mechanisms.length} mechanism(s), ${brief.avoid.length} avoid(s)` +
-        briefHighlights(brief)
-    );
-    settled = true;
-    return {
-      status: "ok",
-      latencyMs: Date.now() - startedAt,
-      evidenceCount: evidence.length,
-      cached: false,
-      sources,
-      brief,
-      evidence,
-    };
+    return await synthesizeFromEvidence(evidence, sources);
   } catch (error) {
     return fail(error instanceof Error ? error.message : "unknown error");
   }
+
 }

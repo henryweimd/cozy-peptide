@@ -196,10 +196,17 @@ function parseNarrative(completion: string): ReportNarrative | null {
   };
 }
 
-/** Deterministic brief from converged lines when synthesis is down. */
+/**
+ * Deterministic brief when synthesis is down. Converged lines come
+ * first, but the retrieved evidence always grounds the rationale —
+ * titles plus reported findings — so a synthesis outage degrades to
+ * a readable evidence digest, never an empty document.
+ */
 function fallbackNarrative(
   target: string,
-  brief: ResearchBrief | null
+  brief: ResearchBrief | null,
+  references: ReportReference[],
+  snippets: string[]
 ): ReportNarrative {
   const join = (entries: Array<{ name: string; rationale: string }>): string =>
     entries
@@ -209,12 +216,27 @@ function fallbackNarrative(
           : entry.name
       )
       .join("; ");
+  const digest = references
+    .slice(0, 6)
+    .map((ref) => {
+      const snippet = (snippets[ref.n - 1] ?? "").trim().slice(0, 220);
+      const what =
+        snippet.length > 0 ? `${ref.title} — ${snippet}` : ref.title;
+      return `[${ref.n}] ${what}`.slice(0, 320);
+    })
+    .join(" ");
+  const rationale =
+    brief !== null && brief.mechanisms.length > 0
+      ? `Supported mechanisms: ${join(brief.mechanisms)}.`
+      : digest.length > 0
+        ? `No mechanism converged; retrieved evidence reports: ${digest}`
+        : "No mechanism converged and no evidence was retrieved.";
   return {
-    background: `Literature-derived design brief for ${target}. Model synthesis was unavailable, so this section lists the converged lines verbatim.`,
-    rationale:
-      brief !== null && brief.mechanisms.length > 0
-        ? `Supported mechanisms: ${join(brief.mechanisms)}.`
-        : "No mechanism converged.",
+    background:
+      references.length > 0
+        ? `Literature-derived design brief for ${target}, grounded in ${references.length} retrieved paper(s) below. Model synthesis was unavailable, so no targets converged — the evidence records stand on their own.`
+        : `Literature-derived design brief for ${target}. Model synthesis was unavailable and no evidence was retrieved.`,
+    rationale: rationale.slice(0, 1500),
     targets: (brief?.targets ?? []).map((entry) => ({
       name: entry.name,
       note: entry.rationale,
@@ -223,9 +245,9 @@ function fallbackNarrative(
     safety:
       brief !== null && brief.avoid.length > 0
         ? `Explicitly avoided: ${join(brief.avoid)}.`
-        : "No avoid list converged.",
+        : "No avoid list converged — reviewer screening did not run.",
     limitations:
-      "Targets and mechanisms below carry no per-claim citation mapping in fallback mode; consult the numbered references.",
+      "Fallback mode carries no per-claim citation mapping; evidence titles and snippets are reproduced verbatim from PubMed and Europe PMC — consult the numbered references.",
   };
 }
 
@@ -273,7 +295,11 @@ export async function synthesizeNarrative(
   } catch {
     // Fall through to the deterministic brief.
   }
-  return { narrative: fallbackNarrative(target, brief), model, fallback: true };
+  return {
+    narrative: fallbackNarrative(target, brief, references, snippets),
+    model,
+    fallback: true,
+  };
 }
 
 /** Validates a cached narrative envelope from the run row. */

@@ -270,3 +270,26 @@ test("reportToDocx emits a zip-packaged document", async () => {
   assert.equal(buffer[0], 0x50);
   assert.equal(buffer[1], 0x4b);
 });
+
+test("fallback narrative grounds itself in retrieved evidence", async () => {
+  const { report } = await buildReport({
+    target: "bile acid diarrhea",
+    brief: null,
+    citations: stubCitations(),
+    snippets: ["Findings about colonization resistance.", "PMC findings."],
+    options: { synthesizeImpl: async () => null },
+  });
+  assert.equal(report.fallback, true);
+  assert.ok(
+    report.narrative.rationale.includes("A gut peptide study"),
+    "rationale should name retrieved papers"
+  );
+  assert.ok(
+    report.narrative.rationale.includes("colonization resistance"),
+    "rationale should carry finding snippets"
+  );
+  assert.ok(
+    report.narrative.background.includes("2 retrieved"),
+    "background should count the evidence"
+  );
+});

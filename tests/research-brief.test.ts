@@ -282,6 +282,146 @@ test("research fallback keeps evidence and narrates the failure", async () => {
   }
 });
 
+test("research stage reuses a stored full brief without refetching", async () => {
+  clearResearchCache();
+  try {
+    const storedBrief = parseResearchSynthesis(SYNTHESIS_OK, 3);
+    assert.ok(storedBrief !== null);
+    const events: PipelineEvent[] = [];
+    let fetches = 0;
+    const counting: FetchImpl = async (input) => {
+      fetches += 1;
+      return stubFetch(LITERATURE_HANDLER)(input);
+    };
+    const provenance = await runResearchBrief(TARGET, undefined, {
+      fetchImpl: counting,
+      synthesizeImpl: async () => {
+        throw new Error("must not synthesize on stored hit");
+      },
+      onEvent: (event) => events.push(event),
+      briefStore: {
+        load: async () => ({
+          key: "k",
+          status: "ok",
+          brief: storedBrief,
+          evidence: [
+            {
+              source: "pubmed",
+              id: "111",
+              title: "Stored paper",
+              snippet: "",
+              url: "",
+            },
+          ],
+          model: "muse-spark-1.3-contributor",
+          retrievedAt: Date.now(),
+        }),
+        save: async () => ({ saved: true }),
+      },
+    });
+    assert.equal(provenance.status, "ok");
+    assert.equal(provenance.cached, true);
+    assert.equal(fetches, 0);
+    assert.ok(
+      events.some((event) => event.message.includes("stored library")),
+      "expected a stored-library announcement"
+    );
+  } finally {
+    clearResearchCache();
+  }
+});
+
+test("research stage synthesizes live over stored evidence", async () => {
+  clearResearchCache();
+  try {
+    const events: PipelineEvent[] = [];
+    let fetches = 0;
+    let syntheses = 0;
+    const counting: FetchImpl = async (input) => {
+      fetches += 1;
+      return stubFetch(LITERATURE_HANDLER)(input);
+    };
+    const provenance = await runResearchBrief(TARGET, undefined, {
+      fetchImpl: counting,
+      synthesizeImpl: async () => {
+        syntheses += 1;
+        return SYNTHESIS_OK;
+      },
+      onEvent: (event) => events.push(event),
+      briefStore: {
+        load: async () => ({
+          key: "k",
+          status: "fallback",
+          brief: null,
+          evidence: [
+            {
+              source: "pubmed",
+              id: "111",
+              title: "Stored paper",
+              snippet: "",
+              url: "",
+            },
+          ],
+          model: "",
+          retrievedAt: Date.now(),
+        }),
+        save: async () => ({ saved: true }),
+      },
+    });
+    assert.equal(provenance.status, "ok");
+    assert.equal(fetches, 0);
+    assert.equal(syntheses, 1);
+    assert.ok(
+      events.some((event) => event.message.includes("stored paper(s)")),
+      "expected a stored-evidence announcement"
+    );
+  } finally {
+    clearResearchCache();
+  }
+});
+
+test("research stage ignores stale stored rows and persists fresh wins", async () => {
+  clearResearchCache();
+  try {
+    const saved: Array<{ brief: unknown; evidenceCount: number }> = [];
+    let fetches = 0;
+    const counting: FetchImpl = async (input) => {
+      fetches += 1;
+      return stubFetch(LITERATURE_HANDLER)(input);
+    };
+    const provenance = await runResearchBrief(TARGET, undefined, {
+      fetchImpl: counting,
+      synthesizeImpl: async () => SYNTHESIS_OK,
+      briefStore: {
+        load: async () => ({
+          key: "k",
+          status: "ok",
+          brief: parseResearchSynthesis(SYNTHESIS_OK, 3),
+          evidence: [],
+          model: "m",
+          retrievedAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
+        }),
+        save: async (_key, input) => {
+          saved.push({
+            brief: input.brief,
+            evidenceCount: input.evidence.length,
+          });
+          return { saved: true };
+        },
+      },
+    });
+    assert.equal(provenance.status, "ok");
+    assert.ok(fetches > 0, "expected live retrieval past the TTL");
+    // persist() is fire-and-forget; flush the microtask queue.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(saved.length, 1);
+    assert.ok(saved[0]?.brief !== null);
+    assert.equal(saved[0]?.evidenceCount, 3);
+  } finally {
+    clearResearchCache();
+  }
+});
+
 test("research stage falls back fast on transport failure", async () => {
   clearResearchCache();
   try {
