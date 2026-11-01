@@ -1085,6 +1085,57 @@
   stroke: none;
 }
 
+.bandNavy .marketBars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-xl);
+  max-width: 60rem;
+}
+
+.bandNavy .marketBarRow {
+  display: grid;
+  grid-template-columns: 10rem 1fr 4.5rem;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: var(--text-sm);
+}
+
+.bandNavy .marketBarLabel {
+  color: oklch(90% 0.016 250);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bandNavy .marketBarTrack {
+  display: block;
+  height: 10px;
+  background: oklch(100% 0 0 / 0.16);
+  border-radius: 999px;
+}
+
+.bandNavy .marketBarFill {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  background: var(--color-accent-2);
+  border-radius: 999px;
+}
+
+.bandNavy .marketBarValue {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: oklch(98.6% 0.005 250);
+}
+
+@media (max-width: 40rem) {
+  .bandNavy .marketBarRow {
+    grid-template-columns: 7.5rem 1fr 4rem;
+    gap: var(--space-sm);
+  }
+}
+
 .well {
   background: var(--color-graphite);
   color: var(--color-graphite-ink);
@@ -1565,6 +1616,13 @@
   display: block;
   width: 100%;
   height: auto;
+}
+
+.wrapDiagram img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
 }
 
 .wrapDiagram figcaption {

@@ -7,8 +7,34 @@ import SiteNav from "../site-nav";
 export const metadata: Metadata = {
   title: "Bio & Business — cozy-peptide",
   description:
-    "Why living medicines win, why the peptide payload is the bottleneck that kills programs, and how an AI designer that proves its work changes the business case. Market figures and build costs included.",
+    "Living medicines end to end: what LBPs are, the two FDA approvals, the late-stage pipeline, the hidden debt in every payload, how the AI designer clears it, and the business case with market figures and build costs.",
 };
+
+const STORY: Array<{
+  src: string;
+  alt: string;
+  title: string;
+  body: string;
+}> = [
+  {
+    src: "/lbp-design.webp",
+    alt: "AI neural mesh above a forming peptide helix",
+    title: "AI designs the peptide",
+    body: "Muse Spark invents the sequence for the target.",
+  },
+  {
+    src: "/lbp-insert.webp",
+    alt: "Pipette placing DNA into a yeast cell",
+    title: "DNA goes into the microbe",
+    body: "The order is engineered into a living chassis.",
+  },
+  {
+    src: "/lbp-produce.webp",
+    alt: "Yeast secreting peptides toward pathogens in the gut",
+    title: "The microbe drugs the gut",
+    body: "It secretes peptide inside you, on site.",
+  },
+];
 
 function IconTarget() {
   return (
@@ -78,8 +104,9 @@ export default function BiologyPage() {
       />
       <nav className={styles.subnav} aria-label="On this page">
         <div className="container">
+          <a href="#lbp">LBP</a>
           <a href="#biology">Biology</a>
-          <a href="#bottleneck">Bottleneck</a>
+          <a href="#hidden-debt">Hidden debt</a>
           <a href="#designer">Designer</a>
           <a href="#market">Market</a>
           <a href="#costs">Costs</a>
@@ -94,10 +121,174 @@ export default function BiologyPage() {
             <div className={styles.headblock}>
               <h1 id="biology-title">Bio &amp; Business</h1>
               <p className="lead">
-                Microbes are factories. Peptides are the product. Designing
-                the product is the bottleneck &mdash; and the bottleneck is
-                what this site clears.
+                Microbes are factories. Peptides are the product. A wrong
+                product is hidden debt &mdash; and hidden debt is what
+                this site clears.
               </p>
+              <p className={styles.heroactions}>
+                <Link className={styles.btn} href="#lbp">
+                  Living medicines
+                </Link>{" "}
+                <Link className={styles.btn} href="/design">
+                  Design a peptide
+                </Link>
+              </p>
+            </div>
+            <div id="lbp">
+              <h2>Living medicines, made of microbes</h2>
+              <div className={styles.bioProse}>
+                <p>
+                  A live biotherapeutic product &mdash; an LBP &mdash; is a
+                  medicine whose active ingredient is alive: chosen
+                  bacteria or yeast, taken as a pill or enema, that take
+                  up residence and do therapeutic work. The FDA regulates
+                  LBPs as biological drugs &mdash; manufactured, dosed,
+                  and trialed like any medicine &mdash; which sets them
+                  apart from yogurt probiotics on one side and raw
+                  donor-stool transplants on the other.
+                </p>
+                <p>
+                  Picture a garden. Antibiotics are a wildfire: they kill
+                  the infection and clear the ground, and whatever grows
+                  back first wins &mdash; too often a pathogen. An LBP
+                  reseeds the ground with the right community so invaders
+                  find no room, a protection doctors call colonization
+                  resistance.
+                </p>
+                <p>
+                  Nowhere shows this better than{" "}
+                  <em>Clostridioides difficile</em>: roughly one in four
+                  patients relapses after antibiotics, with worsening
+                  odds each round, because spores survive treatment and
+                  germinate into an emptied gut. A landmark 2013 trial
+                  proved the alternative &mdash; restoring the community
+                  cured most recurrent cases &mdash; and LBPs are that
+                  insight turned into standardized, screened, dosed
+                  products.
+                </p>
+                <p>
+                  <strong>Approved today: two products.</strong> Both
+                  prevent <em>C.&nbsp;difficile</em> recurrence after
+                  antibiotics, and both are made from screened donor
+                  microbiota &mdash; no engineered strain has been
+                  approved anywhere yet. That is the frontier this site
+                  builds toward.
+                </p>
+                <p>
+                  <strong>Rebyota (Ferring, November 2022).</strong> A
+                  single rectal dose of donor microbiota; kept about 71%
+                  of recurrent patients recurrence-free at eight weeks,
+                  against 58% on placebo.
+                </p>
+                <p>
+                  <strong>Vowst (Seres, April 2023).</strong> Purified
+                  bacterial spores in capsules, four a day for three
+                  days. In the 182-patient ECOSPOR III trial, published
+                  in the New England Journal of Medicine, only 12% of
+                  recipients relapsed within eight weeks versus 40% on
+                  placebo.
+                </p>
+                <p>
+                  <strong>The late-stage pipeline.</strong> The next wave
+                  replaces donor stool with defined, manufactured
+                  consortia &mdash; every strain known, every dose
+                  identical &mdash; and pushes beyond{" "}
+                  <em>C.&nbsp;difficile</em> into transplant medicine and
+                  inflammatory disease.
+                </p>
+              </div>
+              <table className={styles.apitable}>
+                <thead>
+                  <tr>
+                    <th scope="col">Product</th>
+                    <th scope="col">Maker</th>
+                    <th scope="col">What it is</th>
+                    <th scope="col">Stage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-label="Product">VE303</td>
+                    <td data-label="Maker">Vedanta Biosciences</td>
+                    <td data-label="What it is">
+                      Eight-strain defined oral consortium for recurrent{" "}
+                      <em>C. difficile</em>
+                    </td>
+                    <td data-label="Stage">
+                      Phase 3 (RESTORATiVE303; topline expected first
+                      half of 2027)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td data-label="Product">MaaT013</td>
+                    <td data-label="Maker">MaaT Pharma</td>
+                    <td data-label="What it is">
+                      Pooled donor microbiota enema for severe
+                      graft-versus-host disease
+                    </td>
+                    <td data-label="Stage">Phase 3 (ARES trial)</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Product">MaaT033</td>
+                    <td data-label="Maker">MaaT Pharma</td>
+                    <td data-label="What it is">
+                      Oral capsule version to improve survival after stem
+                      cell transplant
+                    </td>
+                    <td data-label="Stage">Phase 2b (PHOEBUS trial)</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Product">SER-155</td>
+                    <td data-label="Maker">Seres Therapeutics</td>
+                    <td data-label="What it is">
+                      Cultivated multi-strain consortium against
+                      bloodstream infections after transplant
+                    </td>
+                    <td data-label="Stage">
+                      Phase 2 ready (77% fewer infections in Phase 1b;
+                      Breakthrough designation)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className={styles.bioProse}>
+                <p>
+                  <strong>Where peptide design plugs in.</strong>{" "}
+                  Today&apos;s LBPs work by competition and chemistry they
+                  happen to make. The engineered generation carries
+                  custom payloads: a harmless resident, rewritten to
+                  secrete a designed peptide exactly where disease
+                  lives &mdash; a living factory with a programmable
+                  product.
+                </p>
+              </div>
+              <ol className={styles.storyrow}>
+                {STORY.map((step) => (
+                  <li key={step.src}>
+                    <figure>
+                      <Image
+                        src={step.src}
+                        alt={step.alt}
+                        width={1920}
+                        height={1280}
+                        sizes="(max-width: 60rem) 100vw, 33vw"
+                      />
+                      <figcaption>
+                        <strong>{step.title}</strong>
+                        <span>{step.body}</span>
+                      </figcaption>
+                    </figure>
+                  </li>
+                ))}
+              </ol>
+              <div className={styles.bioProse}>
+                <p>
+                  That payload is what this site designs &mdash; and
+                  designing it is the hard part. The rest of this page:
+                  the factory, the hidden debt, and the designer that
+                  clears it.
+                </p>
+              </div>
             </div>
             <div id="biology">
               <h2>The biology: medicine brewed where disease lives</h2>
@@ -115,12 +306,10 @@ export default function BiologyPage() {
                     factory; the DNA cassette is the product line.
                   </p>
                   <p>
-                    These engineered residents are called live
-                    biotherapeutic products (LBPs). Two are already
-                    FDA-approved for recurrent <em>C.&nbsp;difficile</em>{" "}
-                    (see the <Link href="/lbp">LBP guide</Link>). The gut
-                    is only the first factory floor: every colonized
-                    surface of the body is a site waiting for tenants.
+                    The gut is only the first factory floor: every
+                    colonized surface of the body is a site waiting for
+                    tenants, as <a href="#universe">the vision</a>{" "}
+                    below shows.
                   </p>
                 </div>
                 <figure className={styles.bioFigure}>
@@ -188,8 +377,8 @@ export default function BiologyPage() {
                 </p>
               </div>
             </div>
-            <div id="bottleneck">
-              <h2>The bottleneck: designing the payload</h2>
+            <div id="hidden-debt">
+              <h2>The hidden debt: designing the wrong peptide</h2>
               <div className={styles.bioProse}>
                 <p>
                   Building the factory is becoming routine. Chassis
@@ -201,8 +390,8 @@ export default function BiologyPage() {
                   the factory is supposed to make.
                 </p>
                 <p>
-                  A therapeutic peptide has to satisfy half a dozen
-                  constraints at once, and they fight each other:
+                  A therapeutic peptide has to satisfy six constraints
+                  at once, and they fight each other:
                 </p>
                 <p>
                   <IconTarget />
@@ -265,9 +454,9 @@ export default function BiologyPage() {
               </div>
               <aside
                 className={styles.expertbox}
-                aria-labelledby="bottleneck-expert-title"
+                aria-labelledby="hidden-debt-expert-title"
               >
-                <h3 id="bottleneck-expert-title">
+                <h3 id="hidden-debt-expert-title">
                   The expert version: biology-first payload design
                 </h3>
                 <p>
@@ -299,7 +488,7 @@ export default function BiologyPage() {
               </aside>
             </div>
             <div id="designer">
-              <h2>How the designer clears the bottleneck</h2>
+              <h2>How the designer clears the hidden debt</h2>
               <div className={styles.bioProse}>
                 <p>
                   This site is a general-purpose small-peptide designer
@@ -388,7 +577,7 @@ export default function BiologyPage() {
               </div>
               <figure className={styles.wrapDiagram}>
                 <svg
-                  viewBox="0 0 760 300"
+                  viewBox="0 0 760 216"
                   role="img"
                   aria-labelledby="flowDiagramTitle flowDiagramDesc"
                 >
@@ -397,10 +586,11 @@ export default function BiologyPage() {
                     compiler proves
                   </title>
                   <desc id="flowDiagramDesc">
-                    Five stages left to right: the disease name, literature
-                    agents over PubMed and Europe PMC, the Spark brief of
-                    targets and avoids, Spark proposing inside the proof
-                    compiler, and the peptide shipping to an LBP factory.
+                    Five numbered stages left to right: the disease name,
+                    literature agents over PubMed and Europe PMC, the
+                    Spark brief of targets and avoids, Spark proposing
+                    inside the proof compiler, and the peptide shipping
+                    to an LBP factory.
                   </desc>
                   <defs>
                     <marker
@@ -420,7 +610,7 @@ export default function BiologyPage() {
                   </defs>
                   <text
                     x="380"
-                    y="34"
+                    y="26"
                     textAnchor="middle"
                     style={{
                       fontFamily: "var(--font-display)",
@@ -434,9 +624,9 @@ export default function BiologyPage() {
                   </text>
                   <rect
                     x="462"
-                    y="100"
-                    width="142"
-                    height="116"
+                    y="48"
+                    width="140"
+                    height="114"
                     rx="10"
                     style={{
                       fill: "none",
@@ -446,8 +636,8 @@ export default function BiologyPage() {
                     }}
                   />
                   <text
-                    x="533"
-                    y="92"
+                    x="532"
+                    y="40"
                     textAnchor="middle"
                     style={{
                       fontFamily: "var(--font-display)",
@@ -457,275 +647,119 @@ export default function BiologyPage() {
                   >
                     proof compiler
                   </text>
-                  <rect
-                    x="8"
-                    y="116"
-                    width="126"
-                    height="84"
-                    rx="8"
-                    style={{
-                      fill: "var(--color-paper)",
-                      stroke: "var(--color-rule-2)",
-                      strokeWidth: 1.5,
-                    }}
-                  />
-                  <text
-                    x="71"
-                    y="152"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fill: "var(--color-ink)",
-                    }}
-                  >
-                    name the
-                  </text>
-                  <text
-                    x="71"
-                    y="172"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fill: "var(--color-ink)",
-                    }}
-                  >
-                    disease
-                  </text>
-                  <line
-                    x1="138"
-                    y1="158"
-                    x2="156"
-                    y2="158"
-                    style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-                    markerEnd="url(#flowArrow)"
-                  />
-                  <rect
-                    x="162"
-                    y="116"
-                    width="126"
-                    height="84"
-                    rx="8"
-                    style={{
-                      fill: "var(--color-paper)",
-                      stroke: "var(--color-rule-2)",
-                      strokeWidth: 1.5,
-                    }}
-                  />
-                  <text
-                    x="225"
-                    y="144"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fill: "var(--color-ink)",
-                    }}
-                  >
-                    literature agents
-                  </text>
-                  <text
-                    x="225"
-                    y="164"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    PubMed +
-                  </text>
-                  <text
-                    x="225"
-                    y="182"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    Europe PMC
-                  </text>
-                  <line
-                    x1="292"
-                    y1="158"
-                    x2="310"
-                    y2="158"
-                    style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-                    markerEnd="url(#flowArrow)"
-                  />
-                  <rect
-                    x="316"
-                    y="116"
-                    width="126"
-                    height="84"
-                    rx="8"
-                    style={{
-                      fill: "var(--color-accent-wash)",
-                      stroke: "var(--color-accent)",
-                      strokeWidth: 2,
-                    }}
-                  />
-                  <text
-                    x="379"
-                    y="144"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fill: "var(--color-accent-deep)",
-                    }}
-                  >
-                    Spark brief
-                  </text>
-                  <text
-                    x="379"
-                    y="164"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    targets · mechs
-                  </text>
-                  <text
-                    x="379"
-                    y="182"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    avoid list
-                  </text>
-                  <line
-                    x1="446"
-                    y1="158"
-                    x2="464"
-                    y2="158"
-                    style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-                    markerEnd="url(#flowArrow)"
-                  />
-                  <rect
-                    x="470"
-                    y="116"
-                    width="126"
-                    height="84"
-                    rx="8"
-                    style={{
-                      fill: "var(--color-accent-wash)",
-                      stroke: "var(--color-accent)",
-                      strokeWidth: 2,
-                    }}
-                  />
-                  <text
-                    x="533"
-                    y="144"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fill: "var(--color-accent-deep)",
-                    }}
-                  >
-                    Spark proposes
-                  </text>
-                  <text
-                    x="533"
-                    y="164"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    compiler proves
-                  </text>
-                  <text
-                    x="533"
-                    y="182"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    until it passes
-                  </text>
-                  <line
-                    x1="600"
-                    y1="158"
-                    x2="618"
-                    y2="158"
-                    style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-                    markerEnd="url(#flowArrow)"
-                  />
-                  <rect
-                    x="624"
-                    y="116"
-                    width="126"
-                    height="84"
-                    rx="8"
-                    style={{
-                      fill: "var(--color-paper)",
-                      stroke: "var(--color-rule-2)",
-                      strokeWidth: 1.5,
-                    }}
-                  />
-                  <text
-                    x="687"
-                    y="144"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fill: "var(--color-ink)",
-                    }}
-                  >
-                    peptide → LBP
-                  </text>
-                  <text
-                    x="687"
-                    y="164"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    brewed in
-                  </text>
-                  <text
-                    x="687"
-                    y="182"
-                    textAnchor="middle"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 12,
-                      fill: "var(--color-ink-2)",
-                    }}
-                  >
-                    the gut
-                  </text>
+                  {[
+                    { x: 14, accent: false, lines: ["name the", "disease"] },
+                    {
+                      x: 166,
+                      accent: false,
+                      lines: ["literature agents", "PubMed +", "Europe PMC"],
+                    },
+                    {
+                      x: 318,
+                      accent: true,
+                      lines: ["Spark brief", "targets · mechs", "avoid list"],
+                    },
+                    {
+                      x: 470,
+                      accent: true,
+                      lines: [
+                        "Spark proposes",
+                        "compiler proves",
+                        "until it passes",
+                      ],
+                    },
+                    {
+                      x: 622,
+                      accent: false,
+                      lines: ["peptide → LBP", "brewed in", "the gut"],
+                    },
+                  ].map((node, i) => {
+                    const cx = node.x + 62;
+                    const ys =
+                      node.lines.length === 2 ? [99, 117] : [91, 109, 127];
+                    return (
+                      <g key={node.lines[0]}>
+                        <rect
+                          x={node.x}
+                          y={64}
+                          width={124}
+                          height={82}
+                          rx={8}
+                          style={
+                            node.accent
+                              ? {
+                                  fill: "var(--color-accent-wash)",
+                                  stroke: "var(--color-accent)",
+                                  strokeWidth: 2,
+                                }
+                              : {
+                                  fill: "var(--color-paper)",
+                                  stroke: "var(--color-rule-2)",
+                                  strokeWidth: 1.5,
+                                }
+                          }
+                        />
+                        {node.lines.map((line, j) => (
+                          <text
+                            key={line}
+                            x={cx}
+                            y={ys[j]}
+                            textAnchor="middle"
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: j === 0 ? 13 : 12,
+                              fontWeight: j === 0 ? 600 : 400,
+                              fill:
+                                j === 0 && node.accent
+                                  ? "var(--color-accent-deep)"
+                                  : j === 0
+                                    ? "var(--color-ink)"
+                                    : "var(--color-ink-2)",
+                            }}
+                          >
+                            {line}
+                          </text>
+                        ))}
+                        <circle
+                          cx={cx}
+                          cy={64}
+                          r={13}
+                          style={{
+                            fill: "var(--color-accent)",
+                            stroke: "var(--color-paper)",
+                            strokeWidth: 3,
+                          }}
+                        />
+                        <text
+                          x={cx}
+                          y={69}
+                          textAnchor="middle"
+                          style={{
+                            fontFamily: "var(--font-display)",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            fill: "var(--color-accent-ink)",
+                          }}
+                        >
+                          {i + 1}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  {[138, 290, 442, 594].map((x1) => (
+                    <line
+                      key={x1}
+                      x1={x1}
+                      y1={105}
+                      x2={x1 + 28}
+                      y2={105}
+                      style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
+                      markerEnd="url(#flowArrow)"
+                    />
+                  ))}
                   <text
                     x="380"
-                    y="262"
+                    y={200}
                     textAnchor="middle"
                     style={{
                       fontFamily: "var(--font-display)",
@@ -836,6 +870,78 @@ export default function BiologyPage() {
                   IBD is one row. Every figure below links to its
                   source, opening in a new tab:
                 </p>
+              </div>
+              <div
+                className={styles.marketBars}
+                role="img"
+                aria-label="2025 global therapeutic market sizes, largest to smallest: type 2 diabetes 68.4 billion dollars, IBD 29.6, atopic dermatitis 17, obesity 15.5, IBS 3.1, C. difficile about 1 billion dollars."
+              >
+                <div className={styles.marketBarRow}>
+                  <span className={styles.marketBarLabel}>
+                    Type 2 diabetes
+                  </span>
+                  <span className={styles.marketBarTrack}>
+                    <span
+                      className={styles.marketBarFill}
+                      style={{ width: "100%" }}
+                    />
+                  </span>
+                  <span className={styles.marketBarValue}>$68.4B</span>
+                </div>
+                <div className={styles.marketBarRow}>
+                  <span className={styles.marketBarLabel}>IBD</span>
+                  <span className={styles.marketBarTrack}>
+                    <span
+                      className={styles.marketBarFill}
+                      style={{ width: "43.3%" }}
+                    />
+                  </span>
+                  <span className={styles.marketBarValue}>$29.6B</span>
+                </div>
+                <div className={styles.marketBarRow}>
+                  <span className={styles.marketBarLabel}>
+                    Atopic dermatitis
+                  </span>
+                  <span className={styles.marketBarTrack}>
+                    <span
+                      className={styles.marketBarFill}
+                      style={{ width: "24.9%" }}
+                    />
+                  </span>
+                  <span className={styles.marketBarValue}>$17.0B</span>
+                </div>
+                <div className={styles.marketBarRow}>
+                  <span className={styles.marketBarLabel}>Obesity</span>
+                  <span className={styles.marketBarTrack}>
+                    <span
+                      className={styles.marketBarFill}
+                      style={{ width: "22.7%" }}
+                    />
+                  </span>
+                  <span className={styles.marketBarValue}>$15.5B</span>
+                </div>
+                <div className={styles.marketBarRow}>
+                  <span className={styles.marketBarLabel}>IBS</span>
+                  <span className={styles.marketBarTrack}>
+                    <span
+                      className={styles.marketBarFill}
+                      style={{ width: "4.5%" }}
+                    />
+                  </span>
+                  <span className={styles.marketBarValue}>$3.1B</span>
+                </div>
+                <div className={styles.marketBarRow}>
+                  <span className={styles.marketBarLabel}>
+                    C. difficile
+                  </span>
+                  <span className={styles.marketBarTrack}>
+                    <span
+                      className={styles.marketBarFill}
+                      style={{ width: "1.5%" }}
+                    />
+                  </span>
+                  <span className={styles.marketBarValue}>~$1.0B</span>
+                </div>
               </div>
               <table className={styles.paperTable}>
                 <thead>
@@ -1150,6 +1256,110 @@ export default function BiologyPage() {
                   </tr>
                 </tbody>
               </table>
+              <figure className={styles.wrapDiagram}>
+                <svg
+                  viewBox="0 0 760 140"
+                  role="img"
+                  aria-labelledby="costTitle costDesc"
+                >
+                  <title id="costTitle">
+                    Build costs on a log scale, free to ten million dollars
+                  </title>
+                  <desc id="costDesc">
+                    A log axis from ten dollars to ten million. Dots mark
+                    each ladder rung at its midpoint: free AI design, DNA
+                    near seventy dollars, strain build near three thousand,
+                    wet-lab loop near six thousand, lead program near one
+                    hundred thousand, GMP near two million, Phase 1 near
+                    six and a half million.
+                  </desc>
+                  <line
+                    x1="60"
+                    y1="92"
+                    x2="730"
+                    y2="92"
+                    style={{ stroke: "var(--color-muted)", strokeWidth: 1.5 }}
+                  />
+                  {[
+                    { x: 60, label: "$10" },
+                    { x: 172, label: "$100" },
+                    { x: 283, label: "$1k" },
+                    { x: 395, label: "$10k" },
+                    { x: 507, label: "$100k" },
+                    { x: 618, label: "$1M" },
+                    { x: 730, label: "$10M" },
+                  ].map((tick) => (
+                    <g key={tick.label}>
+                      <line
+                        x1={tick.x}
+                        y1={86}
+                        x2={tick.x}
+                        y2={98}
+                        style={{
+                          stroke: "var(--color-muted)",
+                          strokeWidth: 1.5,
+                        }}
+                      />
+                      <text
+                        x={tick.x}
+                        y={120}
+                        textAnchor="middle"
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontSize: 12,
+                          fill: "var(--color-muted)",
+                        }}
+                      >
+                        {tick.label}
+                      </text>
+                    </g>
+                  ))}
+                  {[
+                    { x: 24, label: "free", y: 62, hollow: true },
+                    { x: 154, label: "DNA", y: 38, hollow: false },
+                    { x: 344, label: "strain", y: 62, hollow: false },
+                    { x: 370, label: "loop", y: 38, hollow: false },
+                    { x: 507, label: "lead", y: 62, hollow: false },
+                    { x: 652, label: "GMP", y: 38, hollow: false },
+                    { x: 709, label: "Ph1", y: 62, hollow: false },
+                  ].map((dot) => (
+                    <g key={dot.label}>
+                      <circle
+                        cx={dot.x}
+                        cy={92}
+                        r={6}
+                        style={
+                          dot.hollow
+                            ? {
+                                fill: "var(--color-paper)",
+                                stroke: "var(--color-accent)",
+                                strokeWidth: 2.5,
+                              }
+                            : { fill: "var(--color-accent)" }
+                        }
+                      />
+                      <text
+                        x={dot.x}
+                        y={dot.y}
+                        textAnchor="middle"
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          fill: "var(--color-ink)",
+                        }}
+                      >
+                        {dot.label}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+                <figcaption>
+                  Five orders of magnitude: each dot sits at the midpoint
+                  of its table range, from a $35 DNA fragment to a $10M
+                  clinic. The hollow dot is this website &mdash; free.
+                </figcaption>
+              </figure>
               <div className={styles.bioProse}>
                 <p>
                   Read the first four rows as the AI dividend. Without
@@ -1179,8 +1389,8 @@ export default function BiologyPage() {
                   catastrophic. LBPs invert the cost stack. Culturing
                   microbes is cheap even with GMP overhead, so the
                   scarce resource is not manufacturing &mdash; it is
-                  knowing which payload to brew. A format where design
-                  is the bottleneck rewards the oldest idea in the
+                  knowing which payload to brew. A format where the debt
+                  hides in the design rewards the oldest idea in the
                   field: think first, build once.
                 </p>
                 <p>
@@ -1236,9 +1446,9 @@ export default function BiologyPage() {
               <div className={styles.bioProse}>
                 <p>
                   Two LBPs are FDA-approved for recurrent{" "}
-                  <em>C. difficile</em> (see the{" "}
-                  <Link href="/lbp">LBP guide</Link>). Everything below
-                  is the expansion pack: resident flora, engineered
+                  <em>C. difficile</em> (see{" "}
+                  <a href="#lbp">Living medicines</a>, above). Everything
+                  below is the expansion pack: resident flora, engineered
                   into programmable factories at every body site
                   &mdash; each one hungry for payloads this designer
                   can supply.
@@ -1320,6 +1530,53 @@ export default function BiologyPage() {
             <div id="sources">
               <h2>Sources</h2>
               <ul className={styles.trace}>
+                <li>
+                  <a
+                    href="https://www.frontiersin.org/journals/microbiology/articles/10.3389/fmicb.2026.2002085/full"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Engineered live biotherapeutic products: design
+                    decisions and clinical translation
+                  </a>,{" "}Frontiers in Microbiology (approvals, engineered
+                  frontier)
+                </li>
+                <li>
+                  <a
+                    href="https://conferences.medicom-publishers.com/specialisation/gastroenterology/spore-therapy-cuts-c-difficile-reinfection-by-68-in-8-week-study/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ECOSPOR III: spore therapy cuts reinfection by 68%
+                  </a>,{" "}NEJM trial report (Vowst 12% vs 40%)
+                </li>
+                <li>
+                  <a
+                    href="https://pulse2.com/vedanta-biosciences-raises-60-million-to-advance-phase-3-ve303-study/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Vedanta advances Phase 3 VE303 study
+                  </a>,{" "}RESTORATiVE303 timelines
+                </li>
+                <li>
+                  <a
+                    href="https://www.globenewswire.com/news-release/2026/08/05/3339196/0/en/seres-therapeutics-reports-second-quarter-2026-financial-results-and-provides-business-updates-including-further-action-to-reduce-ongoing-facilities-costs.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Seres Q2 2026 update
+                  </a>,{" "}SER-155 Phase 2 readiness
+                </li>
+                <li>
+                  <a
+                    href="https://www.biospace.com/maat-pharma-announces-first-patient-dosed-in-phase-2b-randomized-clinical-trial-evaluating-maat033-in-patients-receiving-allo-hsct"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    MaaT Pharma doses first Phase 2b patient
+                  </a>,{" "}MaaT033 PHOEBUS trial
+                </li>
                 <li>
                   <a
                     href="https://www.grandviewresearch.com/press-release/global-live-biotherapeutic-products-microbiome-cdmo-market"

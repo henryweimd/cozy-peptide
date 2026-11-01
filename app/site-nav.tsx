@@ -7,12 +7,11 @@ import styles from "./page.module.css";
  * call to action, and in-page navigation lives in a subnav below.
  */
 
-export type SitePage = "home" | "design" | "lbp" | "biology";
+export type SitePage = "home" | "design" | "biology";
 
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
   { id: "biology", href: "/biology", label: "Bio & Business" },
-  { id: "lbp", href: "/lbp", label: "Live Biotherapeutic Product" },
 ];
 
 /**

@@ -118,7 +118,9 @@ Full version with the LBP universe beyond the gut, market figures, and build
 costs from DNA to GMP:
 [cozy-peptide.vercel.app/biology](https://cozy-peptide.vercel.app/biology).
 
-**Safe by design, approved by precedent.** The chassis is GRAS yeast with
+**Safety by design.** Nothing here is approved, and nothing claims to be —
+the designer reviews and revises every candidate against regulatory
+precedent and sound scientific reasoning. The chassis is GRAS yeast with
 decades of safe use; it never colonizes and clears within days of the last
 dose; engineered auxotrophy and CRISPR kill switches contain it; and every
 peptide passes the compiler first. Regulators already know this category:
@@ -480,22 +482,21 @@ design call to action):
   **Recent designs** ledger table (ten at a time with a pager; any
   row reopens the full pipeline output), and the service-provider
   directory.
-- **`/biology`** — Bio & Business: the factory-model biology and
-  what LBPs make, the payload-design bottleneck (six constraints plus
-  a biology-first expert companion), how the designer clears it
-  end to end with the literature-first process flow, a navy-band
-  business case (IBD worked example plus a worldwide therapeutic
-  markets table with LBP approach, payload angle, and host plus body
-  site per row, figures hyperlinked to new-tab sources), build costs
-  from DNA to
-  GMP by company stage with the AI-dividend and rational-design case,
-  the one-person-biotech thesis, and the
-  factory-at-every-body-site vision with sources.
-- **`/lbp`** — the Live Biotherapeutic Product guide: what LBPs are,
-  the two FDA-approved products, the late-stage pipeline, and how
-  designed peptides turn microbes into living drug factories,
-  illustrated with wordless story images (design → insert →
-  produce).
+- **`/biology`** — Bio & Business, merged with the former LBP
+  guide: what LBPs are (garden model, colonization resistance, the
+  *C. difficile* proof), the two FDA-approved products, the
+  late-stage pipeline, and the design → insert → produce story
+  images; then the factory-model biology and what LBPs make, the
+  payload hidden debt (six icon-marked constraints plus
+  a biology-first expert companion), how the designer
+  clears it end to end with the numbered literature-first process
+  flow, a navy-band business case (IBD worked example, market-scale
+  bars, plus a worldwide therapeutic markets table with LBP approach,
+  payload angle, and host plus body site per row, figures hyperlinked
+  to new-tab sources), build costs from DNA to GMP by company stage
+  with a log-scale cost strip and the AI-dividend and rational-design
+  case, the one-person-biotech thesis, and the
+  factory-at-every-body-site vision with new-tab sources.
 
 Pick one of thirteen preset gut conditions from the grid — or choose
 Other and describe your own condition in free text. Custom input
