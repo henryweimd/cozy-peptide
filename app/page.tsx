@@ -154,12 +154,6 @@ export default function Home() {
                 probiotics can make it where it&apos;s needed.
               </p>
               <div className={styles.heroactions}>
-                <a
-                  className={`${styles.btn} ${styles.btnPrimary}`}
-                  href="/design?tour=1"
-                >
-                  Design your first peptide with Pep
-                </a>
                 <a className={styles.btn} href="#api">
                   Read the API call
                 </a>
@@ -807,19 +801,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          className={`${styles.band} ${styles.bandWash}`}
-          aria-label="Design another peptide"
-        >
-          <div className={`container ${styles.closerow}`}>
-            <p className={styles.closeline}>
-              The board is live. Pick a condition.
-            </p>
-            <a className={`${styles.btn} ${styles.btnPrimary}`} href="/design">
-              Design a peptide
-            </a>
-          </div>
-        </section>
       </main>
 
       <footer className={styles.footer}>

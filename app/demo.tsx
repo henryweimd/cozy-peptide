@@ -54,10 +54,12 @@ export default function Demo() {
         setError("Describe a gut condition first.");
         return;
       }
-      router.push(`/design?custom=${encodeURIComponent(target)}`);
+      router.push(
+        `/design?custom=${encodeURIComponent(target)}&tour=1`
+      );
       return;
     }
-    router.push(`/design?target=${encodeURIComponent(presetId)}`);
+    router.push(`/design?target=${encodeURIComponent(presetId)}&tour=1`);
   }
 
   return (
@@ -145,7 +147,7 @@ export default function Demo() {
       >
         {cooling
           ? `Next design in ${formatCountdown(remaining)}`
-          : "Design my peptide"}
+          : "Design your first peptide with Pep"}
       </button>
       {error !== null && (
         <p className={styles.errorbox} role="alert">
