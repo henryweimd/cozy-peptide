@@ -391,9 +391,13 @@ test("roadmap stubs render future functionality honestly", async () => {
     ["wetlab-feedback", "potency-prediction", "gut-safety-panel"]
   );
   for (const stub of ROADMAP_STUBS) {
-    assert.equal(stub.badge, FUTURE_BADGE);
     assert.ok(stub.summary.length > 0);
     assert.ok(stub.how.length > 20);
+    if (stub.liveHref === undefined) {
+      assert.equal(stub.badge, FUTURE_BADGE);
+    } else {
+      assert.ok(stub.liveHref.startsWith("/"));
+    }
   }
   const results = await runAgentTools({
     candidate: KNOTTIN,
@@ -402,7 +406,9 @@ test("roadmap stubs render future functionality honestly", async () => {
     charge_target: 4,
   });
   assert.equal(results.length, AGENT_TOOLS.length);
-  for (const stub of ROADMAP_STUBS) {
+  for (const stub of ROADMAP_STUBS.filter(
+    (entry) => entry.liveHref === undefined
+  )) {
     const hit = results.find((entry) => entry.tool === stub.id);
     assert.equal(hit?.status, "not-configured");
     assert.ok((hit?.detail ?? "").includes(stub.how));

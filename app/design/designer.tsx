@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import styles from "../page.module.css";
 import FocusedPeptide from "../focused-peptide";
@@ -819,7 +820,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           <section aria-label="Coming next">
             <h3>
               <SectionIcon name="clock" />
-              Coming next
+              Roadmap
             </h3>
             <FutureStubs />
           </section>
@@ -840,6 +841,22 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                   " (provisional codons — the vendor re-optimizes)"}
               </p>
               <HandoffDownloads result={result} />
+              {(() => {
+                const guideRun = result.run_id ?? streamRunId ?? null;
+                return (
+                  <p className={styles.handoffline}>
+                    <Link
+                      href={
+                        guideRun === null
+                          ? "/lab-guide"
+                          : `/lab-guide?run=${guideRun}`
+                      }
+                    >
+                      Open the Lab Guide — bench steps plus result upload
+                    </Link>
+                  </p>
+                );
+              })()}
               {handoff.host !== undefined && (
                 <ProviderDirectory host={handoff.host} />
               )}

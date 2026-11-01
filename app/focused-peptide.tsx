@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import styles from "./page.module.css";
 import SectionIcon from "./section-icons";
 import {
@@ -557,6 +558,11 @@ export default function FocusedPeptide({
                 Lab handoff
               </h4>
               <HandoffDownloads result={downloadResult} />
+              <p className={styles.handoffline}>
+                <Link href={`/lab-guide?run=${runId}`}>
+                  Open the Lab Guide — bench steps plus result upload
+                </Link>
+              </p>
             </>
           )}
 

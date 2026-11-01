@@ -95,12 +95,14 @@ const offTargetPanelTool: AgentTool = {
 };
 
 /**
- * Roadmap tools: wet-lab feedback, potency prediction, and the gut
- * safety panel, built from the shared roadmap registry so the API
- * detail and the web app's "Future functionality" cards can never
- * disagree about what each capability will do.
+ * Roadmap tools: the not-yet-live registry entries (shipped ones link
+ * out instead), built from the shared roadmap registry so the API
+ * detail and the web app's roadmap list can never disagree about what
+ * each capability will do.
  */
-const roadmapTools: AgentTool[] = ROADMAP_STUBS.map((stub) => ({
+const roadmapTools: AgentTool[] = ROADMAP_STUBS.filter(
+  (stub) => stub.liveHref === undefined
+).map((stub) => ({
   name: stub.id,
   description: `${stub.title}: ${stub.summary} Stub: no backend configured.`,
   invoke: async (input) => {
