@@ -33,9 +33,10 @@ function metaLine(run: RecentRun): string {
 }
 
 /**
- * Subtle recent-designs strip for the landing demo board. Renders
- * nothing until rows arrive, and hides on any fault — the ledger is
- * ambient, never load-bearing for the page.
+ * Most-recent-design spotlight for the landing demo board: exactly
+ * one run, labeled as such, with a link into the Design page's full
+ * recent list. Renders nothing until the row arrives, and hides on
+ * any fault — the ledger is ambient, never load-bearing.
  */
 export default function Recent({
   onUse,
@@ -47,7 +48,7 @@ export default function Recent({
 
   useEffect(() => {
     let live = true;
-    fetch("/api/recent-peptides?limit=3")
+    fetch("/api/recent-peptides?limit=1")
       .then((response) =>
         response.ok ? response.json() : Promise.reject(new Error("feed"))
       )
@@ -70,32 +71,36 @@ export default function Recent({
   }, []);
 
   if (runs === null || runs.length === 0) return null;
+  const run = runs[0] as RecentRun;
   return (
-    <aside className={styles.recent} aria-label="Recently designed peptides">
-      <p className={styles.recentTitle}>Fresh from the pipeline</p>
+    <aside className={styles.recent} aria-label="Most recently designed peptide">
+      <p className={styles.recentTitle}>Most recent design</p>
       <ol className={styles.recentList}>
-        {runs.map((run) => (
-          <li key={run.id}>
-            <code className={styles.recentSeq} title={run.target}>
-              {run.candidateSequence ?? run.candidateId ?? "—"}
-            </code>
-            <span className={styles.recentMeta}>
-              {run.target} — {timeAgo(run.createdAt, now)}
-              {metaLine(run).length > 0 ? `, ${metaLine(run)}` : ""}
-            </span>
-            {onUse !== undefined && run.candidateSequence !== null && (
-              <button
-                type="button"
-                className={styles.usebutton}
-                onClick={() => onUse(run)}
-                aria-label={`View structure of ${run.candidateId ?? "peptide"}`}
-              >
-                View structure
-              </button>
-            )}
-          </li>
-        ))}
+        <li key={run.id}>
+          <code className={styles.recentSeq} title={run.target}>
+            {run.candidateSequence ?? run.candidateId ?? "—"}
+          </code>
+          <span className={styles.recentMeta}>
+            {run.target} — {timeAgo(run.createdAt, now)}
+            {metaLine(run).length > 0 ? `, ${metaLine(run)}` : ""}
+          </span>
+          {onUse !== undefined && run.candidateSequence !== null && (
+            <button
+              type="button"
+              className={styles.usebutton}
+              onClick={() => onUse(run)}
+              aria-label={`View structure of ${run.candidateId ?? "peptide"}`}
+            >
+              View structure
+            </button>
+          )}
+        </li>
       </ol>
+      <p className={styles.recentMeta}>
+        <a className={styles.designerlink} href="/design#recent-runs">
+          See recently designed peptides
+        </a>
+      </p>
     </aside>
   );
 }

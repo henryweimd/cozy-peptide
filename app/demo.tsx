@@ -65,7 +65,7 @@ export default function Demo() {
         live pipeline.
       </p>
       <div
-        className={styles.cells}
+        className={`${styles.cells} ${styles.cellsGrid}`}
         role="group"
         aria-label="Condition to design for"
       >

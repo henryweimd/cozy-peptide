@@ -43,3 +43,11 @@ test("design params reject bad ids and fall through to idle", () => {
   );
   assert.ok((long.custom ?? "").length <= 200);
 });
+
+test("auto scaffold resolves to a valid default modality", async () => {
+  const { AUTO_MODALITY, AUTO_MODALITY_REASON, MODALITIES, modalityLabel } =
+    await import("../lib/modality");
+  assert.ok((MODALITIES as readonly string[]).includes(AUTO_MODALITY));
+  assert.ok(AUTO_MODALITY_REASON.length > 0);
+  assert.equal(modalityLabel(AUTO_MODALITY), "Knottin 6C");
+});

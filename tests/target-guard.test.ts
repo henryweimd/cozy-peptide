@@ -162,3 +162,31 @@ test("demo stream accepts guarded custom conditions", async () => {
   );
   assert.equal(rejected.status, 400);
 });
+
+test("guard recovery suggestions all pass the guard", async () => {
+  const { GUARD_RECOVERY_SUGGESTIONS } = await import(
+    "../lib/demo-config"
+  );
+  assert.ok(GUARD_RECOVERY_SUGGESTIONS.length >= 4);
+  for (const suggestion of GUARD_RECOVERY_SUGGESTIONS) {
+    const verdict = guardCustomTarget(suggestion);
+    assert.equal(
+      verdict.ok,
+      true,
+      `suggestion rejected: ${suggestion} (${verdict.error ?? "unknown"})`
+    );
+  }
+});
+
+test("all demo preset targets pass the guard", async () => {
+  const { DEMO_PRESETS } = await import("../lib/demo-config");
+  assert.ok(DEMO_PRESETS.length >= 11);
+  for (const preset of DEMO_PRESETS) {
+    const verdict = guardCustomTarget(preset.target);
+    assert.equal(
+      verdict.ok,
+      true,
+      `preset rejected: ${preset.id} (${verdict.error ?? "unknown"})`
+    );
+  }
+});

@@ -11,6 +11,29 @@ export type Modality = "knottin-6c" | "disulfide-4c" | "disulfide-2c" | "linear"
 
 export const DEFAULT_MODALITY: Modality = "knottin-6c";
 
+/**
+ * Hands-off scaffold choice: the designer defaults to Auto, which
+ * resolves to the knottin — the most disulfide-constrained and
+ * protease-resilient scaffold, hence the safest default for a peptide
+ * that must survive the gut. Power users can still pick explicitly.
+ */
+export const AUTO_MODALITY: Modality = DEFAULT_MODALITY;
+export const AUTO_MODALITY_REASON =
+  "Knottin 6C: most stable in the gut — the safest default";
+
+export function modalityLabel(modality: Modality): string {
+  switch (modality) {
+    case "knottin-6c":
+      return "Knottin 6C";
+    case "disulfide-4c":
+      return "Disulfide 4C";
+    case "disulfide-2c":
+      return "Disulfide 2C";
+    case "linear":
+      return "Linear";
+  }
+}
+
 export const MODALITIES: Modality[] = [
   "knottin-6c",
   "disulfide-4c",

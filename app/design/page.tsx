@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import styles from "../page.module.css";
+import SiteNav from "../site-nav";
 import Designer from "./designer";
 
 export const metadata: Metadata = {
-  title: "Full designer — cozy-peptide",
+  title: "Design a peptide — cozy-peptide",
   description:
-    "Design a peptide with full controls: condition, scaffold, charge, and literature research, with live design status.",
+    "Name a gut condition: AI-drafted, compiler-verified peptides with 3D structure and lab-ready DNA orders.",
 };
 
 const PROCESS_STEPS: Array<{
@@ -63,24 +64,15 @@ export default function DesignPage() {
       <a className={styles.skip} href="#main">
         Skip to content
       </a>
-      <header className={styles.topbar}>
-        <div className={`container ${styles.masthead}`}>
-          <Link className={styles.wordmark} href="/" aria-label="cozy-peptide home">
-            cozy-peptide
-          </Link>
-          <nav className={styles.navrow} aria-label="Sections">
-            <Link className={styles.navlink} href="/#api">
-              the API call
-            </Link>
-            <Link className={styles.navlink} href="/#pipeline">
-              the pipeline
-            </Link>
-            <Link className={styles.navlink} href="/#safety">
-              safety
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteNav
+        current="design"
+        sections={[
+          { href: "/#api", label: "the API call" },
+          { href: "/#pipeline", label: "the pipeline" },
+          { href: "/#safety", label: "safety" },
+        ]}
+        action={{ href: "#design-controls", label: "Start designing" }}
+      />
       <nav className={styles.subnav} aria-label="On this page">
         <div className="container">
           <a href="#how-it-works">How it works</a>
@@ -95,10 +87,12 @@ export default function DesignPage() {
         <section className={styles.section} aria-labelledby="design-title">
           <div className="container">
             <div className={styles.headblock}>
-              <h1 id="design-title">The full designer</h1>
+              <h1 id="design-title">Design a peptide</h1>
               <p className="lead">
-                Every control the demo holds back: scaffold, charge, and
-                the literature research stage.
+                Name a gut condition. Muse Spark drafts candidates on
+                the best scaffold for the job, a symbolic compiler
+                verifies them, and you get a sequence, 3D structure,
+                and a lab-ready DNA order.
               </p>
             </div>
             <div id="how-it-works">

@@ -46,6 +46,56 @@ export const DEMO_PRESETS: DemoPreset[] = [
     label: "Traveler's diarrhea (E. coli)",
     target: "Enterotoxigenic E. coli gut colonization blockade",
   },
+  {
+    id: "bile-acid",
+    label: "Bile acid diarrhea",
+    target: "bile acid diarrhea",
+  },
+  {
+    id: "sibo",
+    label: "SIBO overgrowth",
+    target: "small intestinal bacterial overgrowth",
+  },
+  {
+    id: "uc",
+    label: "Ulcerative colitis",
+    target: "ulcerative colitis gut inflammation",
+  },
+  {
+    id: "cjejuni",
+    label: "C. jejuni infection",
+    target: "Campylobacter jejuni gut colonization",
+  },
+  {
+    id: "salmonella",
+    label: "Salmonella blockade",
+    target: "Salmonella gut colonization blockade",
+  },
+  {
+    id: "dysbiosis",
+    label: "Post-antibiotic dysbiosis",
+    target: "gut dysbiosis after antibiotics",
+  },
+  {
+    id: "cholera",
+    label: "Cholera colonization",
+    target: "Vibrio cholerae gut colonization",
+  },
+];
+
+/**
+ * Recovery suggestions offered when free-text input fails the guard:
+ * valid gut conditions deliberately outside the presets and the
+ * stock examples, so a rejected visitor has somewhere to go.
+ * Covered by a test asserting each one passes the guard.
+ */
+export const GUARD_RECOVERY_SUGGESTIONS: string[] = [
+  "small intestinal bacterial overgrowth",
+  "ulcerative colitis gut inflammation",
+  "gut dysbiosis after antibiotics",
+  "C. jejuni gut colonization",
+  "microscopic colitis diarrhea",
+  "cholera gut colonization",
 ];
 
 export function isDemoPresetTarget(target: string): boolean {

@@ -1933,3 +1933,80 @@
   margin-bottom: 0.4rem;
   overflow-wrap: anywhere;
 }
+
+.guardbox {
+  margin-top: var(--space-md);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-input);
+  padding: var(--space-md);
+  background: color-mix(in oklab, var(--color-error) 7%, transparent);
+  font-size: var(--text-md);
+}
+
+.guardbox p {
+  margin: 0 0 var(--space-xs);
+}
+
+.guardbox p:last-child {
+  margin-bottom: 0;
+}
+
+.guardtitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--color-error);
+}
+
+.guardsub {
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.guardchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+.optdetails {
+  align-self: start;
+}
+
+.optdetails summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+  list-style-position: outside;
+}
+
+.optdetails .cells {
+  margin-top: var(--space-xs);
+}
+
+.diagram {
+  margin: var(--space-lg) 0;
+  max-width: 46rem;
+}
+
+.diagram svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.diagram svg text {
+  font-family: var(--font-body);
+  font-size: 15px;
+  fill: var(--color-ink);
+}
+
+.diagramcap {
+  font-size: 12.5px;
+  fill: var(--color-ink-2);
+}
+
+.cellsGrid {
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}

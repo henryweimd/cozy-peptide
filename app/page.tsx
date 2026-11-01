@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Demo from "./demo";
 import Field from "./field";
+import SiteNav from "./site-nav";
 import styles from "./page.module.css";
 
 const CURL_EXAMPLE = `curl -X POST https://cozy-peptide.vercel.app/api/generate-peptide \\
@@ -72,33 +73,17 @@ export default function Home() {
       <a className={styles.skip} href="#main">
         Skip to content
       </a>
-      <header className={styles.topbar}>
-        <div className={`container ${styles.masthead}`}>
-          <a className={styles.wordmark} href="#top" aria-label="cozy-peptide home">
-            cozy-peptide
-          </a>
-          <nav className={styles.navrow} aria-label="Sections">
-            <a className={styles.navlink} href="#demo">
-              the demo
-            </a>
-            <a className={styles.navlink} href="#biology">
-              the biology
-            </a>
-            <a className={styles.navlink} href="#api">
-              the API call
-            </a>
-            <a className={styles.navlink} href="#pipeline">
-              the pipeline
-            </a>
-            <a className={styles.navlink} href="#safety">
-              safety
-            </a>
-            <a className={`${styles.btn} ${styles.navbtn}`} href="#demo">
-              Design a peptide
-            </a>
-          </nav>
-        </div>
-      </header>
+      <SiteNav
+        current="home"
+        sections={[
+          { href: "#demo", label: "the demo" },
+          { href: "#biology", label: "the biology" },
+          { href: "#api", label: "the API call" },
+          { href: "#pipeline", label: "the pipeline" },
+          { href: "#safety", label: "safety" },
+        ]}
+        action={{ href: "#demo", label: "Design a peptide" }}
+      />
 
       <main className={styles.main} id="main">
         <section className={styles.hero} aria-labelledby="page-title">

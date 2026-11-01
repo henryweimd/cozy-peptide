@@ -19,8 +19,14 @@ import {
   DEMO_CHARGE_TARGET,
   DEMO_COOLDOWN_SECONDS,
   DEMO_PRESETS,
+  GUARD_RECOVERY_SUGGESTIONS,
 } from "../../lib/demo-config";
 import { CUSTOM_TARGET_MAX_LENGTH } from "../../lib/target-guard";
+import {
+  AUTO_MODALITY,
+  AUTO_MODALITY_REASON,
+  modalityLabel,
+} from "../../lib/modality";
 import type { PipelinePayload, StageEvent } from "../pipeline-shared";
 import ReportDialog, { type ReportSource } from "../report-dialog";
 import RecentRunsTable from "../recent-runs-table";
@@ -75,8 +81,17 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   // interactive.
   const locked =
     initial.presetId !== undefined || initial.custom !== undefined;
-  const [modality, setModality] = useState<string>("knottin-6c");
-  const [charge, setCharge] = useState<number>(DEMO_CHARGE_TARGET);
+  const [modality, setModality] = useState<string>("auto");
+  const resolvedModality = modality === "auto" ? AUTO_MODALITY : modality;
+  const scaffoldSummary =
+    modality === "auto"
+      ? `Auto (${modalityLabel(AUTO_MODALITY)})`
+      : (MODALITIES.find((entry) => entry.value === modality)?.label ??
+        modality);
+  const [charge, setCharge] = useState<number | "auto">("auto");
+  const resolvedCharge = charge === "auto" ? DEMO_CHARGE_TARGET : charge;
+  const chargeSummary =
+    charge === "auto" ? `Auto (+${DEMO_CHARGE_TARGET})` : `+${charge}`;
   const [research, setResearch] = useState(true);
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -85,6 +100,9 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const [events, setEvents] = useState<StageEvent[]>([]);
   const [result, setResult] = useState<PipelinePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<"validation" | "pipeline" | null>(
+    null
+  );
   const [streamRunId, setStreamRunId] = useState<string | null>(null);
   const [reportSource, setReportSource] = useState<ReportSource | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
@@ -155,12 +173,14 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
     if (target.length === 0 || loading || cooling) {
       if (customActive && custom.trim().length === 0 && !loading && !cooling) {
         setError("Describe a gut condition first.");
+        setErrorKind("validation");
       }
       return;
     }
     setLoading(true);
     setElapsed(0);
     setError(null);
+    setErrorKind(null);
     setResult(null);
     setEvents([]);
     setStreamRunId(null);
@@ -170,8 +190,8 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           target,
-          charge_target: charge,
-          modality,
+          charge_target: resolvedCharge,
+          modality: resolvedModality,
           research,
         }),
       });
@@ -180,6 +200,11 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           .json()
           .catch(() => null)) as PipelinePayload | null;
         setError(payload?.error ?? `Request failed (${response.status}).`);
+        setErrorKind(
+          response.status === 400 || response.status === 422
+            ? "validation"
+            : "pipeline"
+        );
         // Only rate limits consume the cooldown: validation and safety
         // refusals leave the visitor free to fix their input.
         if (response.status === 429) {
@@ -218,10 +243,12 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         setResult(outcome);
       } else {
         setError(outcome?.error ?? "Stream ended without a result.");
+        setErrorKind("pipeline");
       }
       lockCooldown(DEMO_COOLDOWN_SECONDS);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed.");
+      setErrorKind("pipeline");
       lockCooldown(DEMO_COOLDOWN_SECONDS);
     } finally {
       setLoading(false);
@@ -247,7 +274,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
     <div className={styles.designer}>
       <div
         id="design-controls"
-        className={styles.cells}
+        className={`${styles.cells} ${styles.cellsGrid}`}
         role="group"
         aria-label="Condition to design for"
       >
@@ -298,65 +325,111 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             spellCheck={false}
             disabled={locked}
             placeholder="e.g. bile acid diarrhea"
-            onChange={(event) => setCustom(event.target.value)}
+            onChange={(event) => {
+              setCustom(event.target.value);
+              setError(null);
+              setErrorKind(null);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") void generate();
             }}
           />
         </div>
       )}
+      {error !== null && errorKind === "validation" && !loading && (
+        <div className={styles.guardbox} role="alert">
+          <p className={styles.guardtitle}>That condition won&apos;t work</p>
+          <p>{error}</p>
+          <p className={styles.guardsub}>
+            Try one of these instead — tapping one runs it immediately:
+          </p>
+          <div className={styles.guardchips} role="group" aria-label="Suggested conditions">
+            {GUARD_RECOVERY_SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                className={styles.cell}
+                disabled={locked}
+                onClick={() => {
+                  setCustom(suggestion);
+                  setError(null);
+                  setErrorKind(null);
+                  void generate(suggestion);
+                }}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className={styles.optrow}>
-        <div
-          className={styles.cells}
-          role="group"
-          aria-label="Peptide scaffold"
-        >
-          <span className={styles.optlabel} aria-hidden="true">
-            Scaffold
-          </span>
-          {MODALITIES.map((entry) => (
-            <button
-              key={entry.value}
-              type="button"
-              aria-pressed={modality === entry.value}
-              disabled={locked}
-              className={
-                modality === entry.value
-                  ? `${styles.cell} ${styles.cellActive}`
-                  : styles.cell
-              }
-              onClick={() => setModality(entry.value)}
+        {locked ? (
+          <p className={styles.note}>Scaffold: {scaffoldSummary}</p>
+        ) : (
+          <details className={styles.optdetails}>
+            <summary>Scaffold: {scaffoldSummary} (change)</summary>
+            <p className={styles.note}>
+              {AUTO_MODALITY_REASON}. Pick one to override.
+            </p>
+            <div
+              className={styles.cells}
+              role="group"
+              aria-label="Peptide scaffold"
             >
-              {entry.label}
-            </button>
-          ))}
-        </div>
-        <div
-          className={styles.cells}
-          role="group"
-          aria-label="Formal charge target"
-        >
-          <span className={styles.optlabel} aria-hidden="true">
-            Charge
-          </span>
-          {CHARGES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={charge === value}
-              disabled={locked}
-              className={
-                charge === value
-                  ? `${styles.cell} ${styles.cellActive}`
-                  : styles.cell
-              }
-              onClick={() => setCharge(value)}
+              {[{ value: "auto", label: "Auto" }, ...MODALITIES].map(
+                (entry) => (
+                  <button
+                    key={entry.value}
+                    type="button"
+                    aria-pressed={modality === entry.value}
+                    className={
+                      modality === entry.value
+                        ? `${styles.cell} ${styles.cellActive}`
+                        : styles.cell
+                    }
+                    onClick={() => setModality(entry.value)}
+                  >
+                    {entry.label}
+                  </button>
+                )
+              )}
+            </div>
+          </details>
+        )}
+        {locked ? (
+          <p className={styles.note}>Charge: {chargeSummary}</p>
+        ) : (
+          <details className={styles.optdetails}>
+            <summary>Charge: {chargeSummary} (change)</summary>
+            <p className={styles.note}>
+              +{DEMO_CHARGE_TARGET}: the standard default, balancing
+              antimicrobial punch with safety. Pick one to override.
+            </p>
+            <div
+              className={styles.cells}
+              role="group"
+              aria-label="Formal charge target"
             >
-              +{value}
-            </button>
-          ))}
-        </div>
+              {(["auto", ...CHARGES] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={charge === value}
+                  className={
+                    charge === value
+                      ? `${styles.cell} ${styles.cellActive}`
+                      : styles.cell
+                  }
+                  onClick={() => setCharge(value)}
+                >
+                  {value === "auto" ? "Auto" : `+${value}`}
+                </button>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       <label className={styles.checkrow}>
@@ -415,7 +488,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         {showFeed && <EventLog events={events} logRef={logRef} />}
       </div>
 
-      {error !== null && !loading && (
+      {error !== null && errorKind !== "validation" && !loading && (
         <p className={styles.errorbox} role="alert">
           {error}
         </p>
