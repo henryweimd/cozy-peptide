@@ -2,7 +2,7 @@ import type { PipelineEvent } from "../meta-spark";
 import { flagsHighRisk } from "../specificity";
 import { flagsDistantSite } from "../gut-targets";
 import { requestSparkCompletion } from "../spark-client";
-import { DEFAULT_MODEL } from "../spark-config";
+import { DEFAULT_MODEL, shortLabelForModel } from "../spark-config";
 import {
   RETRIEVAL_MAX_RESULTS,
   RETRIEVAL_TIMEOUT_MS,
@@ -83,6 +83,34 @@ export const RESEARCH_SYNTHESIS_TEMPERATURE = 0.2;
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 200;
+/** Status-log titles stay short so the event log stays scannable. */
+const TITLE_LOG_MAX = 110;
+
+function shortTitle(title: string): string {
+  const collapsed = title.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= TITLE_LOG_MAX) return collapsed;
+  return `${collapsed.slice(0, TITLE_LOG_MAX - 1).trimEnd()}…`;
+}
+
+function sourceLabel(source: EvidenceItem["source"]): string {
+  return source === "pubmed" ? "PubMed" : "Europe PMC";
+}
+
+/** One-line highlight of what the brief converged on, for the log. */
+function briefHighlights(brief: ResearchBrief): string {
+  const names = (entries: ResearchEntry[], max: number): string =>
+    entries
+      .map((entry) => entry.name)
+      .filter((name) => name.length > 0)
+      .slice(0, max)
+      .join("; ");
+  const parts: string[] = [];
+  const targets = names(brief.targets, 3);
+  const mechanisms = names(brief.mechanisms, 2);
+  if (targets.length > 0) parts.push(`aiming at ${targets}`);
+  if (mechanisms.length > 0) parts.push(`via ${mechanisms}`);
+  return parts.length > 0 ? ` — ${parts.join(" ")}` : "";
+}
 const cache = new Map<
   string,
   { brief: ResearchBrief; evidence: EvidenceItem[]; expiresAt: number }
@@ -331,24 +359,39 @@ export async function runResearchBrief(
     if (settled) return;
     onEvent?.({ stage: "research", turn: 0, message });
   };
-  const fallback = (reason: string): ResearchProvenance => {
+  // Every fallback announces itself in the event log, and keeps any
+  // retrieved evidence so citations still save and the brief reader
+  // still has papers to show even when synthesis fails.
+  const fail = (
+    reason: string,
+    extra: {
+      evidence?: EvidenceItem[];
+      sources?: ResearchSourceReport[];
+    } = {}
+  ): ResearchProvenance => {
+    emit(
+      `Literature brief unavailable (${reason}) — designing from the static prompt`
+    );
     settled = true;
     return {
       status: "fallback",
       reason,
       latencyMs: Date.now() - startedAt,
-      evidenceCount: 0,
+      evidenceCount: extra.evidence?.length ?? 0,
       cached: false,
-      sources: [],
+      sources: extra.sources ?? [],
+      ...(extra.evidence !== undefined ? { evidence: extra.evidence } : {}),
     };
   };
 
   try {
-    if (budgetMs <= 0) return fallback("Research budget disabled");
+    if (budgetMs <= 0) return fail("Research budget disabled");
     const key = researchCacheKey(target, mechanism);
     const cached = readCache(key);
     if (cached !== null) {
-      emit("Literature brief reused from cache");
+      emit(
+        `Literature brief reused from cache${briefHighlights(cached.brief)}`
+      );
       settled = true;
       return {
         status: "ok",
@@ -361,7 +404,9 @@ export async function runResearchBrief(
       };
     }
 
-    emit(`Researching "${target.trim().slice(0, 80)}" in the literature…`);
+    emit(
+      `Researching "${target.trim().slice(0, 80)}" in PubMed + Europe PMC…`
+    );
     const remaining = (): number => budgetMs - (Date.now() - startedAt);
     const sourceTimeout = Math.min(
       RESEARCH_SOURCE_TIMEOUT_MS,
@@ -393,30 +438,33 @@ export async function runResearchBrief(
         `, Europe PMC ${europepmc.items.length} paper(s)` +
         (europepmc.error !== undefined ? ` (${europepmc.error})` : "")
     );
+    // One log line per retrieved paper so the status panel shows
+    // what actually came back, not just counts.
+    for (const item of evidence) {
+      const year =
+        item.year !== undefined && item.year.length > 0
+          ? ` (${item.year})`
+          : "";
+      emit(
+        `Found in ${sourceLabel(item.source)}${year}: "${shortTitle(item.title)}"`
+      );
+    }
     if (evidence.length === 0) {
-      settled = true;
-      return {
-        status: "fallback",
-        reason: "No literature evidence retrieved",
-        latencyMs: Date.now() - startedAt,
-        evidenceCount: 0,
-        cached: false,
-        sources,
-      };
+      return fail("No literature evidence retrieved", { sources });
     }
 
     const safetySeeds = screenEvidenceSafety(evidence);
+    if (safetySeeds.length > 0) {
+      emit(
+        `Safety screen flagged ${safetySeeds.length} passage(s) for the avoid list`
+      );
+    }
     const synthesisBudget = remaining();
     if (synthesisBudget < 3000) {
-      settled = true;
-      return {
-        status: "fallback",
-        reason: "Research budget exhausted before synthesis",
-        latencyMs: Date.now() - startedAt,
-        evidenceCount: evidence.length,
-        cached: false,
+      return fail("Research budget exhausted before synthesis", {
+        evidence,
         sources,
-      };
+      });
     }
     const prompt = buildResearchSynthesisPrompt(
       target,
@@ -424,38 +472,29 @@ export async function runResearchBrief(
       evidence,
       safetySeeds
     );
+    emit(
+      `Synthesizing ${evidence.length} paper(s) into a design brief with ${shortLabelForModel(model)}…`
+    );
     const synthesize = options.synthesizeImpl;
     const text =
       synthesize !== undefined
         ? await synthesize(prompt, synthesisBudget)
         : await defaultSynthesize(prompt, synthesisBudget, model);
     if (text === null || text.trim().length === 0) {
-      settled = true;
-      return {
-        status: "fallback",
-        reason: "Synthesis returned no completion",
-        latencyMs: Date.now() - startedAt,
-        evidenceCount: evidence.length,
-        cached: false,
-        sources,
-      };
+      return fail("Synthesis returned no completion", { evidence, sources });
     }
     const brief = parseResearchSynthesis(text, evidence.length);
     if (brief === null) {
-      settled = true;
-      return {
-        status: "fallback",
-        reason: "Synthesis converged on no usable target",
-        latencyMs: Date.now() - startedAt,
-        evidenceCount: evidence.length,
-        cached: false,
+      return fail("Synthesis converged on no usable target", {
+        evidence,
         sources,
-      };
+      });
     }
     writeCache(key, brief, evidence);
     emit(
       `Literature brief converged: ${brief.targets.length} target(s), ` +
-        `${brief.mechanisms.length} mechanism(s), ${brief.avoid.length} avoid(s)`
+        `${brief.mechanisms.length} mechanism(s), ${brief.avoid.length} avoid(s)` +
+        briefHighlights(brief)
     );
     settled = true;
     return {
@@ -468,6 +507,6 @@ export async function runResearchBrief(
       evidence,
     };
   } catch (error) {
-    return fallback(error instanceof Error ? error.message : "unknown error");
+    return fail(error instanceof Error ? error.message : "unknown error");
   }
 }

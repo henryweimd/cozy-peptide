@@ -177,6 +177,42 @@ test("research stage converges evidence into a capped brief", async () => {
   }
 });
 
+test("research stage announces retrieved paper titles in the log", async () => {
+  clearResearchCache();
+  try {
+    const events: PipelineEvent[] = [];
+    const provenance = await runResearchBrief(TARGET, undefined, {
+      fetchImpl: stubFetch(LITERATURE_HANDLER),
+      synthesizeImpl: async () => SYNTHESIS_OK,
+      onEvent: (event) => events.push(event),
+    });
+    assert.equal(provenance.status, "ok");
+    const messages = events.map((event) => event.message);
+    assert.ok(
+      messages.some((message) =>
+        message.includes('Found in PubMed (2024): "TcdA receptor-binding')
+      ),
+      "expected the PubMed title in the log"
+    );
+    assert.ok(
+      messages.some((message) =>
+        message.includes(
+          'Found in Europe PMC (2023): "Cationic peptides disrupt'
+        )
+      ),
+      "expected the Europe PMC title in the log"
+    );
+    assert.ok(
+      messages.some((message) =>
+        message.includes("converged") && message.includes("TcdA")
+      ),
+      "expected the convergence line to name what it converged on"
+    );
+  } finally {
+    clearResearchCache();
+  }
+});
+
 test("research stage falls back when retrieval is empty", async () => {
   clearResearchCache();
   try {
@@ -207,6 +243,40 @@ test("research stage falls back on unparseable synthesis", async () => {
     assert.equal(provenance.status, "fallback");
     assert.equal(provenance.brief, undefined);
     assert.equal(provenance.evidenceCount, 3);
+  } finally {
+    clearResearchCache();
+  }
+});
+
+test("research fallback keeps evidence and narrates the failure", async () => {
+  clearResearchCache();
+  try {
+    const events: PipelineEvent[] = [];
+    const provenance = await runResearchBrief(TARGET, undefined, {
+      fetchImpl: stubFetch(LITERATURE_HANDLER),
+      synthesizeImpl: async () => null,
+      onEvent: (event) => events.push(event),
+    });
+    assert.equal(provenance.status, "fallback");
+    assert.equal(provenance.brief, undefined);
+    assert.equal(provenance.evidenceCount, 3);
+    assert.equal(provenance.evidence?.length, 3);
+    assert.equal(provenance.sources.length, 2);
+    const messages = events.map((event) => event.message);
+    assert.ok(
+      messages.some((message) =>
+        message.includes("Synthesizing 3 paper(s)") &&
+        message.includes("Muse Spark")
+      ),
+      "expected a Muse Spark build announcement"
+    );
+    assert.ok(
+      messages.some((message) =>
+        message.includes("Literature brief unavailable") &&
+        message.includes("Synthesis returned no completion")
+      ),
+      "expected the fallback reason in the log"
+    );
   } finally {
     clearResearchCache();
   }

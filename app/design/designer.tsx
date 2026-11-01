@@ -36,6 +36,7 @@ import {
   StageDetail,
   formatCountdown,
   parseSseFrame,
+  researchOutcomeLine,
 } from "../pipeline-shared";
 
 const COOLDOWN_KEY = "cozy-peptide-demo-cooldown-until";
@@ -524,11 +525,11 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             <section aria-label="Literature brief">
               <h3>Literature brief</h3>
               <p className={styles.handoffline}>
-                {researchBrief.status === "ok"
-                  ? `Converged from ${researchBrief.evidence_count ?? 0} papers`
-                  : researchBrief.status === "disabled"
-                    ? "Disabled — static prompt"
-                    : `Fallback to the static prompt (${researchBrief.reason ?? researchBrief.status})`}
+                {researchOutcomeLine(
+                  researchBrief.status,
+                  researchBrief.reason,
+                  researchBrief.evidence_count
+                )}
               </p>
               {researchBrief.brief !== undefined &&
                 researchBrief.brief !== null && (

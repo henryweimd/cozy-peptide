@@ -132,7 +132,7 @@ export const STAGES: StageDef[] = [
   {
     name: "research",
     title: "Literature research",
-    sub: "Targets and mechanisms from papers",
+    sub: "Muse Spark briefs PubMed + Europe PMC",
   },
   {
     name: "propose",
@@ -186,6 +186,24 @@ export function stageState(
   if (finished) return "done";
   const latest = events[events.length - 1];
   return latest?.stage === stage ? "active" : "done";
+}
+
+/**
+ * One-line research outcome for result panels. When synthesis failed
+ * but papers were retrieved, says so — the full brief still carries
+ * the references even though the prompt fell back to static steering.
+ */
+export function researchOutcomeLine(
+  status: string | null | undefined,
+  reason: string | null | undefined,
+  evidenceCount: number | null | undefined
+): string {
+  if (status === "ok") return `Converged from ${evidenceCount ?? 0} papers`;
+  if (status === "disabled") return "Disabled — static prompt";
+  const base = `Fallback to the static prompt (${reason ?? status ?? "unknown"})`;
+  return (evidenceCount ?? 0) > 0
+    ? `${base} — ${evidenceCount} retrieved paper(s) are in the full brief below`
+    : base;
 }
 
 export function stageElapsed(

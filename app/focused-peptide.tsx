@@ -7,6 +7,7 @@ import {
   EventLog,
   HandoffDownloads,
   StageDetail,
+  researchOutcomeLine,
   timeAgo,
   type PipelinePayload,
   type StageEvent,
@@ -387,11 +388,13 @@ export default function FocusedPeptide({
             <>
               <h4>Literature brief</h4>
               <p className={styles.handoffline}>
-                {researchStatus === "ok"
-                  ? `Converged from ${evidenceCount ?? 0} papers`
-                  : researchStatus === "disabled"
-                    ? "Disabled — static prompt"
-                    : `Fallback to the static prompt (${researchStatus ?? "unknown"})`}
+                {researchOutcomeLine(
+                  researchStatus,
+                  researchBlob !== null
+                    ? asString(researchBlob["reason"])
+                    : null,
+                  evidenceCount
+                )}
               </p>
               <div className={styles.reportactions}>
                 <button
