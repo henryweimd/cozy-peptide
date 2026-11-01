@@ -141,7 +141,7 @@ export default function Demo() {
       )}
       <button
         type="button"
-        className={`${styles.btn} ${styles.btnPrimary} ${styles.designbtn}`}
+        className={`${styles.btn} ${styles.btnPrimary} ${styles.designbtn} ${styles.pepbtn}`}
         disabled={cooling}
         onClick={go}
       >
