@@ -95,7 +95,7 @@ const STEPS: GuideStep[] = [
     body: "Disease name in, lab-ready DNA out — with evidence, proof, and safety at every step. Press Design my peptide when ready, or read the full story next door.",
     why: "Millions wait on better treatments. Better payloads are how they arrive.",
     target: null,
-    link: { href: "/biology", label: "Read Bio & Business" },
+    link: { href: "/biology", label: "Read Science & Impact" },
   },
 ];
 

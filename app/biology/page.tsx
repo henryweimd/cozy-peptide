@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "../page.module.css";
+import BiosafetyFooter from "../biosafety-footer";
 import SiteNav from "../site-nav";
 
 export const metadata: Metadata = {
-  title: "Bio & Business — cozy-peptide",
+  title: "Science & Impact — cozy-peptide",
   description:
-    "Living medicines end to end: what LBPs are, the two FDA approvals, the late-stage pipeline, the hidden debt in every payload, how the AI designer clears it, and the business case with market figures and build costs.",
+    "Living medicines end to end: what LBPs are, the two FDA approvals, the late-stage pipeline, the hidden debt in every payload, how the AI designer clears it, the business case with market figures and build costs, and the personalized lab-in-the-loop pipeline vision.",
 };
 
 const STORY: Array<{
@@ -112,6 +113,7 @@ export default function BiologyPage() {
           <a href="#costs">Costs</a>
           <a href="#solo">Solo path</a>
           <a href="#universe">Vision</a>
+          <a href="#pipelines">Pipelines</a>
           <a href="#sources">Sources</a>
         </div>
       </nav>
@@ -119,7 +121,7 @@ export default function BiologyPage() {
         <section className={styles.section} aria-labelledby="biology-title">
           <div className="container">
             <div className={styles.headblock}>
-              <h1 id="biology-title">Bio &amp; Business</h1>
+              <h1 id="biology-title">Science &amp; Impact</h1>
               <p className="lead">
                 Microbes are factories. Peptides are the product. A wrong
                 product is hidden debt &mdash; and hidden debt is what
@@ -134,7 +136,7 @@ export default function BiologyPage() {
                 </Link>
               </p>
             </div>
-            <div id="lbp">
+            <div id="lbp" className={styles.bioSub}>
               <h2>Living medicines, made of microbes</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -166,91 +168,100 @@ export default function BiologyPage() {
                   insight turned into standardized, screened, dosed
                   products.
                 </p>
-                <p>
-                  <strong>Approved today: two products.</strong> Both
-                  prevent <em>C.&nbsp;difficile</em> recurrence after
-                  antibiotics, and both are made from screened donor
-                  microbiota &mdash; no engineered strain has been
-                  approved anywhere yet. That is the frontier this site
-                  builds toward.
-                </p>
-                <p>
-                  <strong>Rebyota (Ferring, November 2022).</strong> A
-                  single rectal dose of donor microbiota; kept about 71%
-                  of recurrent patients recurrence-free at eight weeks,
-                  against 58% on placebo.
-                </p>
-                <p>
-                  <strong>Vowst (Seres, April 2023).</strong> Purified
-                  bacterial spores in capsules, four a day for three
-                  days. In the 182-patient ECOSPOR III trial, published
-                  in the New England Journal of Medicine, only 12% of
-                  recipients relapsed within eight weeks versus 40% on
-                  placebo.
-                </p>
-                <p>
-                  <strong>The late-stage pipeline.</strong> The next wave
-                  replaces donor stool with defined, manufactured
-                  consortia &mdash; every strain known, every dose
-                  identical &mdash; and pushes beyond{" "}
-                  <em>C.&nbsp;difficile</em> into transplant medicine and
-                  inflammatory disease.
-                </p>
               </div>
-              <table className={styles.apitable}>
-                <thead>
-                  <tr>
-                    <th scope="col">Product</th>
-                    <th scope="col">Maker</th>
-                    <th scope="col">What it is</th>
-                    <th scope="col">Stage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td data-label="Product">VE303</td>
-                    <td data-label="Maker">Vedanta Biosciences</td>
-                    <td data-label="What it is">
-                      Eight-strain defined oral consortium for recurrent{" "}
-                      <em>C. difficile</em>
-                    </td>
-                    <td data-label="Stage">
-                      Phase 3 (RESTORATiVE303; topline expected first
-                      half of 2027)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td data-label="Product">MaaT013</td>
-                    <td data-label="Maker">MaaT Pharma</td>
-                    <td data-label="What it is">
-                      Pooled donor microbiota enema for severe
-                      graft-versus-host disease
-                    </td>
-                    <td data-label="Stage">Phase 3 (ARES trial)</td>
-                  </tr>
-                  <tr>
-                    <td data-label="Product">MaaT033</td>
-                    <td data-label="Maker">MaaT Pharma</td>
-                    <td data-label="What it is">
-                      Oral capsule version to improve survival after stem
-                      cell transplant
-                    </td>
-                    <td data-label="Stage">Phase 2b (PHOEBUS trial)</td>
-                  </tr>
-                  <tr>
-                    <td data-label="Product">SER-155</td>
-                    <td data-label="Maker">Seres Therapeutics</td>
-                    <td data-label="What it is">
-                      Cultivated multi-strain consortium against
-                      bloodstream infections after transplant
-                    </td>
-                    <td data-label="Stage">
-                      Phase 2 ready (77% fewer infections in Phase 1b;
-                      Breakthrough designation)
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className={styles.bioDuo}>
+                <aside
+                  className={styles.bioCallout}
+                  aria-labelledby="approved-title"
+                >
+                  <h3 id="approved-title">Approved today: two products</h3>
+                  <p>
+                    Both prevent <em>C.&nbsp;difficile</em> recurrence
+                    after antibiotics, and both are made from screened
+                    donor microbiota &mdash; no engineered strain has
+                    been approved anywhere yet. That is the frontier
+                    this site builds toward.
+                  </p>
+                  <dl>
+                    <div>
+                      <dt>Rebyota (Ferring, November 2022)</dt>
+                      <dd>
+                        A single rectal dose of donor microbiota; kept
+                        about 71% of recurrent patients
+                        recurrence-free at eight weeks, against 58% on
+                        placebo.
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Vowst (Seres, April 2023)</dt>
+                      <dd>
+                        Purified bacterial spores in capsules, four a
+                        day for three days. In the 182-patient ECOSPOR
+                        III trial, published in the New England Journal
+                        of Medicine, only 12% of recipients relapsed
+                        within eight weeks versus 40% on placebo.
+                      </dd>
+                    </div>
+                  </dl>
+                </aside>
+                <aside
+                  className={styles.bioCallout}
+                  aria-labelledby="pipeline-title"
+                >
+                  <h3 id="pipeline-title">The late-stage pipeline</h3>
+                  <p>
+                    The next wave replaces donor stool with defined,
+                    manufactured consortia &mdash; every strain known,
+                    every dose identical &mdash; and pushes beyond{" "}
+                    <em>C.&nbsp;difficile</em> into transplant medicine
+                    and inflammatory disease.
+                  </p>
+                  <dl>
+                    <div>
+                      <dt>
+                        VE303 &middot; Vedanta Biosciences &middot;
+                        Phase 3
+                      </dt>
+                      <dd>
+                        Eight-strain defined oral consortium for
+                        recurrent <em>C. difficile</em>{" "}
+                        (RESTORATiVE303; topline expected first half of
+                        2027).
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        MaaT013 &middot; MaaT Pharma &middot; Phase 3
+                      </dt>
+                      <dd>
+                        Pooled donor microbiota enema for severe
+                        graft-versus-host disease (ARES trial).
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        MaaT033 &middot; MaaT Pharma &middot; Phase 2b
+                      </dt>
+                      <dd>
+                        Oral capsule version to improve survival after
+                        stem cell transplant (PHOEBUS trial).
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        SER-155 &middot; Seres Therapeutics &middot;
+                        Phase 2 ready
+                      </dt>
+                      <dd>
+                        Cultivated multi-strain consortium against
+                        bloodstream infections after transplant (77%
+                        fewer infections in Phase 1b; Breakthrough
+                        designation).
+                      </dd>
+                    </div>
+                  </dl>
+                </aside>
+              </div>
               <div className={styles.bioProse}>
                 <p>
                   <strong>Where peptide design plugs in.</strong>{" "}
@@ -290,7 +301,7 @@ export default function BiologyPage() {
                 </p>
               </div>
             </div>
-            <div id="biology">
+            <div id="biology" className={styles.bioSub}>
               <h2>The biology: medicine brewed where disease lives</h2>
               <div className={styles.bioSplit}>
                 <div className={styles.bioProse}>
@@ -336,7 +347,7 @@ export default function BiologyPage() {
                 </figure>
               </div>
             </div>
-            <div id="outputs">
+            <div id="outputs" className={styles.bioSub}>
               <h2>What the factories make</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -344,40 +355,58 @@ export default function BiologyPage() {
                   like drugs the moment their outputs do. Three output
                   classes are already on the path to the clinic:
                 </p>
-                <p>
-                  <strong>Metabolic sinks &mdash; living dialysis.</strong>{" "}
-                  Engineered E.&nbsp;coli Nissle strains SYNB1618 and
-                  SYNB1934 consume phenylalanine in the gut for
-                  phenylketonuria: a 14-day study cut labeled-phenylalanine
-                  exposure 34% and 43%. The pivotal trial was later
-                  stopped &mdash; target engagement is not efficacy &mdash;
-                  but the factory model reached the bloodstream without
-                  ever entering it.
-                </p>
-                <p>
-                  <strong>
-                    Secreted biologics &mdash; drugs brewed on site.
-                  </strong>{" "}
-                  IL-10-secreting <em>Lactococcus lactis</em> set the
-                  clinical precedent for cytokine delivery. GLP-1 analogs,
-                  antimicrobial peptides, and replacement enzymes are the
-                  obvious next products: conventional mechanisms,
-                  manufactured at the mucosa instead of in a steel tank.
-                </p>
-                <p>
-                  <strong>
-                    Immune programming &mdash; the long-range thesis.
-                  </strong>{" "}
-                  Roughly 70% of the body&apos;s immune cells live in
-                  gut-associated lymphoid tissue. Peptides delivered to
-                  mucosal sampling machinery can re-educate immunity
-                  locally and project the benefit systemically: calm a
-                  joint, quiet skin, reset an allergy &mdash; all from
-                  medicine brewed in the gut.
-                </p>
+              </div>
+              <div className={styles.bioTrio}>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      Metabolic sinks &mdash; living dialysis.
+                    </strong>
+                  </p>
+                  <p>
+                    Engineered E.&nbsp;coli Nissle strains SYNB1618 and
+                    SYNB1934 consume phenylalanine in the gut for
+                    phenylketonuria: a 14-day study cut
+                    labeled-phenylalanine exposure 34% and 43%. The
+                    pivotal trial was later stopped &mdash; target
+                    engagement is not efficacy &mdash; but the factory
+                    model reached the bloodstream without ever entering
+                    it.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      Secreted biologics &mdash; drugs brewed on site.
+                    </strong>
+                  </p>
+                  <p>
+                    IL-10-secreting <em>Lactococcus lactis</em> set the
+                    clinical precedent for cytokine delivery. GLP-1
+                    analogs, antimicrobial peptides, and replacement
+                    enzymes are the obvious next products: conventional
+                    mechanisms, manufactured at the mucosa instead of in
+                    a steel tank.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      Immune programming &mdash; the long-range thesis.
+                    </strong>
+                  </p>
+                  <p>
+                    Roughly 70% of the body&apos;s immune cells live in
+                    gut-associated lymphoid tissue. Peptides delivered
+                    to mucosal sampling machinery can re-educate
+                    immunity locally and project the benefit
+                    systemically: calm a joint, quiet skin, reset an
+                    allergy &mdash; all from medicine brewed in the gut.
+                  </p>
+                </div>
               </div>
             </div>
-            <div id="hidden-debt">
+            <div id="hidden-debt" className={styles.bioSub}>
               <h2>The hidden debt: designing the wrong peptide</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -393,54 +422,82 @@ export default function BiologyPage() {
                   A therapeutic peptide has to satisfy six constraints
                   at once, and they fight each other:
                 </p>
-                <p>
-                  <IconTarget />
-                  <strong>It must work.</strong> The peptide has to act
-                  on a target that is actually causal in the disease,
-                  active in the right cell state, and druggable in a
-                  human &mdash; not just plausible in a pathway diagram.
-                  Most clinical failures are target failures, not
-                  chemistry failures.
-                </p>
-                <p>
-                  <IconScaffold />
-                  <strong>It must fold.</strong> Small constrained
-                  peptides only work when their disulfide bonds pair
-                  correctly and the backbone holds its shape. A
-                  misfolded peptide is expensive cellular garbage.
-                </p>
-                <p>
-                  <IconShield />
-                  <strong>It must survive.</strong> The gut is a
-                  demolition site: acid, bile, and a gauntlet of
-                  proteases. A peptide that degrades in minutes never
-                  reaches its target, however elegant its design.
-                </p>
-                <p>
-                  <IconSecrete />
-                  <strong>It must express.</strong> The chassis has to
-                  manufacture and secrete the peptide without choking
-                  on it &mdash; correct secretion signal, tolerable
-                  expression burden, clean proteolytic processing. A
-                  peptide that kills its own factory is a failed
-                  product, whatever its potency.
-                </p>
-                <p>
-                  <IconHeart />
-                  <strong>It must be safe.</strong> No hemolysis, no
-                  cytotoxicity, no immunogenic red flags, and no
-                  broad-spectrum antimicrobial rampage that wipes out
-                  the very microbiome the LBP lives in.
-                </p>
-                <p>
-                  <IconLock />
-                  <strong>It must be stable and contained.</strong> The
-                  DNA cassette has to persist in the strain without
-                  being lost or mutated away &mdash; and the engineered
-                  microbe needs biocontainment, such as auxotrophy or
-                  kill switches, so it cannot persist or spread where
-                  it should not.
-                </p>
+              </div>
+              <div className={styles.bioDuo}>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <IconTarget /> <strong>It must work.</strong>
+                  </p>
+                  <p>
+                    The peptide has to act on a target that is actually
+                    causal in the disease, active in the right cell
+                    state, and druggable in a human &mdash; not just
+                    plausible in a pathway diagram. Most clinical
+                    failures are target failures, not chemistry
+                    failures.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <IconScaffold /> <strong>It must fold.</strong>
+                  </p>
+                  <p>
+                    Small constrained peptides only work when their
+                    disulfide bonds pair correctly and the backbone
+                    holds its shape. A misfolded peptide is expensive
+                    cellular garbage.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <IconShield /> <strong>It must survive.</strong>
+                  </p>
+                  <p>
+                    The gut is a demolition site: acid, bile, and a
+                    gauntlet of proteases. A peptide that degrades in
+                    minutes never reaches its target, however elegant
+                    its design.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <IconSecrete /> <strong>It must express.</strong>
+                  </p>
+                  <p>
+                    The chassis has to manufacture and secrete the
+                    peptide without choking on it &mdash; correct
+                    secretion signal, tolerable expression burden,
+                    clean proteolytic processing. A peptide that kills
+                    its own factory is a failed product, whatever its
+                    potency.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <IconHeart /> <strong>It must be safe.</strong>
+                  </p>
+                  <p>
+                    No hemolysis, no cytotoxicity, no immunogenic red
+                    flags, and no broad-spectrum antimicrobial rampage
+                    that wipes out the very microbiome the LBP lives
+                    in.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <IconLock />{" "}
+                    <strong>It must be stable and contained.</strong>
+                  </p>
+                  <p>
+                    The DNA cassette has to persist in the strain
+                    without being lost or mutated away &mdash; and the
+                    engineered microbe needs biocontainment, such as
+                    auxotrophy or kill switches, so it cannot persist
+                    or spread where it should not.
+                  </p>
+                </div>
+              </div>
+              <div className={styles.bioProse}>
                 <p>
                   Traditional discovery optimizes these one at a time:
                   screen a library for binding, then fix stability,
@@ -487,7 +544,7 @@ export default function BiologyPage() {
                 </p>
               </aside>
             </div>
-            <div id="designer">
+            <div id="designer" className={styles.bioSub}>
               <h2>How the designer clears the hidden debt</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -503,62 +560,95 @@ export default function BiologyPage() {
                   grammar. Evidence first, invention second, proof
                   always.
                 </p>
-                <p>
-                  <strong>1. Literature grounds the prompt.</strong>{" "}
-                  Diseases enter as words. Agents read PubMed and
-                  Europe PMC first and synthesize a brief &mdash;
-                  targets, mechanisms, and an explicit avoid list
-                  &mdash; so generation aims at causal biology instead
-                  of hallucinating it.
-                </p>
-                <p>
-                  <strong>2. The scaffold matches the objective.</strong>{" "}
-                  Seven small-peptide scaffolds, from knotted
-                  knottins and cyclotides down to simple helices,
-                  cover the stability&ndash;function trade-off. The
-                  designer picks the default for your objective
-                  &mdash; nothing over 37 residues &mdash; because
-                  most users want a first run to just choose.
-                </p>
-                <p>
-                  <strong>
-                    3. The chassis is chosen by compatibility.
-                  </strong>{" "}
-                  Four oral chassis &mdash; <em>S.&nbsp;boulardii</em>{" "}
-                  yeast, E.&nbsp;coli Nissle, <em>L.&nbsp;lactis</em>,
-                  and <em>B.&nbsp;subtilis</em> spores &mdash; are
-                  scored on secretion-signal fit, expression burden,
-                  and proteolytic processing, and the best match
-                  becomes the default. The peptide is designed{" "}
-                  <em>for</em> its factory, not in the abstract.
-                </p>
-                <p>
-                  <strong>4. The compiler proves, then repairs.</strong>{" "}
-                  Every candidate is checked for correct disulfide
-                  topology, charge, aggregation and hemolysis
-                  liabilities, and gut-protease exposure &mdash; and
-                  failures loop back through diagnostics-guided
-                  repair until a design passes. Nothing unverified
-                  ships.
-                </p>
-                <p>
-                  <strong>
-                    5. Containment and stability are designed in.
-                  </strong>{" "}
-                  Biocontainment &mdash; kill switches, auxotrophy
-                  &mdash; and plasmid-stability screens run inside
-                  the pipeline, not as an afterthought, and the
-                  Safety panel shows exactly what was checked.
-                </p>
-                <p>
-                  <strong>6. The handoff is vendor-ready.</strong>{" "}
-                  Output is LBP-ready DNA with a lab-handoff page:
-                  orderable synthesis plus a directory of CROs with
-                  real experience in these hosts. The honest boundary
-                  is labeled too: wet-lab feedback, potency
-                  prediction, and the gut-safety panel are marked{" "}
-                  <em>Future functionality</em> until they ship.
-                </p>
+              </div>
+              <div className={styles.bioDuo}>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      1. Literature grounds the prompt.
+                    </strong>
+                  </p>
+                  <p>
+                    Diseases enter as words. Agents read PubMed and
+                    Europe PMC first and synthesize a brief &mdash;
+                    targets, mechanisms, and an explicit avoid list
+                    &mdash; so generation aims at causal biology
+                    instead of hallucinating it.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      2. The scaffold matches the objective.
+                    </strong>
+                  </p>
+                  <p>
+                    Seven small-peptide scaffolds, from knotted
+                    knottins and cyclotides down to simple helices,
+                    cover the stability&ndash;function trade-off. The
+                    designer picks the default for your objective
+                    &mdash; nothing over 37 residues &mdash; because
+                    most users want a first run to just choose.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      3. The chassis is chosen by compatibility.
+                    </strong>
+                  </p>
+                  <p>
+                    Four oral chassis &mdash;{" "}
+                    <em>S.&nbsp;boulardii</em> yeast, E.&nbsp;coli
+                    Nissle, <em>L.&nbsp;lactis</em>, and{" "}
+                    <em>B.&nbsp;subtilis</em> spores &mdash; are scored
+                    on secretion-signal fit, expression burden, and
+                    proteolytic processing, and the best match becomes
+                    the default. The peptide is designed <em>for</em>{" "}
+                    its factory, not in the abstract.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      4. The compiler proves, then repairs.
+                    </strong>
+                  </p>
+                  <p>
+                    Every candidate is checked for correct disulfide
+                    topology, charge, aggregation and hemolysis
+                    liabilities, and gut-protease exposure &mdash; and
+                    failures loop back through diagnostics-guided
+                    repair until a design passes. Nothing unverified
+                    ships.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      5. Containment and stability are designed in.
+                    </strong>
+                  </p>
+                  <p>
+                    Biocontainment &mdash; kill switches, auxotrophy
+                    &mdash; and plasmid-stability screens run inside
+                    the pipeline, not as an afterthought, and the
+                    Safety panel shows exactly what was checked.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>6. The handoff is vendor-ready.</strong>
+                  </p>
+                  <p>
+                    Output is LBP-ready DNA with a lab-handoff page:
+                    orderable synthesis plus a directory of CROs with
+                    real experience in these hosts. The honest boundary
+                    is labeled too: wet-lab feedback, potency
+                    prediction, and the gut-safety panel are marked{" "}
+                    <em>Future functionality</em> until they ship.
+                  </p>
+                </div>
               </div>
               <p className={styles.statement} id="language">
                 A model that writes fluent sentences in the language of
@@ -782,11 +872,11 @@ export default function BiologyPage() {
           </div>
         </section>
         <section
-          className={`${styles.band} ${styles.bandNavy}`}
+          className={`${styles.band} ${styles.bandNavy} ${styles.bioBand}`}
           aria-labelledby="market-title"
         >
           <div className="container">
-            <div id="market">
+            <div id="market" className={styles.bioSub}>
               <h2 id="market-title">The business case</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -802,67 +892,74 @@ export default function BiologyPage() {
                 </p>
               </div>
               <h3>Worked example: inflammatory bowel disease</h3>
-              <div className={styles.bioProse}>
-                <p>
-                  Crohn&apos;s disease and ulcerative colitis &mdash;
-                  together, inflammatory bowel disease &mdash; afflict
-                  roughly five to ten million people worldwide, from{" "}
-                  <a
-                    href="https://tauli.cat/en/institut/actualitat/noticies/2025/05/un-estudi-internacional-publicat-a-nature-analitza-levolucio-global-de-la-malaltia-inflamatoria-intestinal/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    about 5 million in a 2025 Nature epidemiology study
-                  </a>{" "}
-                  to{" "}
-                  <a
-                    href="https://www.ovid.com/jnls/sjga/fulltext/10.4103/sjg.sjg_138_26~global-burden-of-inflammatory-bowel-disease-in-asia"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    an estimated 10 million in recent reviews
-                  </a>
-                  , with prevalence still rising in newly
-                  industrialized countries. It is chronic, incurable,
-                  and flares for decades.
-                </p>
-                <p>
-                  Treatment climbs a ladder: aminosalicylates,
-                  steroids, immunomodulators, then biologics &mdash;
-                  anti-TNF, anti-integrin, and anti-IL antibodies
-                  &mdash; plus JAK inhibitors. Biologics dominate
-                  spending:{" "}
-                  <a
-                    href="https://pmarketresearch.com/hc/inflammatory-bowel-disease-market/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    about three quarters of IBD drug sales, roughly
-                    $17.7 billion, in 2025
-                  </a>
-                  . The catch is systemic: these drugs suppress
-                  immunity everywhere to calm inflammation somewhere,
-                  trading efficacy for infection risk &mdash; and many
-                  patients cycle through one after another.
-                </p>
-                <p>
-                  <a
-                    href="https://www.fortunebusinessinsights.com/inflammatory-bowel-disease-treatment-market-106704"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    The global IBD treatment market was valued near
-                    $29.6 billion in 2025, heading to $41.6 billion by
-                    2034
-                  </a>
-                  . An engineered resident that secretes an
-                  anti-inflammatory peptide at the lesion &mdash; the
-                  IL-10-secreting <em>L.&nbsp;lactis</em> trials set
-                  the clinical precedent &mdash; attacks the same
-                  disease from inside the tissue, without systemic
-                  suppression. That is the payload thesis in one
-                  disease: same therapeutic value, local delivery.
-                </p>
+              <div className={styles.bioDuo}>
+                <div className={styles.bioCell}>
+                  <p>
+                    Crohn&apos;s disease and ulcerative colitis &mdash;
+                    together, inflammatory bowel disease &mdash; afflict
+                    roughly five to ten million people worldwide, from{" "}
+                    <a
+                      href="https://tauli.cat/en/institut/actualitat/noticies/2025/05/un-estudi-internacional-publicat-a-nature-analitza-levolucio-global-de-la-malaltia-inflamatoria-intestinal/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      about 5 million in a 2025 Nature epidemiology
+                      study
+                    </a>{" "}
+                    to{" "}
+                    <a
+                      href="https://www.ovid.com/jnls/sjga/fulltext/10.4103/sjg.sjg_138_26~global-burden-of-inflammatory-bowel-disease-in-asia"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      an estimated 10 million in recent reviews
+                    </a>
+                    , with prevalence still rising in newly
+                    industrialized countries. It is chronic, incurable,
+                    and flares for decades.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p>
+                    Treatment climbs a ladder: aminosalicylates,
+                    steroids, immunomodulators, then biologics &mdash;
+                    anti-TNF, anti-integrin, and anti-IL antibodies
+                    &mdash; plus JAK inhibitors. Biologics dominate
+                    spending:{" "}
+                    <a
+                      href="https://pmarketresearch.com/hc/inflammatory-bowel-disease-market/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      about three quarters of IBD drug sales, roughly
+                      $17.7 billion, in 2025
+                    </a>
+                    . The catch is systemic: these drugs suppress
+                    immunity everywhere to calm inflammation somewhere,
+                    trading efficacy for infection risk &mdash; and many
+                    patients cycle through one after another.
+                  </p>
+                </div>
+                <div className={`${styles.bioCell} ${styles.bioSpan}`}>
+                  <p className={styles.bioFlow2}>
+                    <a
+                      href="https://www.fortunebusinessinsights.com/inflammatory-bowel-disease-treatment-market-106704"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      The global IBD treatment market was valued near
+                      $29.6 billion in 2025, heading to $41.6 billion
+                      by 2034
+                    </a>
+                    . An engineered resident that secretes an
+                    anti-inflammatory peptide at the lesion &mdash; the
+                    IL-10-secreting <em>L.&nbsp;lactis</em> trials set
+                    the clinical precedent &mdash; attacks the same
+                    disease from inside the tissue, without systemic
+                    suppression. That is the payload thesis in one
+                    disease: same therapeutic value, local delivery.
+                  </p>
+                </div>
               </div>
               <h3>Therapeutic markets, worldwide</h3>
               <div className={styles.bioProse}>
@@ -1168,9 +1265,12 @@ export default function BiologyPage() {
             </div>
           </div>
         </section>
-        <section className={styles.section} aria-labelledby="costs-title">
+        <section
+          className={`${styles.section} ${styles.bioSection}`}
+          aria-labelledby="costs-title"
+        >
           <div className="container">
-            <div id="costs">
+            <div id="costs" className={styles.bioSub}>
               <h2 id="costs-title">What a factory costs to build</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -1256,88 +1356,113 @@ export default function BiologyPage() {
                   </tr>
                 </tbody>
               </table>
-              <div className={styles.bioProse}>
-                <p>
-                  Read the first four rows as the AI dividend. Without
-                  machine design, the same ground is covered by expert
-                  labor plus shotgun screening: every candidate costs a
-                  wet-lab loop &mdash; $1&ndash;2.5k DIY, $4&ndash;8k
-                  via CRO, plus weeks &mdash; and an unfocused library
-                  burns through dozens of loops before one candidate
-                  survives. Focused, compiler-proven design collapses
-                  that to a handful of high-quality shots on goal, each
-                  cheap enough for a bootstrapped founder. That is not
-                  just savings; it is probability of technical success.
-                  Preclinical attrition is what kills seed-stage biotech,
-                  and investors can underwrite a program whose losers
-                  fail in silico instead of in animals.
-                </p>
-                <p>
-                  This is rational drug design, back from exile. The
-                  philosophy &mdash; design the molecule for the job
-                  instead of screening for it &mdash; lost the last era
-                  honestly: display libraries and automation let antibody
-                  hunters generate and test tens of thousands of
-                  candidates, so generate-and-test won. But antibodies
-                  concentrate their cost downstream: mammalian
-                  manufacturing, purification, and cold chain make every
-                  clinical candidate precious and every late failure
-                  catastrophic. LBPs invert the cost stack. Culturing
-                  microbes is cheap even with GMP overhead, so the
-                  scarce resource is not manufacturing &mdash; it is
-                  knowing which payload to brew. A format where the debt
-                  hides in the design rewards the oldest idea in the
-                  field: think first, build once.
-                </p>
-                <p>
-                  Yeast versus bacteria matters less than air versus no
-                  air. All four cozy-peptide chassis &mdash;{" "}
-                  <em>S. boulardii</em> yeast, E. coli Nissle,{" "}
-                  <em>L. lactis</em>, <em>B. subtilis</em> spores &mdash;
-                  are aerotolerant, which dodges the anaerobic-GMP premium
-                  that makes strict-anaerobe consortia cost two to five
-                  times more. Yeast is the cheapest path (GRAS, aerobic
-                  fermentation); spores are the cheapest to ship
-                  (room-stable fill-finish). The industry&apos;s direction
-                  of travel is visible in the Lonza&ndash;Chr. Hansen joint
-                  venture, which committed &euro;90M to build cGMP LBP
-                  capacity.
-                </p>
+              <div className={styles.bioDuo}>
+                <div className={`${styles.bioCell} ${styles.bioSpan}`}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>The AI dividend</strong>
+                  </p>
+                  <p className={styles.bioFlow2}>
+                    Read the first four rows as the AI dividend. Without
+                    machine design, the same ground is covered by expert
+                    labor plus shotgun screening: every candidate costs
+                    a wet-lab loop &mdash; $1&ndash;2.5k DIY,
+                    $4&ndash;8k via CRO, plus weeks &mdash; and an
+                    unfocused library burns through dozens of loops
+                    before one candidate survives. Focused,
+                    compiler-proven design collapses that to a handful
+                    of high-quality shots on goal, each cheap enough
+                    for a bootstrapped founder. That is not just
+                    savings; it is probability of technical success.
+                    Preclinical attrition is what kills seed-stage
+                    biotech, and investors can underwrite a program
+                    whose losers fail in silico instead of in animals.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>Rational drug design, back from exile</strong>
+                  </p>
+                  <p>
+                    The philosophy &mdash; design the molecule for the
+                    job instead of screening for it &mdash; lost the
+                    last era honestly: display libraries and automation
+                    let antibody hunters generate and test tens of
+                    thousands of candidates, so generate-and-test won.
+                    But antibodies concentrate their cost downstream:
+                    mammalian manufacturing, purification, and cold
+                    chain make every clinical candidate precious and
+                    every late failure catastrophic. LBPs invert the
+                    cost stack. Culturing microbes is cheap even with
+                    GMP overhead, so the scarce resource is not
+                    manufacturing &mdash; it is knowing which payload
+                    to brew. A format where the debt hides in the
+                    design rewards the oldest idea in the field: think
+                    first, build once.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>Yeast versus bacteria</strong>
+                  </p>
+                  <p>
+                    What matters is air versus no air. All four
+                    cozy-peptide chassis &mdash;{" "}
+                    <em>S. boulardii</em> yeast, E. coli Nissle,{" "}
+                    <em>L. lactis</em>, <em>B. subtilis</em> spores
+                    &mdash; are aerotolerant, which dodges the
+                    anaerobic-GMP premium that makes strict-anaerobe
+                    consortia cost two to five times more. Yeast is the
+                    cheapest path (GRAS, aerobic fermentation); spores
+                    are the cheapest to ship (room-stable
+                    fill-finish). The industry&apos;s direction of
+                    travel is visible in the Lonza&ndash;Chr. Hansen
+                    joint venture, which committed &euro;90M to build
+                    cGMP LBP capacity.
+                  </p>
+                </div>
               </div>
             </div>
-            <div id="solo">
+            <div id="solo" className={styles.bioSub}>
               <h2>The one-person biotech</h2>
-              <div className={styles.bioProse}>
-                <p>
-                  In October 2026, Anthropic disclosed it had acquired
-                  Mithril Medicine &mdash; a drug-development company with
-                  one full-time employee. Founder Cody Tranbarger used
-                  Claude to coordinate 11 external laboratories across
-                  contracts, logistics, and experiments, advancing two
-                  rare muscular-dystrophy programs from idea to
-                  encouraging mouse results in under 18 months. Terms
-                  were not disclosed; the work is preclinical and not
-                  peer reviewed.
-                </p>
-                <p>
-                  The pattern generalizes. AI designs, CROs build, and a
-                  founder coordinates: DNA for $35, a verified strain for
-                  a few thousand, a full wet-lab loop for less than a used
-                  car. The garage startup can now generate the early data
-                  that once required a Series A &mdash; and the next
-                  billion-dollar biotech unicorn may never own a lab
-                  bench.
-                </p>
-                <p>
-                  The honest boundary: preclinical is not clinical, and
-                  GMP plus trials still cost millions. But the entry
-                  ticket to credible animal data has collapsed &mdash; and
-                  for engineered LBPs, the design leg of that ticket is
-                  this website.
-                </p>
+              <div className={styles.bioDuo}>
+                <div className={styles.bioProse}>
+                  <p>
+                    In October 2026, Anthropic disclosed it had acquired
+                    Mithril Medicine &mdash; a drug-development company
+                    with one full-time employee. Founder Cody Tranbarger
+                    used Claude to coordinate 11 external laboratories
+                    across contracts, logistics, and experiments,
+                    advancing two rare muscular-dystrophy programs from
+                    idea to encouraging mouse results in under 18
+                    months. Terms were not disclosed; the work is
+                    preclinical and not peer reviewed.
+                  </p>
+                  <p>
+                    The pattern generalizes. AI designs, CROs build, and
+                    a founder coordinates: DNA for $35, a verified
+                    strain for a few thousand, a full wet-lab loop for
+                    less than a used car. The garage startup can now
+                    generate the early data that once required a Series
+                    A &mdash; and the next billion-dollar biotech
+                    unicorn may never own a lab bench.
+                  </p>
+                </div>
+                <aside
+                  className={styles.bioCallout}
+                  aria-labelledby="solo-boundary-title"
+                >
+                  <h3 id="solo-boundary-title">The honest boundary</h3>
+                  <p>
+                    Preclinical is not clinical, and GMP plus trials
+                    still cost millions. But the entry ticket to
+                    credible animal data has collapsed &mdash; and for
+                    engineered LBPs, the design leg of that ticket is
+                    this website.
+                  </p>
+                </aside>
               </div>
             </div>
-            <div id="universe">
+            <div id="universe" className={styles.bioSub}>
               <h2>The vision: factories at every body site</h2>
               <div className={styles.bioProse}>
                 <p>
@@ -1423,9 +1548,72 @@ export default function BiologyPage() {
                 </tbody>
               </table>
             </div>
-            <div id="sources">
+            <div id="pipelines" className={styles.bioSub}>
+              <h2>Personalized lab-in-the-loop peptide pipelines</h2>
+              <div className={styles.bioProse}>
+                <p>
+                  Factories at every body site are the platform. The
+                  product is personal: n-of-1 peptides, designed for
+                  one patient&apos;s disease and brewed by their own
+                  resident flora. This site&apos;s designer is step
+                  one &mdash; sequences from words. Step two closes
+                  the loop, so every lab result makes the next design
+                  smarter.
+                </p>
+              </div>
+              <div className={styles.bioTrio}>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>Function, not just structure.</strong>
+                  </p>
+                  <p>
+                    Today&apos;s paradigm invents candidates, predicts
+                    folds and binding, and hopes the biology follows.
+                    It is not wrong &mdash; it is wasteful, because a
+                    structure is a hypothesis and most hypotheses die
+                    in animals. A lab-in-the-loop pipeline trains on
+                    outcomes instead: cassettes that held, strains
+                    that thrived, peptides that moved living cells.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>
+                      Every failure becomes training data.
+                    </strong>
+                  </p>
+                  <p>
+                    Each loop runs end to end in vitro: DNA stability
+                    in the host, manufacturability, secretion yield,
+                    and the secreted peptide&apos;s real effect on
+                    cell biology &mdash; no human trials required.
+                    Misses are not waste; they are labeled examples
+                    that fine-tune the next model generation.
+                  </p>
+                </div>
+                <div className={styles.bioCell}>
+                  <p className={styles.bioCellTitle}>
+                    <strong>Ex vivo before in vivo.</strong>
+                  </p>
+                  <p>
+                    Before anything touches a patient, candidates meet
+                    that patient&apos;s own ecosystem: gut, skin,
+                    mouth, nose, and genital-tract samples challenged
+                    against their local flora outside the body. Human
+                    relevance without human risk &mdash; so trials get
+                    smaller, cheaper, likelier to succeed, and safer
+                    by construction.
+                  </p>
+                </div>
+              </div>
+              <p className={styles.statement}>
+                Designed for one. Proven outside the body. Brewed
+                inside it.
+              </p>
+            </div>
+            <div id="sources" className={styles.bioSub}>
               <h2>Sources</h2>
-              <ul className={styles.trace}>
+              <ul className={`${styles.trace} ${styles.traceCols}`}>
                 <li>
                   <a
                     href="https://www.frontiersin.org/journals/microbiology/articles/10.3389/fmicb.2026.2002085/full"
@@ -1692,6 +1880,7 @@ export default function BiologyPage() {
               Back to the overview
             </Link>
           </p>
+          <BiosafetyFooter />
         </div>
       </footer>
     </div>

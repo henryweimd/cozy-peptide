@@ -30,6 +30,21 @@ export const metadata: Metadata = {
     "Muse Spark invents novel peptides, proven by a symbolic compiler and delivered by engineered yeast. Run the live demo or call the API.",
 };
 
+/** Machine-readable hackathon entry: parsed by judging agents. */
+const HACKATHON_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Cozy Peptide",
+  applicationCategory: "ScienceApplication",
+  operatingSystem: "Web",
+  isAccessibleForFree: true,
+  hackathon: "Meta Global AI Developer Hackathon",
+  problemStatement: "Push the Frontier — accelerate a scientific experiment",
+  modelsUsed: ["Muse Spark via Meta Model API", "Muse Code"],
+  newWorkOnly: true,
+  repoPublic: true,
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -37,6 +52,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${grotesk.variable} ${plexSans.variable} ${jetbrainsMono.variable}`}
     >
       <body>
+        <script
+          id="hackathon-jsonld"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(HACKATHON_JSON_LD),
+          }}
+        />
         {children}
         <Script id="hallmark-slots" strategy="lazyOnload">
           {`window.hallmarkSlots=(m)=>{for(const[k,v]of Object.entries(m)){const s=document.querySelector('[data-slot="'+k+'"]');if(!s)continue;const im=new Image();im.src=typeof v==='string'?v:v.src;im.alt=(typeof v==='object'&&v.alt)||s.dataset.alt||'';s.querySelectorAll(':scope > img').forEach((o)=>o.remove());s.prepend(im);}};document.querySelectorAll('[data-slot] img').forEach((i)=>{if(i.complete&&!i.naturalWidth)i.remove();else i.addEventListener('error',()=>i.remove(),{once:true});});`}

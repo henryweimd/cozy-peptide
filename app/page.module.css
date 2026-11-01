@@ -1924,6 +1924,286 @@
   }
 }
 
+/* Science & Impact reading grids: duo/trio columns on wide screens,
+   single column under 60rem. */
+.bioDuo {
+  margin-top: var(--space-2xl);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-columns);
+  align-items: start;
+}
+
+.bioTrio {
+  margin-top: var(--space-2xl);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-columns);
+  align-items: start;
+}
+
+.bioSpan {
+  grid-column: 1 / -1;
+}
+
+.bioCell {
+  border-top: var(--rule-hair) solid var(--color-rule-2);
+  padding-top: var(--space-sm);
+  min-width: 0;
+  color: var(--color-ink-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.bioCellTitle {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.bioCell p {
+  margin: 0;
+}
+
+.bioDuo > .bioProse,
+.bioTrio > .bioProse {
+  margin-top: 0;
+}
+
+/* Long full-width passages flow in two newspaper columns. */
+.bioFlow2 {
+  columns: 2;
+  column-gap: var(--gap-columns);
+}
+
+.bandNavy .bioCell {
+  border-top-color: color-mix(in oklab, currentColor 32%, transparent);
+  color: inherit;
+}
+
+.bandNavy .bioCellTitle,
+.bandNavy .bioCell strong {
+  color: var(--color-accent-ink);
+}
+
+/* Shaded call-out box: same scheme as expertbox, sized to its grid
+   cell, with definition entries for product/pipeline detail. */
+.bioCallout {
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  color: var(--color-ink-2);
+  min-width: 0;
+}
+
+.bioCallout h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+}
+
+.bioCallout > p {
+  margin: 0;
+}
+
+.bioCallout dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.bioCallout dl > div {
+  border-top: var(--rule-hair) solid var(--color-rule-2);
+  padding-top: var(--space-2xs);
+}
+
+.bioCallout dt {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.bioCallout dd {
+  margin: var(--space-3xs) 0 0;
+  font-size: var(--text-sm);
+}
+
+/* Sources list: two columns on wide screens. */
+.traceCols {
+  display: block;
+  columns: 2;
+  column-gap: var(--gap-columns);
+}
+
+.traceCols > li {
+  break-inside: avoid;
+  margin-bottom: var(--space-3xs);
+}
+
+@media (max-width: 60rem) {
+  .bioDuo,
+  .bioTrio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bioFlow2 {
+    columns: 1;
+  }
+
+  .traceCols {
+    display: flex;
+    columns: auto;
+  }
+
+  .traceCols > li {
+    margin-bottom: 0;
+  }
+}
+
+/* Science & Impact subsection rhythm: even breaks between subsections,
+   tighter than the major section movements. */
+.bioSub {
+  margin-top: var(--space-3xl);
+}
+
+.bioSub:first-child {
+  margin-top: 0;
+}
+
+.bioSub > .trace {
+  margin-top: var(--space-xl);
+}
+
+.section.bioSection {
+  padding-top: var(--space-3xl);
+}
+
+.band.bioBand {
+  margin-top: var(--space-3xl);
+}
+
+@media (max-width: 60rem) {
+  .bioSub {
+    margin-top: var(--space-2xl);
+  }
+}
+
+/* Judged safety section: high-contrast dark cards, red refusal box. */
+.safetyGrid {
+  margin-top: var(--space-2xl);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-columns);
+}
+
+.safetyCard {
+  background: var(--color-graphite);
+  color: var(--color-graphite-ink);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  min-width: 0;
+}
+
+.safetyCard h3 {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--text-lg);
+  color: var(--color-accent-ink);
+}
+
+.safetyCard p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.refusalDemo {
+  margin-top: var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+
+.refusalDemo h3 {
+  margin: 0;
+}
+
+.refusalDemo .btn {
+  align-self: flex-start;
+}
+
+.refusalVerdict {
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-card);
+  background: color-mix(in oklab, var(--color-error) 12%, var(--color-paper));
+  border: var(--rule-hair) solid var(--color-error);
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.safetySubhead {
+  margin: var(--space-2xl) 0 0;
+}
+
+/* Hackathon-fit strip directly under the hero. */
+.hackfit {
+  background: var(--color-paper-2);
+  border-top: var(--rule-hair) solid var(--color-rule);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  padding-top: var(--space-xl);
+  padding-bottom: var(--space-xl);
+}
+
+.hackfitTitle {
+  font-size: var(--text-title);
+  margin: 0;
+}
+
+.hackfit ul {
+  list-style: none;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md) var(--gap-columns);
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+
+.hackfit li strong {
+  color: var(--color-ink);
+}
+
+/* Always-visible research-use-only footer notice. */
+.biosafety {
+  grid-column: span 12;
+  margin: var(--space-md) 0 0;
+}
+
+.biosafety small {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.biosafety a {
+  color: inherit;
+}
+
+@media (max-width: 60rem) {
+  .safetyGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hackfit ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 40rem) {
   .wrapDiagram {
     overflow-x: auto;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import styles from "../page.module.css";
+import BiosafetyFooter from "../biosafety-footer";
 import SiteNav from "../site-nav";
 import SectionIcon from "../section-icons";
 import Designer from "./designer";
@@ -135,6 +136,7 @@ export default function DesignPage() {
               Back to the overview
             </Link>
           </p>
+          <BiosafetyFooter />
         </div>
       </footer>
     </div>

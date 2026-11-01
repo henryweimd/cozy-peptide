@@ -11,7 +11,7 @@ export type SitePage = "home" | "design" | "biology";
 
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
-  { id: "biology", href: "/biology", label: "Bio & Business" },
+  { id: "biology", href: "/biology", label: "Science & Impact" },
 ];
 
 /**
@@ -21,7 +21,7 @@ const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
 const SECTIONS: Array<{ href: string; label: string }> = [
   { href: "/#api", label: "API Docs" },
   { href: "/#pipeline", label: "AI Pipeline" },
-  { href: "/#safety", label: "Safety" },
+  { href: "/#responsible-use-meta-ai-tooling", label: "Safety" },
 ];
 
 export default function SiteNav({
