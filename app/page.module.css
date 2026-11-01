@@ -1017,6 +1017,74 @@
   margin-bottom: var(--space-sm);
 }
 
+.bandNavy {
+  background: oklch(30% 0.105 262);
+  color: oklch(90% 0.016 250);
+}
+
+.bandNavy h2,
+.bandNavy h3 {
+  color: oklch(98.6% 0.005 250);
+}
+
+.bandNavy h3 {
+  margin-top: var(--space-2xl);
+}
+
+.bandNavy .headblock .lead {
+  color: oklch(80% 0.03 255);
+}
+
+.bandNavy .bioProse {
+  color: oklch(85% 0.02 252);
+}
+
+.bandNavy .bioProse strong {
+  color: oklch(98.6% 0.005 250);
+}
+
+.bandNavy a {
+  color: var(--color-accent-2);
+  text-decoration: underline;
+}
+
+.bandNavy a:hover {
+  color: oklch(98.6% 0.005 250);
+}
+
+.bandNavy .paperTable th {
+  color: oklch(78% 0.035 255);
+  border-bottom-color: oklch(100% 0 0 / 0.28);
+}
+
+.bandNavy .paperTable td {
+  color: oklch(90% 0.016 250);
+  border-bottom-color: oklch(100% 0 0 / 0.16);
+}
+
+.bandNavy .paperTable th[scope="row"] {
+  color: oklch(98.6% 0.005 250);
+}
+
+.paraIcon {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 0.4em;
+  vertical-align: -0.22em;
+  color: var(--color-accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.paraIconDot {
+  fill: currentColor;
+  stroke: none;
+}
+
 .well {
   background: var(--color-graphite);
   color: var(--color-graphite-ink);

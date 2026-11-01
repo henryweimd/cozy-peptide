@@ -1,9 +1,9 @@
-# cozy-peptide — Name the disease. Get a novel AI-designed peptide to treat it.
+# cozy-peptide — Name the disease. We design the peptide.
 
 > ## Try it live: [cozy-peptide.vercel.app](https://cozy-peptide.vercel.app/)
 >
 > Design a peptide in your browser — no token needed. Then read the
-> [biology](https://cozy-peptide.vercel.app/#biology),
+> [bio & business](https://cozy-peptide.vercel.app/biology),
 > [safety](https://cozy-peptide.vercel.app/#safety), and API tabs on the site.
 > This README is the condensed version; the site is the full story.
 
@@ -108,15 +108,15 @@ Nissle, Lactococcus, or Bacillus spores):
 name the disease → [ cozy-peptide [ compiler [ Muse Spark ] ] ] → chassis DNA
 ```
 
-**Biology for everyone.** Chatbots predict the next word; Muse Spark
+**Bio & Business.** Chatbots predict the next word; Muse Spark
 predicts the next building block of a protein. DNA spells genes with four
 letters (A, C, G, T); proteins spell themselves with twenty amino-acid
-letters. Swallowed peptides rarely survive stomach acid and pancreatic
-proteases — so the winning design never travels as a pill. It is compiled
-into DNA and installed as a cassette in *Saccharomyces boulardii*, a
-miniature factory living where the disease lives. Full version with market
-figures (1 in 10 with IBS, 7M+ with IBD, $33B in drug sales):
-[cozy-peptide.vercel.app/#biology](https://cozy-peptide.vercel.app/#biology).
+letters. Swallowed peptides rarely survive the gut — so the winning design
+never travels as a pill. It is compiled into DNA and installed as a cassette
+in a resident microbe, a miniature factory living where the disease lives.
+Full version with the LBP universe beyond the gut, market figures, and build
+costs from DNA to GMP:
+[cozy-peptide.vercel.app/biology](https://cozy-peptide.vercel.app/biology).
 
 **Safe by design, approved by precedent.** The chassis is GRAS yeast with
 decades of safe use; it never colonizes and clears within days of the last
@@ -466,7 +466,7 @@ and per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 
 ### Try it in the browser
 
-Four pages share one top bar (`home`, `Biology`, `Live
+Four pages share one top bar (`home`, `Bio & Business`, `Live
 Biotherapeutic Product`, `API Docs`, `AI Pipeline`, `Safety`, plus the
 design call to action):
 
@@ -480,10 +480,17 @@ design call to action):
   **Recent designs** ledger table (ten at a time with a pager; any
   row reopens the full pipeline output), and the service-provider
   directory.
-- **`/biology`** — the biology explainer: proteins as sentences, the
-  literature-first process flow with Muse models at the core, the gut
-  factory, disease burden, and the contrarian function-first thesis
-  with an expert technical companion.
+- **`/biology`** — Bio & Business: the factory-model biology and
+  what LBPs make, the payload-design bottleneck (six constraints plus
+  a biology-first expert companion), how the designer clears it
+  end to end with the literature-first process flow, a navy-band
+  business case (IBD worked example plus a worldwide therapeutic
+  markets table with LBP approach, payload angle, and host plus body
+  site per row, figures hyperlinked to new-tab sources), build costs
+  from DNA to
+  GMP by company stage with the AI-dividend and rational-design case,
+  the one-person-biotech thesis, and the
+  factory-at-every-body-site vision with sources.
 - **`/lbp`** — the Live Biotherapeutic Product guide: what LBPs are,
   the two FDA-approved products, the late-stage pipeline, and how
   designed peptides turn microbes into living drug factories,

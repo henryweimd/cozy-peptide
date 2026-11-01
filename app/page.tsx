@@ -146,11 +146,12 @@ export default function Home() {
           <div className={`container ${styles.herogrid}`}>
             <div className={styles.herotext}>
               <h1 id="page-title">
-                Name the disease. Get a novel AI-designed peptide to treat
-                it.
+                Name the disease. We design the peptide.
               </h1>
               <p className="lead">
-                New peptides, proven by the compiler, brewed in your gut.
+                Novel AI-designed peptides for gut disease — every one
+                safety-verified, then compiled to DNA so engineered
+                probiotics can make it where it&apos;s needed.
               </p>
               <div className={styles.heroactions}>
                 <a className={styles.btn} href="#api">
@@ -668,10 +669,11 @@ export default function Home() {
         <section className={styles.section} aria-labelledby="safety">
           <div className="container">
             <div className={styles.headblock}>
-              <h2 id="safety">Safe by design, approved by precedent</h2>
+              <h2 id="safety">Safety by design</h2>
               <p className="lead">
-                Living medicine, with layers of safety and an FDA path
-                already walked.
+                Nothing here is approved, and nothing claims to be. The
+                designer reviews and revises every candidate against
+                regulatory precedent and sound scientific reasoning.
               </p>
             </div>
             <div className={styles.bioProse}>

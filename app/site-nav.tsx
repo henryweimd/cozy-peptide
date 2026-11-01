@@ -11,7 +11,7 @@ export type SitePage = "home" | "design" | "lbp" | "biology";
 
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
-  { id: "biology", href: "/biology", label: "Biology" },
+  { id: "biology", href: "/biology", label: "Bio & Business" },
   { id: "lbp", href: "/lbp", label: "Live Biotherapeutic Product" },
 ];
 

@@ -98,6 +98,18 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
   const [focusRunId, setFocusRunId] = useState<string | null>(
     initial.runId ?? null
   );
+  // Review scrolls to the ledger panel AFTER it mounts: scrolling in
+  // the click handler runs before React renders #design-focus, so the
+  // lookup misses and the user is left staring at the runs list.
+  useEffect(() => {
+    if (focusRunId === null) return;
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document
+      .getElementById("design-focus")
+      ?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }, [focusRunId]);
   const customActive = presetId === "other";
   // Deep-linked sessions chose on the overview: the top renders as a
   // read-only summary, never as controls. Direct visits stay fully
@@ -821,14 +833,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
         </div>
       )}
       <div id="recent-runs">
-        <RecentRunsTable
-          onSelect={(id) => {
-            setFocusRunId(id);
-            document
-              .getElementById("design-focus")
-              ?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-        />
+        <RecentRunsTable onSelect={(id) => setFocusRunId(id)} />
       </div>
     </div>
   );
