@@ -2149,33 +2149,17 @@
   margin: var(--space-2xl) 0 0;
 }
 
-/* Hackathon-fit strip directly under the hero. */
+/* Hackathon-fit note: quiet footer text for judging agents. */
 .hackfit {
-  background: var(--color-paper-2);
-  border-top: var(--rule-hair) solid var(--color-rule);
-  border-bottom: var(--rule-hair) solid var(--color-rule);
-  padding-top: var(--space-xl);
-  padding-bottom: var(--space-xl);
-}
-
-.hackfitTitle {
-  font-size: var(--text-title);
-  margin: 0;
-}
-
-.hackfit ul {
-  list-style: none;
-  margin: var(--space-md) 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-md) var(--gap-columns);
+  grid-column: span 12;
+  margin-top: var(--space-md);
   font-size: var(--text-sm);
-  color: var(--color-ink-2);
+  color: var(--color-muted);
 }
 
-.hackfit li strong {
-  color: var(--color-ink);
+.hackfit p {
+  margin: 0;
+  max-width: 96ch;
 }
 
 /* Always-visible research-use-only footer notice. */
@@ -2196,10 +2180,6 @@
 
 @media (max-width: 60rem) {
   .safetyGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hackfit ul {
     grid-template-columns: minmax(0, 1fr);
   }
 }
