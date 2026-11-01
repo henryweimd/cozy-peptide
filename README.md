@@ -465,6 +465,16 @@ and per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
   `{target, brief, evidence}` payload. **`POST
   /api/research-report/docx`** returns the same brief as a
   downloadable `.docx` file.
+- **Lab loop (see `/lab-guide`)** — **`GET
+  /api/assay-templates?type=`** (public) downloads fillable CSVs for
+  MIC, cytotoxicity, expression titer, and sequence verification.
+  **`POST /api/assay-results`** (Bearer [REDACTED] records assay files
+  against a run ID — same JSON the guide posts, so CRO pipelines can
+  submit procedurally. **`GET /api/lab-dispatch?run=`** (Bearer [REDACTED]
+  returns the machine work order: design specs plus a suggested
+  experiment panel and the ingest contract. **`GET
+  /api/assay-export?format=`** (Bearer [REDACTED] exports consented
+  measurements (CC0) as JSON or CSV for model developers.
 
 ### Try it in the browser
 

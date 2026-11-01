@@ -887,6 +887,9 @@ export default function Home() {
             <a className={styles.footlink} href="/biology">
               science &amp; impact
             </a>
+            <a className={styles.footlink} href="/lab-guide">
+              lab guide
+            </a>
             <a className={styles.footlink} href="#api">
               the API call
             </a>

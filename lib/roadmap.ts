@@ -16,6 +16,8 @@ export interface RoadmapStub {
   summary: string;
   /** How it will be achieved — tooltip and tool detail. */
   how: string;
+  /** Present when the capability shipped: links to its live home. */
+  liveHref?: string;
 }
 
 export const FUTURE_BADGE = "Future functionality";
@@ -27,6 +29,7 @@ export const ROADMAP_STUBS: RoadmapStub[] = [
     badge: FUTURE_BADGE,
     summary: "Feed assay results back into design.",
     how: "MIC, cytotoxicity, and expression-titer assays recorded against run IDs in the ledger; active learning re-ranks the next candidate pool by expected information gain.",
+    liveHref: "/lab-guide",
   },
   {
     id: "potency-prediction",

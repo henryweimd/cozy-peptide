@@ -79,6 +79,7 @@ const STEPS: GuideStep[] = [
     body: "Download the DNA order files, then pick who builds it: synthesis houses for DNA, specialist CROs for engineered strains.",
     why: "A design only matters once a lab can build it — this is the bridge.",
     target: "#providers",
+    link: { href: "/lab-guide", label: "Open the Lab Guide" },
   },
   {
     id: "recent",

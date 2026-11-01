@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
+import Link from "next/link";
 import styles from "./page.module.css";
 import SectionIcon from "./section-icons";
 import { optimizeCdsForHostId } from "../lib/codon-optimizer";
@@ -857,10 +858,22 @@ export function FutureStubs(): React.ReactElement {
     <ul className={styles.futurelist} aria-label="Planned capabilities">
       {ROADMAP_STUBS.map((stub) => (
         <li key={stub.id} title={stub.how}>
-          <span className={styles.futurebadge}>{FUTURE_BADGE}</span>{" "}
-          <strong>{stub.title}</strong>
-          <span className={styles.futuresummary}> — {stub.summary}</span>
-          <span className={styles.futurehow}>How: {stub.how}</span>
+          {stub.liveHref !== undefined ? (
+            <>
+              <span className={styles.livebadge}>Live</span>{" "}
+              <Link href={stub.liveHref}>
+                <strong>{stub.title}</strong>
+              </Link>
+              <span className={styles.futuresummary}> — {stub.summary}</span>
+            </>
+          ) : (
+            <>
+              <span className={styles.futurebadge}>{FUTURE_BADGE}</span>{" "}
+              <strong>{stub.title}</strong>
+              <span className={styles.futuresummary}> — {stub.summary}</span>
+              <span className={styles.futurehow}>How: {stub.how}</span>
+            </>
+          )}
         </li>
       ))}
     </ul>

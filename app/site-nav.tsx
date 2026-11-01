@@ -7,12 +7,19 @@ import styles from "./page.module.css";
  * call to action, and in-page navigation lives in a subnav below.
  */
 
-export type SitePage = "home" | "design" | "biology";
+export type SitePage = "home" | "design" | "biology" | "lab";
 
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
   { id: "biology", href: "/biology", label: "Science & Impact" },
 ];
+
+/** Standalone Lab Guide: last link before the Design call to action. */
+const LAB_PAGE: { id: SitePage; href: string; label: string } = {
+  id: "lab",
+  href: "/lab-guide",
+  label: "Lab Guide",
+};
 
 /**
  * Explainer anchors on the landing page, reachable from every whole
@@ -66,6 +73,19 @@ export default function SiteNav({
               {section.label}
             </a>
           ))}
+          {current === LAB_PAGE.id ? (
+            <span className={styles.navlink} aria-current="page">
+              {LAB_PAGE.label}
+            </span>
+          ) : (
+            <Link
+              key={LAB_PAGE.id}
+              className={styles.navlink}
+              href={LAB_PAGE.href}
+            >
+              {LAB_PAGE.label}
+            </Link>
+          )}
           {action !== undefined && (
             <Link
               className={`${styles.btn} ${styles.navbtn}`}

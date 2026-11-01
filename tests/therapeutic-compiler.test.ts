@@ -433,18 +433,17 @@ test("agent tool stubs report honestly and never throw", async () => {
     "binding-affinity",
     "structure-fold",
     "off-target-panel",
-    "wetlab-feedback",
     "potency-prediction",
     "gut-safety-panel",
   ]);
-  assert.equal(AGENT_TOOLS.length, 6);
+  assert.equal(AGENT_TOOLS.length, 5);
   const results = await runAgentTools({
     candidate: "ACDEFGHIKLMN",
     target: TARGET,
     modality: "linear",
     charge_target: 2,
   });
-  assert.equal(results.length, 6);
+  assert.equal(results.length, 5);
   for (const result of results) {
     assert.equal(AgentToolResultSchema.safeParse(result).success, true);
     assert.equal(result.status, "not-configured");
@@ -463,14 +462,13 @@ test("route payload carries agent tool results", async () => {
   assert.equal(res.status, 200);
   const body = (await res.json()) as Record<string, unknown>;
   const tools = body["agent_tools"] as Array<Record<string, unknown>>;
-  assert.equal(tools.length, 6);
+  assert.equal(tools.length, 5);
   assert.deepEqual(
     tools.map((entry) => entry["tool"]),
     [
       "binding-affinity",
       "structure-fold",
       "off-target-panel",
-      "wetlab-feedback",
       "potency-prediction",
       "gut-safety-panel",
     ]
