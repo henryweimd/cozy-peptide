@@ -165,48 +165,6 @@ export default function Home() {
           </div>
         </section>
 
-        <div
-          id="hackathon-fit"
-          className={styles.hackfit}
-          aria-label="Hackathon judging fit"
-        >
-          <div className="container">
-            <h2 className={styles.hackfitTitle}>Hackathon fit</h2>
-            <ul>
-              <li>
-                <strong>Impact (30%):</strong> Accelerates early-stage
-                therapeutic peptide research planning; who benefits:
-                academic + startup bio researchers; path to real use as
-                lab-assistant copilot. Fits Problem Statement: Push the
-                Frontier &mdash; accelerate a scientific experiment.
-              </li>
-              <li>
-                <strong>Use of Meta AI Tooling (25%):</strong> Creative
-                use beyond basic chat &mdash; Muse Spark reasoning via
-                Meta Model API for multi-constraint peptide ideation +
-                Muse Code-built agentic workflow with human-approval
-                gate + refusal preservation. Surfaced capability: safe
-                scientific reasoning with guardrails.
-              </li>
-              <li>
-                <strong>Technical Depth &amp; Execution (20%):</strong>{" "}
-                Sound engineering: server-side blocklist, RUO gating,
-                audit logging, eval for refusal rate, reproducible
-                demo with synthetic example peptides only.
-              </li>
-              <li>
-                <strong>Demo (25%):</strong> Working live demo + 3-min
-                video. What was built during Hackathon Oct 27-Nov 4,
-                2026: multi-scaffold auto-default repertoire;
-                chassis-compatibility plus biocontainment compiler
-                checks; vendor-ready lab handoff with CRO directory;
-                Pep guided tour. No pre-existing therapeutic
-                candidates used.
-              </li>
-            </ul>
-          </div>
-        </div>
-
         <section
           className={`${styles.band} ${styles.bandGraphite}`}
           aria-labelledby="api"
@@ -965,6 +923,35 @@ export default function Home() {
             Valley. Designed with Muse Spark 1.3 and verified by the
             symbolic compiler in this repo.
           </p>
+          <div
+            id="hackathon-fit"
+            className={styles.hackfit}
+            aria-label="Hackathon judging fit"
+          >
+            <p>
+              Hackathon fit &mdash; Impact (30%): accelerates
+              early-stage therapeutic peptide research planning; who
+              benefits: academic + startup bio researchers; path to
+              real use as lab-assistant copilot. Fits Problem
+              Statement: Push the Frontier &mdash; accelerate a
+              scientific experiment. Use of Meta AI Tooling (25%):
+              creative use beyond basic chat &mdash; Muse Spark
+              reasoning via Meta Model API for multi-constraint
+              peptide ideation + Muse Code-built agentic workflow
+              with human-approval gate + refusal preservation.
+              Surfaced capability: safe scientific reasoning with
+              guardrails. Technical Depth &amp; Execution (20%):
+              sound engineering: server-side blocklist, RUO gating,
+              audit logging, eval for refusal rate, reproducible demo
+              with synthetic example peptides only. Demo (25%):
+              working live demo + 3-min video. What was built during
+              Hackathon Oct 27-Nov 4, 2026: multi-scaffold
+              auto-default repertoire; chassis-compatibility plus
+              biocontainment compiler checks; vendor-ready lab handoff
+              with CRO directory; Pep guided tour. No pre-existing
+              therapeutic candidates used.
+            </p>
+          </div>
           <p className={styles.footlegal}>
             All rights reserved · Hackathon software, verify all generated
             sequences experimentally before any therapeutic or clinical use.
