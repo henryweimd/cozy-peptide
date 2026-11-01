@@ -116,6 +116,7 @@ function UploadWidget({
   token,
   consent,
   done,
+  demo,
   onSubmitted,
 }: {
   assay: AssayType;
@@ -123,6 +124,7 @@ function UploadWidget({
   token: string;
   consent: boolean;
   done: boolean;
+  demo: boolean;
   onSubmitted: (assay: AssayType) => void;
 }): React.ReactElement {
   const template = ASSAY_TEMPLATES[assay];
@@ -198,12 +200,17 @@ function UploadWidget({
   }
 
   async function submit(): Promise<void> {
-    if (token.length === 0) {
+    if (!demo && token.length === 0) {
       setStatus("Enter your API token above first.");
       return;
     }
     if (contentText === null && contentBase64 === null) {
       setStatus("Choose a file first.");
+      return;
+    }
+    if (demo) {
+      setStatus("Demo submission recorded locally — nothing was sent.");
+      onSubmitted(assay);
       return;
     }
     setBusy(true);
@@ -247,6 +254,8 @@ function UploadWidget({
     }
   }
 
+  const locked = (!demo && token.length === 0) || busy;
+
   return (
     <div className={styles.labUpload}>
       <p className={styles.bioCellTitle}>
@@ -269,7 +278,7 @@ function UploadWidget({
         className={styles.otherinput}
         type="file"
         accept={acceptsFasta ? ".csv,.txt,.fasta,.fa,.ab1" : ".csv,.txt"}
-        disabled={token.length === 0 || busy}
+        disabled={locked}
         onChange={(event) => {
           void onFile(event.target.files?.[0]);
         }}
@@ -291,13 +300,13 @@ function UploadWidget({
         type="text"
         placeholder="e.g. plate 2, edge wells excluded"
         value={notes}
-        disabled={token.length === 0 || busy}
+        disabled={locked}
         onChange={(event) => setNotes(event.target.value)}
       />
       <button
         type="button"
         className={`${styles.btn} ${styles.btnPrimary}`}
-        disabled={token.length === 0 || busy || done}
+        disabled={locked || done}
         onClick={() => {
           void submit();
         }}
@@ -309,8 +318,35 @@ function UploadWidget({
   );
 }
 
+const DEMO_RUN: LabRun = {
+  id: "demo",
+  target: "C. difficile colonization (demo)",
+  modality: "knottin-6c",
+  candidateId: "demo-cand-1",
+  candidateSequence: "ACDEFGHIKLMNPQRSTVWYACDEFGH",
+  labHandoff: { host_display: "S. boulardii (demo)" },
+};
+
+const DEMO_DISPATCH = `{
+  "schema": "cozy-peptide.lab-dispatch/1",
+  "run_id": "demo",
+  "note": "Sample work order. Bind a real run and enter a token for live data.",
+  "design": {
+    "target": "C. difficile colonization (demo)",
+    "candidate_sequence": "ACDEFGHIKLMNPQRSTVWYACDEFGH",
+    "dna_gblock": "<120-600 bp construct>",
+    "order_csv": "<downloadable from the run handoff>"
+  },
+  "experiment_panel": ["sequence_verification", "expression_titer", "mic", "cytotoxicity"],
+  "result_ingest": {
+    "endpoint": "/api/assay-results",
+    "auth": "Authorization: Bearer <API_BEARER_TOKEN>"
+  }
+}`;
+
 export default function Guide(): React.ReactElement {
   const params = useSearchParams();
+  const [demo, setDemo] = useState(false);
   const [runId, setRunId] = useState<string | null>(() => {
     const fromUrl = params.get("run");
     return fromUrl !== null && fromUrl.length > 0 ? fromUrl : null;
@@ -337,6 +373,12 @@ export default function Guide(): React.ReactElement {
     const frame = requestAnimationFrame(() => {
       if (runId === null) {
         setRun(null);
+        return;
+      }
+      if (runId === "demo") {
+        setRunError("");
+        setProgress(loadProgress("demo"));
+        setRun(DEMO_RUN);
         return;
       }
       setRunError("");
@@ -410,7 +452,11 @@ export default function Guide(): React.ReactElement {
   );
 
   async function loadDispatch(): Promise<void> {
-    if (runId === null || token.length === 0) return;
+    if (runId === null) return;
+    if (demo || token.length === 0) {
+      if (demo) setDispatch(DEMO_DISPATCH);
+      return;
+    }
     setDispatchBusy(true);
     setDispatch("");
     try {
@@ -436,7 +482,21 @@ export default function Guide(): React.ReactElement {
   }
 
   function pickRun(picked: RecentRun): void {
+    setDemo(false);
+    setDispatch("");
     setRunId(picked.id);
+  }
+
+  function enterDemo(): void {
+    setDemo(true);
+    setDispatch("");
+    setRunId("demo");
+  }
+
+  function exitDemo(): void {
+    setDemo(false);
+    setDispatch("");
+    setRunId(null);
   }
 
   const hostDisplay =
@@ -458,6 +518,19 @@ export default function Guide(): React.ReactElement {
           next generation of design models.
         </p>
       </div>
+      {demo && (
+        <p className={styles.note}>
+          Demo mode: sample run, simulated submissions — nothing is
+          sent and no models run.{" "}
+          <button
+            type="button"
+            className={styles.demolink}
+            onClick={exitDemo}
+          >
+            [Exit demo]
+          </button>
+        </p>
+      )}
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-run">
         <StepHead id="lab-run-head" index="0" title="Bind a run" done={run !== null} />
@@ -488,7 +561,16 @@ export default function Guide(): React.ReactElement {
         <p className={styles.note}>
           Uploads and lab work orders are restricted to credentialed
           users. The token lives only in this browser tab and is sent
-          solely with your submissions.
+          solely with your submissions. No token?{" "}
+          <button
+            type="button"
+            className={styles.demolink}
+            onClick={enterDemo}
+          >
+            [Demo]
+          </button>{" "}
+          takes you through with sample data — nothing runs, nothing
+          is sent.
         </p>
       </div>
 
@@ -536,7 +618,7 @@ export default function Guide(): React.ReactElement {
         <button
           type="button"
           className={styles.btn}
-          disabled={runId === null || token.length === 0 || dispatchBusy}
+          disabled={runId === null || (!demo && token.length === 0) || dispatchBusy}
           onClick={() => {
             void loadDispatch();
           }}
@@ -582,6 +664,7 @@ export default function Guide(): React.ReactElement {
             token={token}
             consent={consent}
             done={progress.submitted.includes("sequence_verification")}
+            demo={demo}
             onSubmitted={markSubmitted}
           />
         )}
@@ -608,6 +691,7 @@ export default function Guide(): React.ReactElement {
             token={token}
             consent={consent}
             done={progress.submitted.includes("expression_titer")}
+            demo={demo}
             onSubmitted={markSubmitted}
           />
         )}
@@ -639,6 +723,7 @@ export default function Guide(): React.ReactElement {
               token={token}
               consent={consent}
               done={progress.submitted.includes("mic")}
+              demo={demo}
               onSubmitted={markSubmitted}
             />
             <UploadWidget
@@ -647,6 +732,7 @@ export default function Guide(): React.ReactElement {
               token={token}
               consent={consent}
               done={progress.submitted.includes("cytotoxicity")}
+              demo={demo}
               onSubmitted={markSubmitted}
             />
           </>

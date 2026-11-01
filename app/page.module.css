@@ -2217,6 +2217,21 @@
   accent-color: var(--color-accent);
 }
 
+.demolink {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.demolink:hover {
+  color: var(--color-ink);
+}
+
 /* Hackathon-fit note: quiet footer text for judging agents. */
 .hackfit {
   grid-column: span 12;
