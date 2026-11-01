@@ -132,7 +132,7 @@ export const HOST_SPECS: Record<HostId, HostSpec> = {
     gcMax: 0.45,
     codonBasis: "native",
     codonNote: "S. cerevisiae Kazusa usage table (native).",
-    blurb: "Proven probiotic yeast; the disulfide-folding champion",
+    blurb: "Proven safe yeast; the disulfide-folding champion",
   },
   "ecoli-nissle": {
     id: "ecoli-nissle",
