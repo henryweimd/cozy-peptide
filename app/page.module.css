@@ -547,6 +547,97 @@
   color: var(--color-muted);
 }
 
+.peptidehero {
+  container-type: inline-size;
+  background: var(--color-graphite);
+  color: var(--color-graphite-ink);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.herokicker {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  color: var(--color-accent-2);
+}
+
+.herosequence {
+  margin: 0;
+  font-family: var(--font-outlier);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 6vw, 2.75rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.herometa,
+.herointerpreted {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-graphite-muted);
+}
+
+.heroactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.copybtn {
+  min-height: 40px;
+  padding: 0 var(--space-md);
+  font-size: var(--text-sm);
+}
+
+.herodna {
+  margin-top: var(--space-xs);
+  border-top: var(--rule-hair) solid var(--color-graphite-glyph-2);
+  padding-top: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.herodna h4 {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-graphite-ink);
+}
+
+.herodna p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-graphite-muted);
+  max-width: 70ch;
+}
+
+.herodnastats {
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+}
+
+.herodnaseq {
+  font-family: var(--font-outlier);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  background: var(--color-graphite-2);
+  border-radius: var(--radius-input);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.herodnafallback {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-graphite-muted);
+}
+
 .loopchips {
   list-style: none;
   margin: 0;
@@ -1241,6 +1332,30 @@
   color: var(--color-ink-2);
 }
 
+.expertbox {
+  margin-top: var(--space-xl);
+  max-width: 72ch;
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-card);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  color: var(--color-ink-2);
+}
+
+.expertbox h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+}
+
+.expertbox p {
+  margin: 0;
+  max-width: 68ch;
+}
+
 .paperTable {
   width: 100%;
   border-collapse: collapse;
@@ -1595,13 +1710,10 @@
 }
 
 .viewerstatus {
-  position: absolute;
-  inset: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-sm);
-  padding: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
   background: var(--color-key-face);
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-input);

@@ -416,20 +416,24 @@ per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 
 ### Try it in the browser
 
-Three pages share one top bar (`home`, `Live Biotherapeutic Product`,
-`The Biology`, `API Docs`, `AI Pipeline`, `Safety`, plus the design
-call to action):
+Four pages share one top bar (`home`, `Biology`, `Live
+Biotherapeutic Product`, `API Docs`, `AI Pipeline`, `Safety`, plus the
+design call to action):
 
 - **`/`** — the landing page: a live demo that runs the real pipeline
-  with no token required, the biology explainer, the API call, the
-  pipeline walkthrough, safety notes, and the single most recent
+  with no token required, the API call, the pipeline walkthrough with
+  the how-it-works primer, safety notes, and the single most recent
   design with a link into the full runs table.
-- **`/design`** — the full designer: how-it-works primer, condition
-  grid, live Design status timeline and event log, the designed
-  sequence with 3D structure and lab handoff downloads, the
+- **`/design`** — the full designer: condition grid, live Design status
+  timeline and event log, the designed peptide hero (large sequence
+  plus LBP-ready DNA), 3D structure with lab handoff downloads, the
   **Recent designs** ledger table (ten at a time with a pager; any
   row reopens the full pipeline output), and the service-provider
   directory.
+- **`/biology`** — the biology explainer: proteins as sentences, the
+  literature-first process flow with Muse models at the core, the gut
+  factory, disease burden, and the contrarian function-first thesis
+  with an expert technical companion.
 - **`/lbp`** — the Live Biotherapeutic Product guide: what LBPs are,
   the two FDA-approved products, the late-stage pipeline, and how
   designed peptides turn microbes into living drug factories,

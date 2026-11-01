@@ -7,10 +7,11 @@ import styles from "./page.module.css";
  * call to action, and in-page navigation lives in a subnav below.
  */
 
-export type SitePage = "home" | "design" | "lbp";
+export type SitePage = "home" | "design" | "lbp" | "biology";
 
 const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
   { id: "home", href: "/", label: "home" },
+  { id: "biology", href: "/biology", label: "Biology" },
   { id: "lbp", href: "/lbp", label: "Live Biotherapeutic Product" },
 ];
 
@@ -19,7 +20,6 @@ const PAGES: Array<{ id: SitePage; href: string; label: string }> = [
  * page. The Design call to action stays a button, never a text link.
  */
 const SECTIONS: Array<{ href: string; label: string }> = [
-  { href: "/#biology", label: "The Biology" },
   { href: "/#api", label: "API Docs" },
   { href: "/#pipeline", label: "AI Pipeline" },
   { href: "/#safety", label: "Safety" },

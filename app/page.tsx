@@ -67,6 +67,53 @@ npm run dev    # http://localhost:3000
 npm test       # typecheck + test suite
 npm run build  # production build`;
 
+const PROCESS_STEPS: Array<{
+  title: string;
+  body: string;
+  meta: boolean;
+}> = [
+  {
+    title: "Guard the input",
+    body: "Free text is screened for injection, off-topic prompts, and safety, then revised into the most feasible target.",
+    meta: false,
+  },
+  {
+    title: "Research the disease",
+    body: "Muse Spark condenses PubMed and Europe PMC evidence into molecular targets, mechanisms, and an avoid list.",
+    meta: true,
+  },
+  {
+    title: "Propose candidates",
+    body: "Muse Spark 1.3 Contributor drafts novel sequences inside the scaffold grammar.",
+    meta: true,
+  },
+  {
+    title: "Verify symbolically",
+    body: "The compiler checks loop grammar, charge, and chemical liabilities — nothing model-made passes unchecked.",
+    meta: false,
+  },
+  {
+    title: "Repair from diagnostics",
+    body: "Failing candidates go back to Spark with compiler errors attached until one passes or turns run out.",
+    meta: true,
+  },
+  {
+    title: "Review blindly",
+    body: "Spark predicts the target without seeing it; a mismatch fails the design as off-target.",
+    meta: true,
+  },
+  {
+    title: "Fold the winner",
+    body: "Meta ESMFold predicts the 3D structure on demand so the disulfide core can be inspected.",
+    meta: true,
+  },
+  {
+    title: "Backstop when needed",
+    body: "If upstream proposals fail outright, a deterministic sampler still delivers a grammar-valid design.",
+    meta: false,
+  },
+];
+
 export default function Home() {
   return (
     <div className={styles.page} id="top">
@@ -75,7 +122,7 @@ export default function Home() {
       </a>
       <SiteNav
         current="home"
-        action={{ href: "#demo", label: "Design a peptide" }}
+        action={{ href: "/design", label: "Design a peptide" }}
       />
 
       <main className={styles.main} id="main">
@@ -97,378 +144,6 @@ export default function Home() {
               </div>
             </div>
             <Demo />
-          </div>
-        </section>
-
-        <section className={styles.section} aria-labelledby="biology">
-          <div className="container">
-            <div className={styles.headblock}>
-              <h2 id="biology">Biology for everyone</h2>
-              <p className="lead">
-                Proteins are sentences. AI learned to write them.
-              </p>
-            </div>
-            <div className={styles.bioProse}>
-              <p>
-                Chatbots predict the next word. Muse Spark predicts the
-                next building block of a protein. DNA spells genes with
-                four letters, <code>A</code>, <code>C</code>,{" "}
-                <code>G</code>, <code>T</code>. Proteins spell themselves
-                with twenty amino-acid letters. A good sentence follows
-                grammar. A good protein folds into a working molecule,
-                knot and all.
-              </p>
-            </div>
-            <table className={styles.paperTable}>
-              <thead>
-                <tr>
-                  <th>Same idea</th>
-                  <th>You write</th>
-                  <th>DNA writes</th>
-                  <th>Muse Spark writes</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">Alphabet</th>
-                  <td data-label="You write">26 letters</td>
-                  <td data-label="DNA writes">
-                    4 bases: <code>A</code>, <code>C</code>, <code>G</code>,{" "}
-                    <code>T</code>
-                  </td>
-                  <td data-label="Muse Spark writes">
-                    20 amino-acid letters
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Sentence</th>
-                  <td data-label="You write">words in order</td>
-                  <td data-label="DNA writes">genes spelled in bases</td>
-                  <td data-label="Muse Spark writes">
-                    protein chains spelled in amino acids
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row">Good means</th>
-                  <td data-label="You write">grammar and sense</td>
-                  <td data-label="DNA writes">
-                    a folded, working molecule
-                  </td>
-                  <td data-label="Muse Spark writes">
-                    passes the compiler: structure, safety, potency
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div className={styles.bioProse}>
-              <p>
-                A raw model proposes; most proposals would fail in a
-                real body. cozy-peptide wraps Muse Spark in a compiler
-                that proves each design &mdash; structure, safety,
-                therapeutic promise &mdash; before anything touches a
-                cell. Only proven winners ship.
-              </p>
-            </div>
-            <figure className={styles.wrapDiagram}>
-              <svg
-                viewBox="0 0 760 300"
-                role="img"
-                aria-labelledby="wrapDiagramTitle wrapDiagramDesc"
-              >
-                <title id="wrapDiagramTitle">
-                  How cozy-peptide wraps the Muse Spark model
-                </title>
-                <desc id="wrapDiagramDesc">
-                  The disease name flows into nested layers: cozy-peptide
-                  on the outside, the proof compiler in the middle, Muse
-                  Spark inventing peptides at the core. A yeast cassette
-                  comes out.
-                </desc>
-                <defs>
-                  <marker
-                    id="wrapArrow"
-                    viewBox="0 0 10 10"
-                    refX="8"
-                    refY="5"
-                    markerWidth="7"
-                    markerHeight="7"
-                    orient="auto-start-reverse"
-                  >
-                    <path
-                      d="M 0 1 L 9 5 L 0 9 z"
-                      style={{ fill: "var(--color-accent)" }}
-                    />
-                  </marker>
-                </defs>
-                <rect
-                  x="170"
-                  y="24"
-                  width="420"
-                  height="252"
-                  rx="10"
-                  style={{
-                    fill: "var(--color-paper)",
-                    stroke: "var(--color-ink)",
-                    strokeWidth: 2,
-                  }}
-                />
-                <text
-                  x="380"
-                  y="54"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 15,
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    fill: "var(--color-ink)",
-                  }}
-                >
-                  cozy-peptide: the wrapper
-                </text>
-                <rect
-                  x="212"
-                  y="72"
-                  width="336"
-                  height="158"
-                  rx="8"
-                  style={{
-                    fill: "var(--color-paper)",
-                    stroke: "var(--color-muted)",
-                    strokeWidth: 1.5,
-                    strokeDasharray: "6 4",
-                  }}
-                />
-                <text
-                  x="380"
-                  y="100"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fill: "var(--color-ink-2)",
-                  }}
-                >
-                  compiler proves it: structure, safety, potency
-                </text>
-                <rect
-                  x="272"
-                  y="118"
-                  width="216"
-                  height="84"
-                  rx="8"
-                  style={{
-                    fill: "var(--color-accent-wash)",
-                    stroke: "var(--color-accent)",
-                    strokeWidth: 2,
-                  }}
-                />
-                <text
-                  x="380"
-                  y="152"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 19,
-                    fontWeight: 600,
-                    fill: "var(--color-accent-deep)",
-                  }}
-                >
-                  Muse Spark
-                </text>
-                <text
-                  x="380"
-                  y="176"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fill: "var(--color-ink-2)",
-                  }}
-                >
-                  invents peptides
-                </text>
-                <text
-                  x="380"
-                  y="258"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 13,
-                    fill: "var(--color-muted)",
-                  }}
-                >
-                  grammar + audit filter every proposal
-                </text>
-                <rect
-                  x="8"
-                  y="118"
-                  width="118"
-                  height="64"
-                  rx="8"
-                  style={{
-                    fill: "var(--color-paper)",
-                    stroke: "var(--color-rule-2)",
-                    strokeWidth: 1.5,
-                  }}
-                />
-                <text
-                  x="67"
-                  y="145"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fill: "var(--color-ink)",
-                  }}
-                >
-                  name the
-                </text>
-                <text
-                  x="67"
-                  y="165"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fill: "var(--color-ink)",
-                  }}
-                >
-                  disease
-                </text>
-                <line
-                  x1="130"
-                  y1="150"
-                  x2="162"
-                  y2="150"
-                  style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-                  markerEnd="url(#wrapArrow)"
-                />
-                <rect
-                  x="634"
-                  y="118"
-                  width="118"
-                  height="64"
-                  rx="8"
-                  style={{
-                    fill: "var(--color-paper)",
-                    stroke: "var(--color-rule-2)",
-                    strokeWidth: 1.5,
-                  }}
-                />
-                <text
-                  x="693"
-                  y="145"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fill: "var(--color-ink)",
-                  }}
-                >
-                  yeast
-                </text>
-                <text
-                  x="693"
-                  y="165"
-                  textAnchor="middle"
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    fill: "var(--color-ink)",
-                  }}
-                >
-                  cassette
-                </text>
-                <line
-                  x1="594"
-                  y1="150"
-                  x2="626"
-                  y2="150"
-                  style={{ stroke: "var(--color-accent)", strokeWidth: 2 }}
-                  markerEnd="url(#wrapArrow)"
-                />
-              </svg>
-              <figcaption>
-                Muse Spark dreams up new peptides at the core. The
-                compiler around it checks every design, and only proven
-                winners ship as a yeast cassette.
-              </figcaption>
-            </figure>
-            <div className={styles.bioSplit}>
-              <div className={styles.bioProse}>
-                <p>
-                  Swallowed peptides rarely survive the trip. Stomach
-                  acid shreds them, and pancreatic proteases finish the
-                  job in the small intestine. So the winning design never
-                  travels as a pill. It is compiled into DNA and installed
-                  as a cassette in baker&apos;s yeast, starting with{" "}
-                  <em>Saccharomyces boulardii</em>. Not a probiotic: an
-                  engineered living therapeutic, a miniature factory that
-                  lives in your gut and brews the medicine where the
-                  disease lives.
-                </p>
-              </div>
-              <figure className={styles.bioFigure}>
-                <Image
-                  src="/yeast-sem.jpg"
-                  alt="Scanning electron micrograph of budding baker's yeast cells"
-                  width={1280}
-                  height={826}
-                  sizes="(max-width: 60rem) 100vw, 288px"
-                  loading="lazy"
-                />
-                <figcaption>
-                  Baker&apos;s yeast budding under the electron
-                  microscope: each cell a miniature factory. Micrograph:{" "}
-                  <a href="https://commons.wikimedia.org/wiki/File:Saccharomyces_cerevisiae_SEM.jpg">
-                    Murtey and Ramasamy, CC BY 3.0, via Wikimedia Commons
-                  </a>
-                  .
-                </figcaption>
-              </figure>
-            </div>
-            <ul className={styles.statGrid} aria-label="Gut disease burden">
-              <li className={styles.stat}>
-                <span className={styles.statFigure}>1 in 10</span>
-                <p className={styles.statLabel}>
-                  people worldwide live with IBS
-                </p>
-              </li>
-              <li className={styles.stat}>
-                <span className={styles.statFigure}>7M+</span>
-                <p className={styles.statLabel}>
-                  people live with IBD, Crohn&apos;s and colitis
-                </p>
-              </li>
-              <li className={styles.stat}>
-                <span className={styles.statFigure}>500k</span>
-                <p className={styles.statLabel}>
-                  US C. difficile infections a year
-                </p>
-              </li>
-              <li className={styles.stat}>
-                <span className={styles.statFigure}>$33B</span>
-                <p className={styles.statLabel}>
-                  IBS plus IBD drug sales in 2025
-                </p>
-              </li>
-            </ul>
-            <p className={styles.sourceLine}>
-              Sources: CDC; Frontiers in Immunology 2026; Rome Foundation
-              meta-analyses; BCC Research, growing to $52.6B by 2030.
-              Celiac disease affects about 1% of people, and 43% carry{" "}
-              <em>H. pylori</em> (Lancet Gastroenterology 2023).
-            </p>
-            <p className={styles.statement} id="language">
-              A model that writes fluent sentences in the language of life
-              is no chatbot trick. It is a drug-discovery engine.
-            </p>
           </div>
         </section>
 
@@ -908,6 +583,27 @@ export default function Home() {
                 </li>
               </ol>
             </div>
+            <div id="how-it-works">
+              <h3>How a design happens</h3>
+              <ol className={styles.howlist}>
+                {PROCESS_STEPS.map((step, index) => (
+                  <li key={step.title}>
+                    <p className={styles.howhead}>
+                      <span aria-hidden="true">{index + 1}.</span>{" "}
+                      {step.title}{" "}
+                      <span
+                        className={
+                          step.meta ? styles.modelbadge : styles.detbadge
+                        }
+                      >
+                        {step.meta ? "Meta AI" : "Deterministic"}
+                      </span>
+                    </p>
+                    <p className={styles.howbody}>{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </section>
 
@@ -1019,7 +715,7 @@ export default function Home() {
             <p className={styles.closeline}>
               The board is live. Pick a condition.
             </p>
-            <a className={`${styles.btn} ${styles.btnPrimary}`} href="#demo">
+            <a className={`${styles.btn} ${styles.btnPrimary}`} href="/design">
               Design a peptide
             </a>
           </div>
@@ -1040,7 +736,7 @@ export default function Home() {
             <a className={styles.footlink} href="#demo">
               the demo
             </a>
-            <a className={styles.footlink} href="#biology">
+            <a className={styles.footlink} href="/biology">
               the biology
             </a>
             <a className={styles.footlink} href="#api">

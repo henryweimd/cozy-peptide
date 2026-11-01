@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 import {
+  DesignedPeptideHero,
   EventLog,
   HandoffDownloads,
   StageDetail,
@@ -361,16 +362,12 @@ export default function FocusedPeptide({
 
           {sequence.length > 0 && (
             <>
-              <h4>Candidate</h4>
-              <p className={styles.sequence}>{sequence}</p>
-              <p className={styles.topology}>
-                {[candidateId, `${sequence.length} residues`, topology]
-                  .filter(
-                    (bit): bit is string =>
-                      typeof bit === "string" && bit.length > 0
-                  )
-                  .join(", ")}
-              </p>
+              <DesignedPeptideHero
+                sequence={sequence}
+                heading="Designed peptide"
+                constructId={candidateId ?? undefined}
+                topology={topology ?? undefined}
+              />
               {grammar !== null && Object.keys(grammar).length > 0 && (
                 <ul className={styles.loopchips}>
                   {Object.entries(grammar).map(([loop, value]) => (

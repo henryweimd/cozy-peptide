@@ -51,23 +51,29 @@ function applyStyles(viewer: GLViewer, scheme: ColorScheme): void {
  * with the cysteine core in sticks. When the parent supplies a stored
  * prediction from the ledger it renders immediately; otherwise it folds
  * on demand through the ESMFold proxy, linking the fold to runId so
- * the fresh prediction is stored for next time. Self-loading with
- * skeleton and error fallback.
+ * the fresh prediction is stored for next time. The canvas mounts
+ * only once a structure exists — while the fold is in flight or has
+ * failed, the viewer is a single compact status row, so the flaky
+ * upstream never reserves a giant empty box.
  */
 export default function PeptideViewer({
   sequence,
   runId = null,
   storedPdb = null,
   storedPlddt = null,
+  guide = false,
 }: {
   sequence: string;
   runId?: string | null;
   storedPdb?: string | null;
   storedPlddt?: number | null;
+  /** Render the confidence guide below the canvas once ready. */
+  guide?: boolean;
 }): React.ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<GLViewer | null>(null);
   const [status, setStatus] = useState<ViewerStatus>("loading");
+  const [pdb, setPdb] = useState<string | null>(null);
   const [message, setMessage] = useState("Folding with ESMFold…");
   const [now, setNow] = useState(() => Date.now());
   const [plddt, setPlddt] = useState<number | null>(null);
@@ -89,12 +95,11 @@ export default function PeptideViewer({
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (container === null) return;
     let cancelled = false;
 
     const run = async (): Promise<void> => {
       setStatus("loading");
+      setPdb(null);
       setNow(Date.now());
       setPlddt(null);
       setAttemptNum(0);
@@ -103,24 +108,14 @@ export default function PeptideViewer({
         // A stored prediction skips ESMFold entirely — same structure,
         // no wait, no upstream load.
         if (storedPdb !== null && storedPdb.length > 0) {
-          setMessage("Loading saved structure…");
-          const { createViewer } = await import("3dmol");
           if (cancelled) return;
-          container.replaceChildren();
-          const viewer = createViewer(container, {
-            backgroundColor: "white",
-          });
-          viewerRef.current = viewer;
-          viewer.addModel(storedPdb, "pdb");
-          applyStyles(viewer, scheme);
-          viewer.zoomTo();
-          viewer.render();
-          viewer.spin(spin);
+          setPdb(storedPdb);
           setPlddt(storedPlddt);
           setStatus("ready");
           return;
         }
         let body: FoldResponse | null = null;
+        let wonPdb: string | null = null;
         let lastError = "Folding failed.";
         let lastKind: string | null = null;
         for (let retry = 0; ; retry += 1) {
@@ -146,6 +141,7 @@ export default function PeptideViewer({
               parsed.pdb !== undefined
             ) {
               body = parsed;
+              wonPdb = parsed.pdb;
               break;
             }
             lastError =
@@ -192,16 +188,8 @@ export default function PeptideViewer({
           );
           return;
         }
-        const { createViewer } = await import("3dmol");
         if (cancelled) return;
-        container.replaceChildren();
-        const viewer = createViewer(container, { backgroundColor: "white" });
-        viewerRef.current = viewer;
-        viewer.addModel(body.pdb, "pdb");
-        applyStyles(viewer, scheme);
-        viewer.zoomTo();
-        viewer.render();
-        viewer.spin(spin);
+        setPdb(wonPdb);
         setPlddt(body.plddt ?? null);
         setStatus("ready");
       } catch (error) {
@@ -213,8 +201,30 @@ export default function PeptideViewer({
       }
     };
     void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [sequence, attempt, runId, storedPdb, storedPlddt]);
 
-    const containerNow = container;
+  // 3Dmol mount: runs only once a structure exists, so the canvas —
+  // and only the canvas — claims its space. Intentionally not
+  // reactive to spin/scheme: those restyle live.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null || pdb === null) return;
+    let cancelled = false;
+    void (async () => {
+      const { createViewer } = await import("3dmol");
+      if (cancelled) return;
+      container.replaceChildren();
+      const viewer = createViewer(container, { backgroundColor: "white" });
+      viewerRef.current = viewer;
+      viewer.addModel(pdb, "pdb");
+      applyStyles(viewer, scheme);
+      viewer.zoomTo();
+      viewer.render();
+      viewer.spin(spin);
+    })();
     const observer =
       typeof ResizeObserver === "undefined"
         ? null
@@ -222,7 +232,7 @@ export default function PeptideViewer({
             viewerRef.current?.resize();
             viewerRef.current?.render();
           });
-    observer?.observe(containerNow);
+    observer?.observe(container);
     return () => {
       cancelled = true;
       observer?.disconnect();
@@ -234,9 +244,8 @@ export default function PeptideViewer({
       }
       viewerRef.current = null;
     };
-    // Intentionally not reactive to spin/scheme: those restyle live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sequence, attempt, runId, storedPdb, storedPlddt]);
+  }, [pdb]);
 
   // Ticks while a fold is in flight so the attempt countdown
   // stays live. Stops the moment the fold resolves or fails.
@@ -277,17 +286,6 @@ export default function PeptideViewer({
 
   return (
     <div className={styles.viewerwrap}>
-      <div
-        ref={containerRef}
-        className={styles.viewer}
-        role="img"
-        aria-label={
-          status === "ready"
-            ? `Predicted 3D structure of a ${sequence.length}-residue peptide`
-            : "Predicted structure loading"
-        }
-        aria-busy={status === "loading"}
-      />
       {status === "loading" && (
         <div className={styles.viewerstatus} role="status">
           <span className={styles.spinner} aria-hidden="true" />
@@ -296,6 +294,15 @@ export default function PeptideViewer({
             {loadingSuffix}
           </span>
         </div>
+      )}
+      {pdb !== null && (
+        <div
+          ref={containerRef}
+          className={styles.viewer}
+          role="img"
+          aria-label={`Predicted 3D structure of a ${sequence.length}-residue peptide`}
+          aria-busy={status === "loading"}
+        />
       )}
       {status === "error" && (
         <div className={styles.viewerstatus} role="alert">
@@ -341,6 +348,7 @@ export default function PeptideViewer({
               {scheme === "plddt" ? "Color: confidence" : "Color: spectrum"}
             </button>
           </div>
+          {guide && <StructureGuide />}
         </>
       )}
     </div>

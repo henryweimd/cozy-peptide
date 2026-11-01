@@ -1,7 +1,8 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useMemo, useState, type RefObject } from "react";
 import styles from "./page.module.css";
+import { optimizeForEcoli } from "../lib/codon-optimizer";
 
 /**
  * Shared pipeline UI vocabulary for the landing demo and the full
@@ -328,6 +329,155 @@ export function gblockFasta(name: string, dna: string): string {
     lines.push(dna.slice(i, i + 80));
   }
   return `${lines.join("\n")}\n`;
+}
+
+/** Wraps any DNA payload as an 80-column FASTA document. */
+export function dnaFasta(name: string, kind: string, dna: string): string {
+  const lines = [`>${name} ${kind}`];
+  for (let i = 0; i < dna.length; i += 80) {
+    lines.push(dna.slice(i, i + 80));
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+/** Small clipboard button with copied/failed feedback. */
+export function CopyButton({
+  text,
+  label,
+}: {
+  text: string;
+  label: string;
+}): React.ReactElement {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  return (
+    <button
+      type="button"
+      className={`${styles.btn} ${styles.copybtn}`}
+      onClick={() => {
+        const clipboard = navigator.clipboard;
+        if (clipboard === undefined) {
+          setState("failed");
+          return;
+        }
+        clipboard.writeText(text).then(
+          () => setState("copied"),
+          () => setState("failed")
+        );
+      }}
+    >
+      {state === "copied"
+        ? "Copied"
+        : state === "failed"
+          ? "Copy failed"
+          : label}
+    </button>
+  );
+}
+
+/** Groups an in-frame CDS into codons for readable display. */
+function codonSpaced(dna: string): string {
+  return dna.replace(/(.{3})(?=.)/g, "$1 ");
+}
+
+/**
+ * The moment a design lands: the novel peptide sequence at display
+ * size plus the E. coli-optimized coding sequence that carries it
+ * into an LBP chassis. The sequence fits one line via container
+ * query units (wrapping fallback where unsupported); the CDS is
+ * computed locally, so it never waits on a model.
+ */
+export function DesignedPeptideHero({
+  sequence,
+  heading = "New peptide designed",
+  constructId,
+  topology,
+  interpreted,
+}: {
+  sequence: string;
+  heading?: string;
+  constructId?: string;
+  topology?: string;
+  interpreted?: string;
+}): React.ReactElement {
+  const cds = useMemo(() => {
+    try {
+      return optimizeForEcoli(sequence);
+    } catch {
+      return null;
+    }
+  }, [sequence]);
+  // Mono advance runs ~0.62em, so this size fits the whole sequence
+  // on one hero line; the class clamp caps it at display size.
+  const fit = sequence.length > 0 ? 100 / (0.62 * sequence.length) : 10;
+  const transfer = cds === null ? null : `${cds.dna}TAA`;
+  const meta = [
+    constructId,
+    topology,
+    `${sequence.length} residues`,
+  ]
+    .filter((bit) => bit !== undefined && bit.length > 0)
+    .join(" · ");
+  const stem = safeStem(constructId ?? "peptide");
+  return (
+    <section className={styles.peptidehero} aria-label={heading}>
+      <p className={styles.herokicker}>{heading}</p>
+      <p
+        className={styles.herosequence}
+        style={{ fontSize: `min(2.75rem, ${fit.toFixed(2)}cqw)` }}
+      >
+        {sequence}
+      </p>
+      <p className={styles.herometa}>
+        {meta} — proven by the symbolic compiler
+      </p>
+      {interpreted !== undefined && (
+        <p className={styles.herointerpreted}>
+          Interpreted as: {interpreted}
+        </p>
+      )}
+      <div className={styles.heroactions}>
+        <CopyButton text={sequence} label="Copy peptide" />
+      </div>
+      {transfer !== null && cds !== null ? (
+        <div className={styles.herodna}>
+          <h4>LBP-ready DNA</h4>
+          <p>
+            The coding sequence for this peptide, optimized for{" "}
+            <i>E. coli</i> — the workhorse LBP chassis — with a TAA
+            stop. Clone it downstream of your vector&apos;s ATG start
+            codon and the LBP transcribes it into the peptide above.
+          </p>
+          <p className={styles.herodnastats}>
+            {transfer.length} nt · GC {cds.gcPercent}% · CAI{" "}
+            {cds.cai.toFixed(2)}
+          </p>
+          <code className={styles.herodnaseq}>
+            {codonSpaced(transfer)}
+          </code>
+          <div className={styles.heroactions}>
+            <CopyButton text={transfer} label="Copy DNA" />
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.copybtn}`}
+              onClick={() =>
+                downloadTextFile(
+                  `${stem}.lbp-cds.fasta`,
+                  dnaFasta(stem, "lbp-cds", transfer),
+                  "text/plain"
+                )
+              }
+            >
+              DNA (.fasta)
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className={styles.herodnafallback}>
+          LBP-ready DNA is unavailable for this sequence.
+        </p>
+      )}
+    </section>
+  );
 }
 
 function stageGlyph(state: StageState): string {

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import styles from "../page.module.css";
-import { StructureGuide } from "../peptide-viewer";
 import FocusedPeptide from "../focused-peptide";
 import {
   parseDesignParams,
@@ -31,6 +30,7 @@ import type { PipelinePayload, StageEvent } from "../pipeline-shared";
 import ReportDialog, { type ReportSource } from "../report-dialog";
 import RecentRunsTable from "../recent-runs-table";
 import {
+  DesignedPeptideHero,
   EventLog,
   HandoffDownloads,
   StageDetail,
@@ -140,6 +140,9 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
     cooldownUntil === null ? 0 : Math.ceil((cooldownUntil - now) / 1000);
   const cooling = remaining > 0;
   const busy = loading || cooling;
+  // Deep-linked arrivals chose on the overview; everyone else's
+  // controls freeze while a design is running.
+  const controlsDisabled = locked || loading;
 
   // Deep-link auto-run: arrivals from the landing page start their
   // design at once; direct visits stay idle. Cooling arrivals wait
@@ -284,7 +287,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             key={preset.id}
             type="button"
             aria-pressed={preset.id === presetId}
-            disabled={locked}
+            disabled={controlsDisabled}
             className={
               preset.id === presetId
                 ? `${styles.cell} ${styles.cellActive}`
@@ -300,7 +303,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           type="button"
           aria-pressed={customActive}
           aria-expanded={customActive}
-          disabled={locked}
+          disabled={controlsDisabled}
           className={
             customActive
               ? `${styles.cell} ${styles.cellActive}`
@@ -324,7 +327,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             maxLength={CUSTOM_TARGET_MAX_LENGTH}
             autoComplete="off"
             spellCheck={false}
-            disabled={locked}
+            disabled={controlsDisabled}
             placeholder="e.g. bile acid diarrhea"
             onChange={(event) => {
               setCustom(event.target.value);
@@ -506,20 +509,16 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
 
       {ok && candidate !== undefined && audit !== undefined && (
         <div className={styles.result} id="design-result">
-          <section aria-label="Designed sequence">
-            <h3>Designed sequence</h3>
-            <p className={styles.sequence}>{candidate.mature_sequence}</p>
-            <p className={styles.topology}>
-              {candidate.id !== undefined ? `${candidate.id}, ` : ""}
-              {candidate.topology}
-            </p>
-            {result?.requested_target !== undefined &&
-              result.target !== undefined && (
-                <p className={styles.interpreted}>
-                  Interpreted as: {result.target}
-                </p>
-              )}
-          </section>
+          <DesignedPeptideHero
+            sequence={candidate.mature_sequence}
+            constructId={candidate.id}
+            topology={candidate.topology}
+            interpreted={
+              result?.requested_target !== undefined
+                ? result.target
+                : undefined
+            }
+          />
 
           {researchBrief !== undefined && (
             <section aria-label="Literature brief">
@@ -584,8 +583,8 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             <PeptideViewer
               sequence={candidate.mature_sequence}
               runId={result?.run_id ?? streamRunId}
+              guide
             />
-            <StructureGuide />
           </section>
 
           <section aria-label="Audit ledger">
