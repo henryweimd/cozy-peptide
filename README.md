@@ -620,6 +620,21 @@ npm run lint     # eslint
 npm run build    # production build
 ```
 
+## Run with Docker
+
+```bash
+docker build -t cozy-peptide .
+
+# Same env vars as above, via a file (never commit real values)
+docker run --rm -p 3000:3000 --env-file .env.production cozy-peptide
+# open http://localhost:3000
+```
+
+The image is a three-stage build (`node:22-alpine`): dependencies,
+production build, then a minimal non-root runner serving `next start`
+with a container healthcheck. All credentials stay runtime-only —
+nothing secret is baked into the image.
+
 ## License
 
 All rights reserved. This is hackathon software: verify all generated

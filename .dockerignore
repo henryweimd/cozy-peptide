@@ -1,0 +1,9 @@
+.git
+.gitignore
+.next
+node_modules
+.test-out
+coverage
+*.log
+.DS_Store
+generated_images
