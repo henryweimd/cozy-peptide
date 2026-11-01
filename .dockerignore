@@ -7,3 +7,5 @@ coverage
 *.log
 .DS_Store
 generated_images
+# Training subproject: separate env, never needed by the web image.
+ml
