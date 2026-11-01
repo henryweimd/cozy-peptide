@@ -399,7 +399,7 @@ export default function FocusedPeptide({
                   className={styles.btn}
                   onClick={() => setReportOpen(true)}
                 >
-                  Read the literature brief
+                  Read the brief
                 </button>
               </div>
             </>

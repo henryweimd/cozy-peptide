@@ -67,8 +67,7 @@ export default function LbpPage(): React.ReactElement {
                 </span>
               </h1>
               <p className="lead">
-                Living medicines, made of microbes: medicines made of
-                living microbes that treat disease from inside the gut.
+                Living microbes that treat disease from inside the gut.
               </p>
               <p className={styles.heroactions}>
                 <Link className={styles.btn} href="#approved">

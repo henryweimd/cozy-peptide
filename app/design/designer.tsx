@@ -507,7 +507,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
           research and proposals are running on deterministic fallbacks.
           Designs still verify through the symbolic compiler
           {sparkStatus.state === "blocked"
-            ? " Only the AI drafting is degraded; check the API key's standing."
+            ? " Only the AI drafting is degraded; check the API key’s standing."
             : sparkStatus.state === "rate_limited"
               ? " Retry shortly; the brief library keeps reports rich meanwhile."
               : sparkStatus.state === "unconfigured"
@@ -590,7 +590,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
                     })
                   }
                 >
-                  Read the full literature brief
+                  Read the brief
                 </button>
               )}
             </section>
