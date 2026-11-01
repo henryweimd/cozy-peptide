@@ -440,7 +440,7 @@ design call to action):
   illustrated with wordless story images (design → insert →
   produce).
 
-Pick one of twelve preset gut conditions from the grid — or choose
+Pick one of thirteen preset gut conditions from the grid — or choose
 Other and describe your own condition in free text. Custom input
 passes an aggressive server-side guard (`lib/target-guard.ts`) that
 refuses prompt injection, markup, off-topic prompts, obscenity,

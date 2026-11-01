@@ -135,6 +135,7 @@ const MEDICAL_PATTERNS: RegExp[] = [
   /campylobacter/i,
   /giardia/i,
   /cholera/i,
+  /cyclospora/i,
   /norovirus/i,
   /rotavirus/i,
   /klebsiella/i,

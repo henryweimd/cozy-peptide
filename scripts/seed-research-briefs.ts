@@ -4,9 +4,11 @@
  * per preset objective and upserts `research_briefs` rows, so runs
  * reuse converged briefs instantly and reports stay rich.
  *
- * Usage: npm run seed:briefs
+ * Usage: npm run seed:briefs [-- preset-id ...]
  * Env: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (or ANON) plus
  * META_API_KEY, from the environment or .env.local.
+ * With preset ids, only those presets are seeded (useful for
+ * backfilling one new objective without re-running the library).
  *
  * Exit code is 1 when any preset fails to converge or store, so a
  * rerun after an outage (or an API unblock) completes the library.
@@ -60,8 +62,23 @@ async function main(): Promise<number> {
     console.error("seed:briefs: Supabase env (URL + key) is not configured.");
     return 1;
   }
+  const wanted = process.argv.slice(2).filter((arg) => arg !== "--");
+  const presets =
+    wanted.length === 0
+      ? DEMO_PRESETS
+      : DEMO_PRESETS.filter((preset) => wanted.includes(preset.id));
+  const unknown = wanted.filter(
+    (id) => !DEMO_PRESETS.some((preset) => preset.id === id)
+  );
+  if (unknown.length > 0) {
+    console.error(
+      `seed:briefs: unknown preset id(s): ${unknown.join(", ")}. ` +
+        `Known: ${DEMO_PRESETS.map((preset) => preset.id).join(", ")}`
+    );
+    return 1;
+  }
   let failures = 0;
-  for (const preset of DEMO_PRESETS) {
+  for (const preset of presets) {
     console.log(`\n=== ${preset.id}: ${preset.target} ===`);
     const provenance = await runResearchBrief(preset.target, undefined, {
       budgetMs: SEED_BUDGET_MS,
@@ -83,7 +100,7 @@ async function main(): Promise<number> {
     if (provenance.status !== "ok" || !stored.saved) failures += 1;
   }
   console.log(
-    `\nseed:briefs: ${DEMO_PRESETS.length - failures}/${DEMO_PRESETS.length} presets converged and stored.`
+    `\nseed:briefs: ${presets.length - failures}/${presets.length} presets converged and stored.`
   );
   return failures > 0 ? 1 : 0;
 }

@@ -81,6 +81,11 @@ export const DEMO_PRESETS: DemoPreset[] = [
     label: "Cholera colonization",
     target: "Vibrio cholerae gut colonization",
   },
+  {
+    id: "cyclospora",
+    label: "Cyclospora infection",
+    target: "Cyclospora cayetanensis gut infection",
+  },
 ];
 
 /**

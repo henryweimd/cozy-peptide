@@ -178,6 +178,15 @@ test("guard recovery suggestions all pass the guard", async () => {
   }
 });
 
+test("cyclospora preset and free-text forms pass the guard", async () => {
+  const { DEMO_PRESETS } = await import("../lib/demo-config");
+  const preset = DEMO_PRESETS.find((entry) => entry.id === "cyclospora");
+  assert.ok(preset !== undefined);
+  assert.equal(guardCustomTarget(preset.target).ok, true);
+  assert.equal(guardCustomTarget("cyclospora").ok, true);
+  assert.equal(guardCustomTarget("Cyclospora cayetanensis").ok, true);
+});
+
 test("all demo preset targets pass the guard", async () => {
   const { DEMO_PRESETS } = await import("../lib/demo-config");
   assert.ok(DEMO_PRESETS.length >= 11);
