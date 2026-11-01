@@ -3,8 +3,8 @@
 > ## Try it live: [cozy-peptide.vercel.app](https://cozy-peptide.vercel.app/)
 >
 > Design a peptide in your browser — no token needed. Then read the
-> [bio & business](https://cozy-peptide.vercel.app/biology),
-> [safety](https://cozy-peptide.vercel.app/#safety), and API tabs on the site.
+> [science & impact](https://cozy-peptide.vercel.app/biology),
+> [safety](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling), and API tabs on the site.
 > This README is the condensed version; the site is the full story.
 
 *Built for the [Meta Global AI Developer
@@ -16,6 +16,15 @@ work. Engineered yeast brews them in your gut.*
 ![License: All rights reserved](https://img.shields.io/badge/license-All_rights_reserved-red)
 ![Next.js](https://img.shields.io/badge/built_with-Next.js-black?logo=next.js)
 ![Model](https://img.shields.io/badge/model-Muse_Spark_1.3-blue)
+
+## 🏆 Hackathon judging — where to verify
+
+| Judging Criterion | Where to Verify |
+| --- | --- |
+| Impact (30%) | [Live demo](https://cozy-peptide.vercel.app/#demo) + [Hackathon fit](https://cozy-peptide.vercel.app/#hackathon-fit) |
+| Use of Meta AI Tooling (25%) | [AI Pipeline](https://cozy-peptide.vercel.app/#pipeline) + [Safety & Intended Use](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling) |
+| Technical Depth & Execution (20%) | [API call](https://cozy-peptide.vercel.app/#api) + [server blocklist](https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts) with refusal eval in `tests/target-guard.test.ts` |
+| Demo (25%) | [Live demo](https://cozy-peptide.vercel.app/#demo) + [Safety Filter try-it-live](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling) (demo video 1:45 Safety Filter) |
 
 ## 🎯 Turn a disease name into gut medicine
 
@@ -108,7 +117,7 @@ Nissle, Lactococcus, or Bacillus spores):
 name the disease → [ cozy-peptide [ compiler [ Muse Spark ] ] ] → chassis DNA
 ```
 
-**Bio & Business.** Chatbots predict the next word; Muse Spark
+**Science & Impact.** Chatbots predict the next word; Muse Spark
 predicts the next building block of a protein. DNA spells genes with four
 letters (A, C, G, T); proteins spell themselves with twenty amino-acid
 letters. Swallowed peptides rarely survive the gut — so the winning design
@@ -131,7 +140,7 @@ difficile*. Once a chassis-and-compiler platform is proven, a new peptide
 is a cassette swap, not a new factory — pointing toward AI-designed,
 patient-matched peptides and n-of-1 trials where need is highest (see
 milasen, NEJM 2019). Full version:
-[cozy-peptide.vercel.app/#safety](https://cozy-peptide.vercel.app/#safety).
+[cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling).
 
 ## 🔬 Watch a prompt become a protein
 
@@ -468,7 +477,7 @@ and per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 
 ### Try it in the browser
 
-Four pages share one top bar (`home`, `Bio & Business`, `Live
+Four pages share one top bar (`home`, `Science & Impact`, `Live
 Biotherapeutic Product`, `API Docs`, `AI Pipeline`, `Safety`, plus the
 design call to action):
 
@@ -483,7 +492,7 @@ design call to action):
   row reopens the full pipeline output), the service-provider
   directory, and Pep, a floating guide that tours the page, explains
   each section in lay terms, and can follow a live run step by step.
-- **`/biology`** — Bio & Business, merged with the former LBP
+- **`/biology`** — Science & Impact, merged with the former LBP
   guide: what LBPs are (garden model, colonization resistance, the
   *C. difficile* proof), the two FDA-approved products, the
   late-stage pipeline, and the design → insert → produce story
@@ -496,7 +505,8 @@ design call to action):
   payload angle, and host plus body site per row, figures hyperlinked
   to new-tab sources), build costs from DNA to GMP by company stage
   with the AI-dividend and rational-design case, the one-person-biotech
-  thesis, and the factory-at-every-body-site vision with new-tab
+  thesis, the factory-at-every-body-site vision, and the
+  personalized lab-in-the-loop pipeline vision, with new-tab
   sources.
 
 Pick one of thirteen preset gut conditions from the grid — or choose

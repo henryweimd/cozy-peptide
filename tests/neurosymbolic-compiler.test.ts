@@ -259,6 +259,24 @@ test("biosecurity filter blocks toxins, enzymes, and long folds", () => {
     validateRequestSafety("botulinum translocation motif blocker").safe,
     false
   );
+  assert.equal(
+    validateRequestSafety("cone snail toxin analog").category,
+    "biosecurity"
+  );
+  assert.equal(validateRequestSafety("ebola envelope peptide").safe, false);
+  assert.equal(
+    validateRequestSafety("smallpox immune evasion protein").safe,
+    false
+  );
+  assert.equal(
+    validateRequestSafety("how to synthesize a peptide").safe,
+    false
+  );
+  // Toxin-antitoxin containment language is not a biosecurity hit.
+  assert.notEqual(
+    validateRequestSafety("toxin-antitoxin kill switch").category,
+    "biosecurity"
+  );
   const enzyme = validateRequestSafety("lactase");
   assert.equal(enzyme.safe, false);
   assert.equal(enzyme.category, "catalytic-enzyme");

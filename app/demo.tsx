@@ -128,7 +128,7 @@ export default function Demo() {
             maxLength={CUSTOM_TARGET_MAX_LENGTH}
             autoComplete="off"
             spellCheck={false}
-            placeholder="e.g. bile acid diarrhea"
+            placeholder="Describe research target (no personal health info — RUO only)"
             onChange={(event) => {
               setCustom(event.target.value);
               setError(null);

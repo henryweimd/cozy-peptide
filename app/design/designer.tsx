@@ -390,7 +390,7 @@ function DesignerInner({ initial }: { initial: DesignParams }) {
             autoComplete="off"
             spellCheck={false}
             disabled={controlsDisabled}
-            placeholder="e.g. bile acid diarrhea"
+            placeholder="Describe research target (no personal health info — RUO only)"
             onChange={(event) => {
               setCustom(event.target.value);
               setError(null);

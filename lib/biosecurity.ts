@@ -12,8 +12,23 @@ export interface SafetyVerdict {
 }
 
 /**
+ * Client-visible refusal for biosafety-prohibited requests. Shared by
+ * the server guard and the client-side filter demo so both say the
+ * same thing.
+ */
+export const BIOSECURITY_REFUSAL =
+  "Blocked for biosafety — this request falls under prohibited toxin / CBRNE categories and cannot be processed. " +
+  "Cozy Peptide only supports legitimate therapeutic research with human oversight.";
+
+/**
  * Toxic-agent motifs blocked upfront. Covers ricin, abrin, and botulinum
- * (including translocation-domain constructs) plus other high-risk toxins.
+ * (including translocation-domain constructs), venoms and conotoxins,
+ * high-risk select-agent pathogens, weapon/warfare use, optimization
+ * for harm (toxicity, infectivity, immune evasion), and wet-lab
+ * synthesis-protocol requests. Generic "pathogen"/"virus" terms are
+ * deliberately NOT blocked: colonization resistance against gut
+ * pathogens is core legitimate research. Toxin-antitoxin
+ * biocontainment language is carved out via the antitoxin lookarounds.
  */
 const TOXIC_PATTERNS: RegExp[] = [
   /ricin/i,
@@ -29,7 +44,51 @@ const TOXIC_PATTERNS: RegExp[] = [
   /tetrodotoxin/i,
   /aflatoxin/i,
   /t-?2\s*(myc)?toxin/i,
+  /conotoxin/i,
+  /cone\s*snail/i,
+  /\bvenom\b/i,
+  /(?<!anti)\btoxin\b(?!-antitoxin)/i,
+  /ebola/i,
+  /marburg/i,
+  /smallpox/i,
+  /variola/i,
+  /yersinia/i,
+  /\bpestis\b/i,
+  /francisella/i,
+  /tularemia/i,
+  /burkholderia/i,
+  /bioweapon/i,
+  /bio-weapon/i,
+  /chemical\s*weapon/i,
+  /nerve\s*agent/i,
+  /mustard\s*gas/i,
+  /\bsarin\b/i,
+  /\bsoman\b/i,
+  /\btabun\b/i,
+  /\bvx\b/i,
+  /select\s*agent/i,
+  /gain[\s-]*of[\s-]*function/i,
+  /\bwarfare\b/i,
+  /\bmilitary\b/i,
+  /higher\s+toxicity/i,
+  /increas\w*\s+(\w+\s+){0,3}toxic/i,
+  /optimiz\w*\s+(for\s+)?toxic/i,
+  /more\s+toxic/i,
+  /most\s+toxic/i,
+  /\bdeadlier\b/i,
+  /more\s+(lethal|deadly|virulent)/i,
+  /increas\w*\s+(\w+\s+){0,3}(lethality|virulence|infectivity)/i,
+  /optimiz\w*\s+(for\s+)?infectivity/i,
+  /immun\w*\s+evasion/i,
+  /evad\w+\s+(\w+\s+){0,3}immun/i,
+  /how\s+to\s+synthes/i,
+  /synthes\w*\s+(protocol|instructions|procedure|guide)/i,
 ];
+
+/** True when free text matches any prohibited biosafety motif. */
+export function containsProhibitedMotif(text: string): boolean {
+  return TOXIC_PATTERNS.some((pattern) => pattern.test(text));
+}
 
 /**
  * Catalytic-enzyme targets that cannot be served as short de novo peptides.

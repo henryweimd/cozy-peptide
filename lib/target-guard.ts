@@ -1,3 +1,7 @@
+import {
+  BIOSECURITY_REFUSAL,
+  containsProhibitedMotif,
+} from "./biosecurity";
 import { assessGutSite } from "./gut-targets";
 
 /**
@@ -273,6 +277,9 @@ export function guardCustomTarget(input: string): GuardVerdict {
     return refuse(
       `Keep it under ${CUSTOM_TARGET_MAX_LENGTH} characters — name the condition, not the history.`
     );
+  }
+  if (containsProhibitedMotif(trimmed)) {
+    return refuse(BIOSECURITY_REFUSAL);
   }
   if (MARKUP_PATTERN.test(trimmed)) {
     return refuse(
