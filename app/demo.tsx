@@ -158,6 +158,17 @@ export default function Demo() {
         One design per minute per visitor. Presets or your own
         condition under Other. Guarded input, no token needed.
       </p>
+      <p className={styles.note}>
+        Prefer to watch first? See the{" "}
+        <a
+          href="https://bit.ly/cozy-peptide-video"
+          target="_blank"
+          rel="noreferrer"
+        >
+          3-minute video walkthrough
+        </a>
+        .
+      </p>
       <Recent onUse={(run) => router.push(`/design?run=${run.id}`)} />
     </section>
   );
