@@ -1,0 +1,8 @@
+# Local-only training state: never commit weights, exports, or envs.
+.venv/
+__pycache__/
+*.egg-info/
+artifacts/
+data/exports/
+data/cache/
+*.jsonl

@@ -1,0 +1,25 @@
+# LoRA-SFT config for a Muse-series open-weight student.
+# Activation checklist step 1: replace base_model with the confirmed
+# Muse open-weight Hugging Face Hub ID. Training refuses the placeholder.
+
+base_model: "REPLACE-ME/muse-8b"
+load_in_4bit: true # QLoRA: 8B fits a single 24GB GPU
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  targets: ["q_proj", "v_proj"]
+
+training:
+  epochs: 3
+  learning_rate: 0.0002
+  batch_size: 2
+  grad_accum: 8
+  logging_steps: 10
+
+data:
+  eval_fraction: 0.2
+  split_seed: 7
+  passed_only: true
+  cc0_only: true

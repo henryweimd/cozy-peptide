@@ -1,0 +1,25 @@
+[project]
+name = "cozy-ml"
+version = "0.1.0"
+description = "Fine-tune Meta Muse-series open-weight models on cozy-peptide lab-loop assay data."
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.4",
+  "transformers>=4.46",
+  "peft>=0.13",
+  "trl>=0.12",
+  "datasets>=3.0",
+  "accelerate>=1.0",
+  "huggingface_hub>=0.26",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cozy_ml*"]

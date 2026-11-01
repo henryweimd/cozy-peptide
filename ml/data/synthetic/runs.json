@@ -1,0 +1,23 @@
+{
+  "run-1": {
+    "target": "Clostridioides difficile colonization in the gut",
+    "modality": "knottin-6c",
+    "chargeTarget": 4,
+    "candidateId": "cand-1",
+    "candidateSequence": "CAAACCCAAAEKKRKKTTSSGGHHRRCCDD"
+  },
+  "run-2": {
+    "target": "Clostridioides difficile colonization in the gut",
+    "modality": "knottin-6c",
+    "chargeTarget": 4,
+    "candidateId": "cand-2",
+    "candidateSequence": "CCKKRRAACCTTGGHHKKSSRRCCAAMMDD"
+  },
+  "run-3": {
+    "target": "Clostridioides difficile colonization in the gut",
+    "modality": "knottin-6c",
+    "chargeTarget": 4,
+    "candidateId": "cand-3",
+    "candidateSequence": "TTSSGGHHRRCCAAMMDDEEKKRRCCAAHH"
+  }
+}

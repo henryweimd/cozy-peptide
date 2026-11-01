@@ -618,6 +618,7 @@ npm run dev      # start Next.js dev server at http://localhost:3000
 npm test         # typecheck + node --test suite
 npm run lint     # eslint
 npm run build    # production build
+npm run score    # self-score the repo against the 4-pillar hackathon rubric
 ```
 
 ## Run with Docker
@@ -634,6 +635,15 @@ The image is a three-stage build (`node:22-alpine`): dependencies,
 production build, then a minimal non-root runner serving `next start`
 with a container healthcheck. All credentials stay runtime-only —
 nothing secret is baked into the image.
+
+## Future training (ml/)
+
+The [`ml/`](ml/README.md) subproject distills and fine-tunes Meta
+Muse-series open-weight models on consented lab-loop assay data. It is a
+skeleton on purpose — no training data yet, nothing trained — kept fully
+separate from the web app (own env, own tests, excluded from the Docker
+image). Its README carries the agent activation checklist for the day
+real assay volume arrives.
 
 ## License
 

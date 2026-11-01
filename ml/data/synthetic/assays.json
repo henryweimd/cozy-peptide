@@ -1,0 +1,58 @@
+[
+  {
+    "id": "assay-1",
+    "created_at": "2026-11-01T10:00:00Z",
+    "run_id": "run-1",
+    "assay_type": "mic",
+    "template_version": "labguide-1",
+    "organism_or_cells": "Clostridioides difficile",
+    "value_num": 2.0,
+    "value_unit": "ug/mL",
+    "value_text": null,
+    "passed": true,
+    "measurements": [{"mic_ug_ml": 2.0}],
+    "consent_license": "CC0"
+  },
+  {
+    "id": "assay-2",
+    "created_at": "2026-11-01T11:00:00Z",
+    "run_id": "run-2",
+    "assay_type": "cytotoxicity",
+    "template_version": "labguide-1",
+    "organism_or_cells": "Caco-2",
+    "value_num": 92.0,
+    "value_unit": "percent_viability",
+    "value_text": null,
+    "passed": true,
+    "measurements": [{"viability_pct": 92.0}],
+    "consent_license": "CC0"
+  },
+  {
+    "id": "assay-3",
+    "created_at": "2026-11-01T12:00:00Z",
+    "run_id": "run-3",
+    "assay_type": "mic",
+    "template_version": "labguide-1",
+    "organism_or_cells": "Clostridioides difficile",
+    "value_num": 64.0,
+    "value_unit": "ug/mL",
+    "value_text": null,
+    "passed": false,
+    "measurements": [{"mic_ug_ml": 64.0}],
+    "consent_license": "CC0"
+  },
+  {
+    "id": "assay-4",
+    "created_at": "2026-11-01T13:00:00Z",
+    "run_id": "run-1",
+    "assay_type": "mic",
+    "template_version": "labguide-1",
+    "organism_or_cells": "Clostridioides difficile",
+    "value_num": 1.0,
+    "value_unit": "ug/mL",
+    "value_text": null,
+    "passed": true,
+    "measurements": [{"mic_ug_ml": 1.0}],
+    "consent_license": "all-rights-reserved"
+  }
+]
