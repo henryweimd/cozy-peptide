@@ -929,27 +929,37 @@ export default function Home() {
             aria-label="Hackathon judging fit"
           >
             <p>
-              Hackathon fit &mdash; Impact (30%): accelerates
-              early-stage therapeutic peptide research planning; who
-              benefits: academic + startup bio researchers; path to
-              real use as lab-assistant copilot. Fits Problem
+              Hackathon fit &mdash; Impact (30%): de-risks the most
+              expensive failure in biotech &mdash; late-stage
+              attrition after costly trials &mdash; by moving Meta AI
+              reasoning to the front of peptide design, so losers
+              fail in silico instead of in animals or trials;
+              accelerates early-stage therapeutic peptide research
+              planning for academic + startup bio researchers, with a
+              path to real use as lab-assistant copilot. Fits Problem
               Statement: Push the Frontier &mdash; accelerate a
               scientific experiment. Use of Meta AI Tooling (25%):
-              creative use beyond basic chat &mdash; Muse Spark
-              reasoning via Meta Model API for multi-constraint
-              peptide ideation + Muse Code-built agentic workflow
-              with human-approval gate + refusal preservation.
+              creative use far beyond basic chat &mdash; Meta AI
+              model-assisted scientific literature mining (PubMed,
+              Europe PMC) synthesizes target, mechanism, and avoid
+              briefs that steer every prompt, Muse Spark reasoning
+              via Meta Model API performs multi-constraint peptide
+              ideation, and a Muse Code-built agentic workflow adds a
+              human-approval gate with refusal preservation.
               Surfaced capability: safe scientific reasoning with
-              guardrails. Technical Depth &amp; Execution (20%):
-              sound engineering: server-side blocklist, RUO gating,
-              audit logging, eval for refusal rate, reproducible demo
-              with synthetic example peptides only. Demo (25%):
-              working live demo + 3-min video. What was built during
-              Hackathon Oct 27-Nov 4, 2026: multi-scaffold
-              auto-default repertoire; chassis-compatibility plus
-              biocontainment compiler checks; vendor-ready lab handoff
-              with CRO directory; Pep guided tour. No pre-existing
-              therapeutic candidates used.
+              guardrails, from papers to peptides. Technical Depth
+              &amp; Execution (20%): sound engineering &mdash;
+              server-side blocklist, RUO gating, audit logging, eval
+              for refusal rate, reproducible demo with synthetic
+              example peptides only, and a proof compiler that admits
+              only verifiable designs. Demo (25%): working live demo
+              + 3-min video. What was built during Hackathon Oct
+              27-Nov 4, 2026: literature-grounded prompt steering;
+              multi-scaffold auto-default repertoire;
+              chassis-compatibility plus biocontainment compiler
+              checks; vendor-ready lab handoff with CRO directory;
+              Pep guided tour. No pre-existing therapeutic candidates
+              used.
             </p>
           </div>
           <p className={styles.footlegal}>
