@@ -17,15 +17,6 @@ work. Engineered yeast brews them in your gut.*
 ![Next.js](https://img.shields.io/badge/built_with-Next.js-black?logo=next.js)
 ![Model](https://img.shields.io/badge/model-Muse_Spark_1.3-blue)
 
-## 🏆 Hackathon judging — where to verify
-
-| Judging Criterion | Where to Verify |
-| --- | --- |
-| Impact (30%) | [Live demo](https://cozy-peptide.vercel.app/#demo) + [Hackathon fit](https://cozy-peptide.vercel.app/#hackathon-fit) |
-| Use of Meta AI Tooling (25%) | [AI Pipeline](https://cozy-peptide.vercel.app/#pipeline) + [Safety & Intended Use](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling) |
-| Technical Depth & Execution (20%) | [API call](https://cozy-peptide.vercel.app/#api) + [server blocklist](https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts) with refusal eval in `tests/target-guard.test.ts` |
-| Demo (25%) | [Live demo](https://cozy-peptide.vercel.app/#demo) + [Safety Filter try-it-live](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling) (demo video 1:45 Safety Filter) |
-
 ## 🎯 Turn a disease name into gut medicine
 
 Most medicines are either tiny chemicals or giant antibodies. cozy-peptide
@@ -705,3 +696,9 @@ for.
    *Protein Science* 3, 1833–1839 (1994).
    Publication: <https://onlinelibrary.wiley.com/doi/10.1002/pro.5560031022>
    · DOI: <https://doi.org/10.1002/pro.5560031022>
+
+<sub>
+
+<strong>For judges</strong> — Impact: front-loaded Meta AI design de-risks late-stage attrition, so losing candidates fail in silico instead of in animals or trials, accelerating therapeutic peptide research planning for academic and startup researchers toward a lab-assistant copilot (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>, <a href="https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling">safety</a>). Meta AI tooling: literature mining over PubMed and Europe PMC steers every prompt, Muse Spark performs multi-constraint ideation, and an agentic workflow adds human approval with refusal preservation (<a href="https://cozy-peptide.vercel.app/#pipeline">pipeline</a>). Technical depth: server-side blocklist, RUO gating, audit logging, refusal eval, and a proof compiler admitting only verifiable designs (<a href="https://cozy-peptide.vercel.app/#api">API</a>, <a href="https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts">blocklist</a>, <code>tests/target-guard.test.ts</code>). Demo: working live demo + 3-min video (1:45 Safety Filter); built Oct 27–Nov 4, 2026 — prompt steering, multi-scaffold repertoire, chassis/containment checks, CRO handoff, Pep tour; no pre-existing candidates (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>).
+
+</sub>
