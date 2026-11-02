@@ -178,7 +178,7 @@ const windowPrs =
 const gitOk = git(["rev-parse", "--is-inside-work-tree"]) === "true";
 
 const videoMatch = (readme + "\n" + appText).match(
-  /https?:\/\/(bit\.ly\/cozy-peptide-hackathon|(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|vimeo\.com\/)[\w-]+)/
+  /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|vimeo\.com\/)[\w-]+/
 );
 const videoUrl = videoMatch !== null ? videoMatch[0] : null;
 const deployMatch = readme.match(/https:\/\/[a-z0-9-]+\.vercel\.app\/?/);
