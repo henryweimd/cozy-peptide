@@ -848,10 +848,10 @@ export function HandoffDownloads({
 }
 
 /**
- * Roadmap stubs: the platform's named-but-unbuilt capabilities as a
- * plain stacked list — never cards. Each carries the "Future
- * functionality" badge, a one-line summary, and a tooltip plus an
- * inline "how" line describing how it will be achieved.
+ * Roadmap list as a plain stacked list — never cards. Unbuilt
+ * capabilities carry the "Future functionality" badge, a one-line
+ * summary, and a tooltip plus an inline "how" line; shipped ones link
+ * out with a Live badge instead.
  */
 export function FutureStubs(): React.ReactElement {
   return (

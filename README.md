@@ -13,38 +13,42 @@
 Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon).*
 
 *Muse Spark invents new peptides. The compiler proves that they're likely to
-work. Engineered yeast brews them in your gut.*
+work. Engineered microbes brew them where the disease lives.*
 
 ![License: All rights reserved](https://img.shields.io/badge/license-All_rights_reserved-red)
 ![Next.js](https://img.shields.io/badge/built_with-Next.js-black?logo=next.js)
 ![Model](https://img.shields.io/badge/model-Muse_Spark_1.3-blue)
 
-## 🎯 Turn a disease name into gut medicine
+## 🎯 Turn a disease name into living medicine
 
 Most medicines are either tiny chemicals or giant antibodies. cozy-peptide
-works in the fertile middle: **knottins** — miniature proteins just 28–36
-building blocks long, tied into a molecular knot by six cysteines. That knot
-is armor: knottins can survive stomach acid and digestive enzymes that shred
-ordinary protein drugs in minutes, so they can act directly inside the gut.
+works in the fertile middle: **small peptides** across seven scaffolds —
+from **knottins**, miniature proteins just 28–36 building blocks long
+tied into a molecular knot by six cysteines, down to simple linear
+peptides. That knot is armor: knottins can survive stomach acid and
+digestive enzymes that shred ordinary protein drugs in minutes, so they
+can act directly where the disease lives. Auto picks the best scaffold
+for each objective.
 
 Here is the remarkable part: **no human draws these molecules.** You name a
-gut disease target — say, *Clostridioides difficile* colonization — and
-**Muse Spark 1.3** invents brand-new knottin sequences from scratch: proteins
-that have never existed in nature, reasoned into being from the grammar of
-protein language. A deterministic symbolic compiler then interrogates every
-candidate — knot topology, charge, stability, protease resistance, safety —
-and rejects anything unsound. Failures return as compiler diagnostics that
-guide Muse Spark to repair its own designs, in a closed loop, until one
-passes every check.
+disease target — say, *Clostridioides difficile* colonization — and
+**Muse Spark 1.3** invents brand-new peptide sequences from scratch:
+proteins that have never existed in nature, reasoned into being from the
+grammar of protein language. A deterministic symbolic compiler then
+interrogates every candidate — topology, charge, stability, protease
+resistance, safety — and rejects anything unsound. Failures return as
+compiler diagnostics that guide Muse Spark to repair its own designs, in
+a closed loop, until one passes every check.
 
 The output is not a picture or a score. It is a **verified protein
 sequence** — the invention itself — which converts straightforwardly into a
 **DNA synthesis order you can send to a vendor**: codon-optimized cDNA
-encoding an engineered living therapeutic in *Saccharomyces boulardii* — a
-living miniature factory you install in your gut — that manufactures your
-therapeutic on site, exactly where the disease lives. Not a probiotic: a
-Live Biotherapeutic Product. The medicine is not a pill you keep taking;
-it is a factory you swallow once.
+encoding an engineered living therapeutic in one of four chassis
+(*Saccharomyces boulardii*, *E. coli* Nissle, *Lactococcus lactis*, or
+*Bacillus subtilis* spores) — a living miniature factory installed where
+the disease lives — that manufactures your therapeutic on site. Not a
+probiotic: a Live Biotherapeutic Product. The medicine is not a pill you
+keep taking; it is a factory you swallow once.
 
 Disease target in, verified protein out — with lab-ready DNA close behind
 and a full audit trail anyone can inspect.
@@ -63,12 +67,13 @@ ago assigned every amino acid a single-letter abbreviation — A, C, D, E…
 — which means a protein is literally a string of text. cozy-peptide adapts
 Muse Spark to generate not essays or code, but text-as-amino-acids:
 candidate protein sentences, composed under the grammatical constraints of
-one of nature's toughest architectures, the knottin.
+seven small-peptide architectures, from the flagship knottin down to
+linear peptides.
 
 And just as English has grammar separating sense from nonsense, proteins
-have a grammar too — cysteine knots must close, charges must balance,
+have a grammar too — disulfides must pair, charges must balance,
 fragile motifs must be absent. So every AI-written sentence is compiled:
-parsed against the knottin loop grammar, audited for stability and safety,
+parsed against its scaffold grammar, audited for stability and safety,
 and either accepted or returned with compiler diagnostics for revision.
 Muse Spark drafts; the compiler edits; only fluent, grammatical,
 manufacturable proteins survive.
@@ -122,10 +127,11 @@ costs from DNA to GMP:
 
 **Safety by design.** Nothing here is approved, and nothing claims to be —
 the designer reviews and revises every candidate against regulatory
-precedent and sound scientific reasoning. The chassis is GRAS yeast with
-decades of safe use; it never colonizes and clears within days of the last
-dose; engineered auxotrophy and CRISPR kill switches contain it; and every
-peptide passes the compiler first. Regulators already know this category:
+precedent and sound scientific reasoning. Every chassis is compatibility-
+scored (secretion, burden, processing) before it is chosen; engineered
+auxotrophy and kill-switch layers contain it; plasmid stability is
+pre-screened; and every peptide passes the compiler first. Regulators
+already know this category:
 Live Biotherapeutic Products go through IND, phased trials, and a full BLA
 at the FDA's Center for Biologics — a path Rebyota (2022, first LBP) and
 Vowst (2023, first oral LBP) already walked to approval for recurrent *C.
@@ -277,15 +283,16 @@ flowchart LR
      repeat flags, 0-100 score), a vendor-ready **order CSV**, and the
      **order-and-build partner directory** (DNA synthesis vendors plus
      CRO/CDMO builders with microbial and LBP experience)
-9. **Agentic tool stubs** (`lib/agent-tools.ts`, `lib/roadmap.ts`) — every
-   accepted candidate runs through the tool registry (`binding-affinity`,
-   `structure-fold`, `off-target-panel`, plus the roadmap stubs
-   `wetlab-feedback`, `potency-prediction`, `gut-safety-panel`), reported
-   as `agent_tools` in the response. All six are honest `not-configured`
-   stubs today: the seam is ready for backends, and wiring one means
-   replacing a single `invoke` implementation. The roadmap three also
-   render in the web app as "Future functionality" with how-achieved
-   notes.
+9. **Agentic tools** (`lib/agent-tools.ts`, `lib/roadmap.ts`) — every
+   accepted candidate runs through the tool registry
+   (`binding-affinity`, `structure-fold`, `off-target-panel`, plus the
+   unbuilt roadmap entries `potency-prediction` and `gut-safety-panel`),
+   reported as `agent_tools` in the response. All five are honest
+   `not-configured` stubs today: the seam is ready for backends, and
+   wiring one means replacing a single `invoke` implementation. The
+   roadmap renders in the web app with "Future functionality" badges
+   and how-achieved notes — except the wet-lab loop, which shipped as
+   the [Lab Guide](/lab-guide) and links out as Live.
 
 ## 🛡️ Block toxins and enzymes before generation
 
@@ -401,13 +408,13 @@ Sample JSON response (truncated):
   },
   "modality_selection": {
     "requested": "auto",
-    "resolved": "hairpin-2c",
-    "reason": "Hairpin 2C: a compact cationic wedge for anionic bacterial surfaces"
+    "resolved": "knottin-6c",
+    "reason": "Knottin 6C: protease-armored scaffold for luminal colonization targets"
   },
   "chassis": {
-    "host": "ecoli-nissle",
-    "reason": "E. coli Nissle: gut-adapted persister for colonization targets",
-    "compatibility": [{ "host_display": "E. coli Nissle", "score": 96, "...": "..." }]
+    "host": "sboulardii",
+    "reason": "S. boulardii: oxidative ER folding for 6-cysteine scaffolds",
+    "compatibility": [{ "host_display": "S. boulardii", "score": 100, "...": "..." }]
   },
   "biocontainment": {
     "auxotrophy": ["dapA (diaminopimelate)", "..."],
@@ -486,8 +493,8 @@ and per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
 
 ### Try it in the browser
 
-Four pages share one top bar (`home`, `Science & Impact`, `Live
-Biotherapeutic Product`, `API Docs`, `AI Pipeline`, `Safety`, plus the
+Three pages share one top bar (`home`, `Science & Impact`, `Lab Guide`,
+plus landing anchors for `API Docs`, `AI Pipeline`, `Safety`, and the
 design call to action):
 
 - **`/`** — the landing page: a live demo that runs the real pipeline
@@ -517,6 +524,13 @@ design call to action):
   thesis, the factory-at-every-body-site vision, and the
   personalized lab-in-the-loop pipeline vision, with new-tab
   sources.
+- **`/lab-guide`** — the wet-lab companion: bind a run, order DNA,
+  build the strain, verify the sequence, express and assay, then feed
+  results back so future designs improve. Tracked steps with
+  outsourced-turnaround planning, template downloads, token-gated
+  uploads (or a token-free [Demo] run-through), an optional CRO photo
+  check with SAM 3.1 segmentation, and a programmatic API for
+  integrators.
 
 Pick one of thirteen preset gut conditions from the grid — or choose
 Other and describe your own condition in free text. Custom input
@@ -742,6 +756,6 @@ for.
 
 <sub>
 
-<strong>For judges</strong> — Impact: front-loaded Meta AI design de-risks late-stage attrition, so losing candidates fail in silico instead of in animals or trials, accelerating therapeutic peptide research planning for academic and startup researchers toward a lab-assistant copilot (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>, <a href="https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling">safety</a>). Meta AI tooling: literature mining over PubMed and Europe PMC steers every prompt, Muse Spark performs multi-constraint ideation, and an agentic workflow adds human approval with refusal preservation (<a href="https://cozy-peptide.vercel.app/#pipeline">pipeline</a>). Technical depth: server-side blocklist, RUO gating, audit logging, refusal eval, and a proof compiler admitting only verifiable designs (<a href="https://cozy-peptide.vercel.app/#api">API</a>, <a href="https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts">blocklist</a>, <code>tests/target-guard.test.ts</code>). Demo: working live demo + <a href="https://bit.ly/cozy-peptide-video">3-min video</a> (1:45 Safety Filter); built Oct 27–Nov 4, 2026 — prompt steering, multi-scaffold repertoire, chassis/containment checks, CRO handoff, Pep tour; no pre-existing candidates (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>).
+<strong>For judges</strong> — Impact: front-loaded Meta AI design de-risks late-stage attrition, so losing candidates fail in silico instead of in animals or trials, accelerating therapeutic peptide research planning for academic and startup researchers toward a lab-assistant copilot (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>, <a href="https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling">safety</a>). Meta AI tooling: literature mining over PubMed and Europe PMC steers every prompt, Muse Spark performs multi-constraint ideation, SAM 3.1 segments CRO photos, and an agentic workflow adds human approval with refusal preservation (<a href="https://cozy-peptide.vercel.app/#pipeline">pipeline</a>). Technical depth: server-side blocklist, RUO gating, audit logging, refusal eval, and a proof compiler admitting only verifiable designs (<a href="https://cozy-peptide.vercel.app/#api">API</a>, <a href="https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts">blocklist</a>, <code>tests/target-guard.test.ts</code>). Demo: working live demo + <a href="https://bit.ly/cozy-peptide-video">3-min video</a> (1:45 Safety Filter); built Oct 27–Nov 4, 2026 — prompt steering, multi-scaffold repertoire, chassis/containment checks, CRO handoff, Pep tour, lab loop, CRO image checks; no pre-existing candidates (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>).
 
 </sub>

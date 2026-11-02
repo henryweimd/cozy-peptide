@@ -644,9 +644,11 @@ export default function BiologyPage() {
                     Output is LBP-ready DNA with a lab-handoff page:
                     orderable synthesis plus a directory of CROs with
                     real experience in these hosts. The honest boundary
-                    is labeled too: wet-lab feedback, potency
-                    prediction, and the gut-safety panel are marked{" "}
-                    <em>Future functionality</em> until they ship.
+                    is labeled too: potency prediction and the
+                    gut-safety panel are marked{" "}
+                    <em>Future functionality</em> until they ship, while
+                    the wet-lab loop already runs in the{" "}
+                    <Link href="/lab-guide">Lab Guide</Link>.
                   </p>
                 </div>
               </div>
