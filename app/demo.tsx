@@ -161,11 +161,11 @@ export default function Demo() {
       <p className={styles.note}>
         Prefer to watch first? See the{" "}
         <a
-          href="https://bit.ly/cozy-peptide-video"
+          href="https://bit.ly/cozy-peptide-hackathon"
           target="_blank"
           rel="noreferrer"
         >
-          3-minute video walkthrough
+          2-minute video walkthrough
         </a>
         .
       </p>
