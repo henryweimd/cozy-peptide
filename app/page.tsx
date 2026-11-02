@@ -913,6 +913,14 @@ export default function Home() {
             <a className={styles.footlink} href="#top">
               back to top
             </a>
+            <a
+              className={styles.footlink}
+              href="https://github.com/henryweimd/cozy-peptide"
+              target="_blank"
+              rel="noreferrer"
+            >
+              source code
+            </a>
           </nav>
           <p className={styles.foothack}>
             Built during the{" "}
