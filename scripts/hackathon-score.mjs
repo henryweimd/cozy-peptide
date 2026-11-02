@@ -154,9 +154,10 @@ const appFiles = walkExt("app", [".ts", ".tsx"]).filter(
 const testFiles = walkExt("tests", [".test.ts"]);
 const libText = libFiles.map((f) => readText(f) ?? "").join("\n");
 const appText = appFiles.map((f) => readText(f) ?? "").join("\n");
+const docsFiles = walkExt("docs", [".md"]);
 const docsBytes =
   fileBytes("README.md") +
-  walkExt("docs", [".md"]).reduce((sum, f) => sum + fileBytes(f), 0);
+  docsFiles.reduce((sum, f) => sum + fileBytes(f), 0);
 const imageBytes = walkExt("public", [".png", ".jpg", ".jpeg", ".webp", ".svg"]).reduce(
   (sum, f) => sum + fileBytes(f),
   0
@@ -290,7 +291,11 @@ const PILLARS = [
         advice: "Document modules until markdown docs exceed 5 KB.",
         run: () => ({
           earned: r1(scaled(docsBytes, 5120, 0.3)),
-          evidence: `${(docsBytes / 1024).toFixed(1)} KB markdown (needs >5 KB)`,
+          evidence:
+            `${(docsBytes / 1024).toFixed(1)} KB markdown (needs >5 KB)` +
+            (docsFiles.length > 0
+              ? `; docs/: ${docsFiles.map((f) => path.basename(f)).join(", ")}`
+              : "; no docs/ directory"),
         }),
       },
     ],
