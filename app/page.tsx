@@ -792,7 +792,7 @@ export default function Home() {
                   <th scope="row">Contained chassis</th>
                   <td>
                     Engineered auxotrophy: the yeast only grows where it
-                    is fed, with CRISPR kill switches as backup.
+                    is fed, with toxin–antitoxin backup.
                   </td>
                 </tr>
                 <tr>
