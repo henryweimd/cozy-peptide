@@ -1,0 +1,136 @@
+1
+00:00:02,600 --> 00:00:06,321
+Every live biotherapeutic starts with the same gamble:
+
+2
+00:00:06,321 --> 00:00:08,554
+a peptide designed by guesswork.
+
+3
+00:00:08,554 --> 00:00:11,057
+Cozy Peptide replaces the guesswork.
+
+4
+00:00:11,057 --> 00:00:15,996
+Name the disease — get a novel AI-designed peptide, screened for safety,
+
+5
+00:00:15,996 --> 00:00:20,528
+compiled to DNA, ready for engineered bacteria to produce locally.
+
+6
+00:00:20,528 --> 00:00:23,370
+No pharma factory, no ten-year pipeline —
+
+7
+00:00:23,370 --> 00:00:26,820
+just a designed DNA order and a bacterial chassis.
+
+8
+00:00:26,820 --> 00:00:28,850
+Watch one get designed, live.
+
+9
+00:00:29,150 --> 00:00:31,207
+Start with a real target: C.
+
+10
+00:00:31,207 --> 00:00:32,981
+difficile gut infection.
+
+11
+00:00:32,981 --> 00:00:37,237
+One click selects it — the designer picks the best scaffold
+
+12
+00:00:37,237 --> 00:00:42,203
+and bacterial factory for this target: a hairpin peptide brewed in E.
+
+13
+00:00:42,203 --> 00:00:43,125
+coli Nissle.
+
+14
+00:00:43,425 --> 00:00:46,712
+Meta AI reads the literature, drafts candidates,
+
+15
+00:00:46,712 --> 00:00:51,475
+then revises them against safety, chassis, and biocontainment checks —
+
+16
+00:00:51,475 --> 00:00:53,621
+every step streaming on screen.
+
+17
+00:00:53,621 --> 00:00:57,982
+Watch the status feed: literature grounding, candidate drafting,
+
+18
+00:00:57,982 --> 00:01:02,275
+verification, chassis matching — each check logged in the feed.
+
+19
+00:01:02,575 --> 00:01:06,747
+Out comes a verified peptide sequence with its DNA order,
+
+20
+00:01:06,747 --> 00:01:10,344
+a CRO-ready lab handoff, and a full audit ledger.
+
+21
+00:01:10,344 --> 00:01:14,589
+Every AI choice is cited there — literature, safety audit,
+
+22
+00:01:14,589 --> 00:01:16,675
+and chassis checks included.
+
+23
+00:01:16,975 --> 00:01:19,049
+And the guardrails are real.
+
+24
+00:01:19,049 --> 00:01:23,410
+Ask for a toxin and the same server-side blocklist refuses —
+
+25
+00:01:23,410 --> 00:01:25,698
+try it live, right on the page.
+
+26
+00:01:25,698 --> 00:01:30,846
+No toxins, no pathogens, no synthesis protocols for flagged sequences —
+
+27
+00:01:30,846 --> 00:01:31,275
+ever.
+
+28
+00:01:31,575 --> 00:01:33,085
+Then the loop closes.
+
+29
+00:01:33,085 --> 00:01:36,928
+The Lab Guide walks any wet lab from DNA order to assay
+
+30
+00:01:36,928 --> 00:01:41,114
+results — or preview the whole thing with zero setup in demo
+
+31
+00:01:41,114 --> 00:01:45,575
+mode, from DNA order to assay results that feed the next design.
+
+32
+00:01:45,875 --> 00:01:49,879
+Even microscopy gets AI: one click segments colony images
+
+33
+00:01:49,879 --> 00:01:52,847
+and files the analysis to the run ledger —
+
+34
+00:01:52,847 --> 00:01:56,575
+microscopy verified before you pay for the next loop.
+

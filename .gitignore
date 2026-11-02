@@ -42,3 +42,14 @@ next-env.d.ts
 
 # test build output
 .test-out/
+
+# aidemo render artifacts (storyboard + captions are committed, video is not)
+demos/*/output/*.mp4
+demos/*/recordings/
+demos/*/audio/
+demos/*/logs/
+demos/*/.chrome-profile*
+demos/*/generated/timeline*.json
+demos/*/generated/captions.*
+demos/*/output/report.json
+demos/*/output/warnings/
