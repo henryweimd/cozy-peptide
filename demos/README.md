@@ -4,7 +4,7 @@
 [aidemo](https://github.com/tandryukha/aidemo) using **local models + offline
 rendering** (Kokoro TTS, no video API spend). The storyboard is the source of
 truth; the MP4 is a build artifact (git-ignored — upload it to video hosting
-and point `https://bit.ly/cozy-peptide-hackathon` at it).
+and point `https://www.youtube.com/watch?v=zxj1aQAsXQ0` at it).
 
 ## Re-render
 
