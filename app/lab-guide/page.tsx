@@ -32,6 +32,7 @@ export default function LabGuidePage() {
           <a href="#lab-express">Express</a>
           <a href="#lab-assay">Assay</a>
           <a href="#lab-consent">Consent</a>
+          <a href="#lab-cro">Images</a>
           <a href="#lab-integrators">Integrators</a>
         </div>
       </nav>

@@ -478,7 +478,11 @@ and per-source timings (`ok`, `fallback`, `disabled`, or `skipped`).
   /api/assay-export?format=`** (Bearer [REDACTED] exports consented
   measurements (CC0) as JSON or CSV for model developers. No token?
   The guide offers a [Demo] run-through with sample data — nothing
-  runs, nothing is sent.
+  runs, nothing is sent. **`POST /api/analyze-image`** segments CRO
+  photos (SAM 3.1) for an optional step-8 photo check with results
+  persisted per run (the demo image analyzes token-free into an
+  auto-created demo run). Repeat analyses of identical pixels reload
+  the stored segmentation instead of re-calling the model.
 
 ### Try it in the browser
 
