@@ -19,6 +19,7 @@ import {
   type StageName,
 } from "./pipeline-shared";
 import ReportDialog from "./report-dialog";
+import { LAB_TOKEN_KEY } from "./lab-guide/guide";
 
 const PeptideViewer = dynamic(() => import("./peptide-viewer"), {
   ssr: false,
@@ -118,6 +119,130 @@ function asStageEvents(value: unknown): StageEvent[] {
  * literature brief, and every downloadable artifact. Degrades to a
  * short note on any fault.
  */
+interface CroAnalysisView {
+  id: string;
+  createdAt: string;
+  imageUrl: string | null;
+  concepts: string[];
+  count: number;
+  foregroundPixels: number;
+  maskSvg: string;
+}
+
+function asCroAnalyses(value: unknown): CroAnalysisView[] | null {
+  const data =
+    typeof value === "object" && value !== null
+      ? (value as { data?: { analyses?: unknown } }).data?.analyses
+      : null;
+  if (!Array.isArray(data)) return null;
+  return data.flatMap((row): CroAnalysisView[] => {
+    if (typeof row !== "object" || row === null) return [];
+    const record = row as Record<string, unknown>;
+    if (typeof record["id"] !== "string") return [];
+    return [
+      {
+        id: record["id"],
+        createdAt:
+          typeof record["createdAt"] === "string" ? record["createdAt"] : "",
+        imageUrl:
+          typeof record["imageUrl"] === "string" ? record["imageUrl"] : null,
+        concepts: Array.isArray(record["concepts"])
+          ? (record["concepts"] as unknown[]).filter(
+              (c): c is string => typeof c === "string"
+            )
+          : [],
+        count: typeof record["count"] === "number" ? record["count"] : 0,
+        foregroundPixels:
+          typeof record["foregroundPixels"] === "number"
+            ? record["foregroundPixels"]
+            : 0,
+        maskSvg: typeof record["maskSvg"] === "string" ? record["maskSvg"] : "",
+      },
+    ];
+  });
+}
+
+function CroLedger({ runId }: { runId: string }): React.ReactElement {
+  const [analyses, setAnalyses] = useState<CroAnalysisView[] | null>(null);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    let token = "";
+    try {
+      token = window.localStorage.getItem(LAB_TOKEN_KEY) ?? "";
+    } catch {
+      token = "";
+    }
+    if (token === "") {
+      const frame = requestAnimationFrame(() => {
+        if (live) setNote("Save your API token in the Lab Guide to view image checks.");
+      });
+      return () => {
+        live = false;
+        cancelAnimationFrame(frame);
+      };
+    }
+    fetch(`/api/analyze-image?run=${encodeURIComponent(runId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((response) =>
+        response.ok ? response.json() : Promise.reject(new Error("cro"))
+      )
+      .then((body: unknown) => {
+        if (!live) return;
+        const parsed = asCroAnalyses(body);
+        if (parsed === null) {
+          setNote("Couldn't load image checks.");
+          return;
+        }
+        setAnalyses(parsed);
+      })
+      .catch(() => {
+        if (live) setNote("Couldn't load image checks.");
+      });
+    return () => {
+      live = false;
+    };
+  }, [runId]);
+
+  if (note !== "") return <p className={styles.note}>{note}</p>;
+  if (analyses === null)
+    return <p className={styles.note}>Loading image checks…</p>;
+  if (analyses.length === 0)
+    return (
+      <p className={styles.note}>
+        No CRO image checks saved for this run yet.
+      </p>
+    );
+  return (
+    <>
+      {analyses.map((analysis) => (
+        <div key={analysis.id} className={styles.croThumb}>
+          {analysis.imageUrl !== null && (
+            <div className={styles.croViewer}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={analysis.imageUrl} alt={analysis.concepts.join(", ")} />
+              {analysis.maskSvg !== "" && (
+                <div
+                  className={styles.croOverlay}
+                  dangerouslySetInnerHTML={{ __html: analysis.maskSvg }}
+                />
+              )}
+            </div>
+          )}
+          <p className={styles.note}>
+            {analysis.concepts.join(" + ")} — {analysis.count} found,{" "}
+            {analysis.foregroundPixels.toLocaleString()} foreground px
+            {analysis.createdAt !== "" &&
+              `, ${new Date(analysis.createdAt).toLocaleDateString()}`}
+          </p>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function FocusedPeptide({
   runId,
   onClose,
@@ -565,6 +690,14 @@ export default function FocusedPeptide({
               </p>
             </>
           )}
+
+          <>
+            <h4>
+              <SectionIcon name="document" />
+              CRO image checks
+            </h4>
+            <CroLedger runId={runId} />
+          </>
 
           {refinementTurns > 0 && (
             <>

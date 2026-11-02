@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import styles from "../page.module.css";
 import Recent, { type RecentRun } from "../recent";
 import SectionIcon, { type SectionIconName } from "../section-icons";
+import CroImageCheck from "../../components/CroImageCheck";
 import {
   ASSAY_TEMPLATE_VERSION,
   ASSAY_TEMPLATES,
@@ -37,7 +38,8 @@ interface LabProgress {
   submitted: AssayType[];
 }
 
-const TOKEN_KEY = "cozy-peptide-lab-token";
+export const LAB_TOKEN_KEY = "cozy-peptide-lab-token";
+const TOKEN_KEY = LAB_TOKEN_KEY;
 
 function progressKey(runId: string): string {
   return `cozy-peptide-lab-progress:${runId}`;
@@ -175,7 +177,7 @@ function PlanStrip(): React.ReactElement {
         Planning ranges for an outsourced run: vendor queues, CRO
         scheduling, and strain troubleshooting move these — MIC and
         cytotoxicity already run in parallel inside step 5. Steps 0, 6,
-        and 7 are bench-free.
+        and 7 are bench-free; step 8 is an optional photo check.
       </p>
     </div>
   );
@@ -863,6 +865,26 @@ export default function Guide(): React.ReactElement {
             Back to the design
           </Link>
         </p>
+      </div>
+
+      <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-cro">
+        <StepHead
+          id="lab-cro-head"
+          index="8"
+          title="CRO image check"
+          done={false}
+          icon="document"
+          time="minutes"
+        />
+        <div className={styles.bioProse}>
+          <p>
+            Optional. When the CRO sends back plate photos or
+            microscopy, verify them here before paying for the next
+            loop: colony plates prove the build, reporter fields prove
+            expression, cell photos prove rescue.
+          </p>
+        </div>
+        <CroImageCheck token={token} />
       </div>
 
       <div className={`${styles.bioSub} ${styles.labStep}`} id="lab-integrators">
