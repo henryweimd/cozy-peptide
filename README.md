@@ -7,7 +7,7 @@
 > [safety](https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling), and API tabs on the site.
 > This README is the condensed version; the site is the full story.
 >
-> Prefer video? Watch the [2-minute walkthrough](https://www.youtube.com/watch?v=zxj1aQAsXQ0).
+> Prefer video? Watch the [3-minute walkthrough](https://www.youtube.com/watch?v=5MatuocaAJk).
 >
 > Judges in a hurry: [problem statement](docs/PROBLEM.md) and [architecture](docs/ARCHITECTURE.md).
 
@@ -758,6 +758,6 @@ for.
 
 <sub>
 
-<strong>For judges</strong> — Impact: front-loaded Meta AI design de-risks late-stage attrition, so losing candidates fail in silico instead of in animals or trials, accelerating therapeutic peptide research planning for academic and startup researchers toward a lab-assistant copilot (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>, <a href="https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling">safety</a>). Meta AI tooling: literature mining over PubMed and Europe PMC steers every prompt, Muse Spark performs multi-constraint ideation, SAM 3.1 segments CRO photos, and an agentic workflow adds human approval with refusal preservation (<a href="https://cozy-peptide.vercel.app/#pipeline">pipeline</a>). Technical depth: server-side blocklist, RUO gating, audit logging, refusal eval, and a proof compiler admitting only verifiable designs (<a href="https://cozy-peptide.vercel.app/#api">API</a>, <a href="https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts">blocklist</a>, <code>tests/target-guard.test.ts</code>). Demo: working live demo + <a href="https://www.youtube.com/watch?v=zxj1aQAsXQ0">2-min video</a> (1:22 Safety Filter); built Oct 27–Nov 4, 2026 — prompt steering, multi-scaffold repertoire, chassis/containment checks, CRO handoff, Pep tour, lab loop, CRO image checks; no pre-existing candidates (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>).
+<strong>For judges</strong> — Impact: front-loaded Meta AI design de-risks late-stage attrition, so losing candidates fail in silico instead of in animals or trials, accelerating therapeutic peptide research planning for academic and startup researchers toward a lab-assistant copilot (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>, <a href="https://cozy-peptide.vercel.app/#responsible-use-meta-ai-tooling">safety</a>). Meta AI tooling: literature mining over PubMed and Europe PMC steers every prompt, Muse Spark performs multi-constraint ideation, SAM 3.1 segments CRO photos, and an agentic workflow adds human approval with refusal preservation (<a href="https://cozy-peptide.vercel.app/#pipeline">pipeline</a>). Technical depth: server-side blocklist, RUO gating, audit logging, refusal eval, and a proof compiler admitting only verifiable designs (<a href="https://cozy-peptide.vercel.app/#api">API</a>, <a href="https://github.com/henryweimd/cozy-peptide/blob/main/lib/biosecurity.ts">blocklist</a>, <code>tests/target-guard.test.ts</code>). Demo: working live demo + <a href="https://www.youtube.com/watch?v=5MatuocaAJk">3-min video</a> (1:46 Safety Filter); built Oct 27–Nov 4, 2026 — prompt steering, multi-scaffold repertoire, chassis/containment checks, CRO handoff, Pep tour, lab loop, CRO image checks; no pre-existing candidates (<a href="https://cozy-peptide.vercel.app/#demo">demo</a>).
 
 </sub>

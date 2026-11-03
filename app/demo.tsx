@@ -161,11 +161,11 @@ export default function Demo() {
       <p className={styles.note}>
         Prefer to watch first? See the{" "}
         <a
-          href="https://www.youtube.com/watch?v=zxj1aQAsXQ0"
+          href="https://www.youtube.com/watch?v=5MatuocaAJk"
           target="_blank"
           rel="noreferrer"
         >
-          2-minute video walkthrough
+          3-minute video walkthrough
         </a>
         .
       </p>

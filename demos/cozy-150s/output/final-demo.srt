@@ -1,0 +1,184 @@
+1
+00:00:02,600 --> 00:00:06,291
+Every live biotherapeutic starts with the same gamble:
+
+2
+00:00:06,291 --> 00:00:08,506
+a peptide designed by guesswork.
+
+3
+00:00:08,506 --> 00:00:10,990
+Cozy Peptide replaces the guesswork.
+
+4
+00:00:10,990 --> 00:00:15,889
+Name the disease — get a novel AI-designed peptide, screened for safety,
+
+5
+00:00:15,889 --> 00:00:20,185
+compiled to DNA, ready for engineered bacteria to brew locally.
+
+6
+00:00:20,185 --> 00:00:22,198
+Watch one get designed, live.
+
+7
+00:00:22,498 --> 00:00:24,201
+Start with a real target: C.
+
+8
+00:00:24,201 --> 00:00:25,668
+difficile gut infection.
+
+9
+00:00:25,668 --> 00:00:29,191
+One click selects it — the designer picks the best scaffold
+
+10
+00:00:29,191 --> 00:00:33,066
+and bacterial factory for the job: a hairpin peptide brewed in E.
+
+11
+00:00:33,066 --> 00:00:33,829
+coli Nissle.
+
+12
+00:00:34,129 --> 00:00:36,937
+Meta AI reads the literature, drafts candidates,
+
+13
+00:00:36,937 --> 00:00:41,005
+then revises them against safety, chassis, and biocontainment checks —
+
+14
+00:00:41,005 --> 00:00:42,838
+every step streaming on screen.
+
+15
+00:00:42,838 --> 00:00:46,563
+Watch the status feed: literature grounding, candidate drafting,
+
+16
+00:00:46,563 --> 00:00:50,230
+verification, chassis matching — each check logged as it lands.
+
+17
+00:00:50,230 --> 00:00:53,897
+The symbolic compiler proves every claim before anything ships:
+
+18
+00:00:53,897 --> 00:00:56,017
+no guesswork survives this pipeline.
+
+19
+00:00:56,017 --> 00:00:59,799
+Each revision cites its sources, so the final report reads like a
+
+20
+00:00:59,799 --> 00:01:01,575
+lab notebook, not a black box.
+
+21
+00:01:01,875 --> 00:01:05,849
+And here it is — the designed peptide, front and center.
+
+22
+00:01:05,849 --> 00:01:10,451
+The novel sequence up top: construct ID, topology, residue count,
+
+23
+00:01:10,451 --> 00:01:11,915
+with one-click copy.
+
+24
+00:01:11,915 --> 00:01:16,029
+Below it, the LBP-ready coding sequence — optimized for E.
+
+25
+00:01:16,029 --> 00:01:19,863
+coli Nissle with a TAA stop, GC and CAI stats in view.
+
+26
+00:01:19,863 --> 00:01:24,047
+And a FASTA download, ready to send to any synthesis house.
+
+27
+00:01:24,047 --> 00:01:27,742
+From sequence to DNA order with zero bioinformatics.
+
+28
+00:01:28,042 --> 00:01:32,183
+Scroll on for the full evidence: predicted 3D structure you can spin,
+
+29
+00:01:32,183 --> 00:01:35,851
+the CRO-ready lab handoff with its DNA order and gBlock file,
+
+30
+00:01:35,851 --> 00:01:37,626
+plus a complete audit ledger.
+
+31
+00:01:37,626 --> 00:01:40,583
+Every AI choice cited — literature, safety audit,
+
+32
+00:01:40,583 --> 00:01:42,299
+and chassis checks included.
+
+33
+00:01:42,599 --> 00:01:44,294
+And the guardrails are real.
+
+34
+00:01:44,294 --> 00:01:47,858
+Ask for a toxin and the same server-side blocklist refuses —
+
+35
+00:01:47,858 --> 00:01:49,728
+try it live, right on the page.
+
+36
+00:01:49,728 --> 00:01:53,877
+No toxins, no pathogens, no synthesis protocols for flagged sequences.
+
+37
+00:01:53,877 --> 00:01:56,624
+Safety isn't a filter here; it's the compiler.
+
+38
+00:01:56,924 --> 00:01:58,396
+Then the loop closes.
+
+39
+00:01:58,396 --> 00:02:02,143
+The Lab Guide walks any wet lab from DNA order to assay
+
+40
+00:02:02,143 --> 00:02:05,220
+results — culture, induction, harvest, assay.
+
+41
+00:02:05,220 --> 00:02:09,034
+Or preview the whole thing with zero setup in demo mode,
+
+42
+00:02:09,034 --> 00:02:12,714
+end to end, feeding results back into the next design.
+
+43
+00:02:13,014 --> 00:02:16,147
+Even microscopy gets AI: one click segments colony images
+
+44
+00:02:16,147 --> 00:02:18,416
+and files the analysis to the run ledger.
+
+45
+00:02:18,416 --> 00:02:21,224
+Verified imaging before you pay for the next loop —
+
+46
+00:02:21,224 --> 00:02:23,277
+the factory that checks its own work.
+
